@@ -1,0 +1,4 @@
+*.sqlproj
+*.dbmdl
+bin/
+obj/
