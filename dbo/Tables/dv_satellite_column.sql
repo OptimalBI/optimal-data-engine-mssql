@@ -13,5 +13,3 @@
     CONSTRAINT [dv_satellite_column_unique] UNIQUE NONCLUSTERED ([satellite_key] ASC, [column_key] ASC)
 );
 
-
-

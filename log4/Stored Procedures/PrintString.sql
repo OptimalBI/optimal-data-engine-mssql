@@ -198,8 +198,6 @@ OnComplete:
 	RETURN
 
 END
-
-
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Prints the supplied string respecting all line feeds and/or carriage returns except where no line feeds are found, in which case the output is printed in user-specified lengths', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'PROCEDURE', @level1name = N'PrintString';
 

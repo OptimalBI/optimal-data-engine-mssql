@@ -13,22 +13,11 @@ SET NOCOUNT ON
 
 -- Internal use variables
 DECLARE @IncludeTables table(dv_schema_name sysname, dv_table_name sysname, dv_load_order int)
-insert @IncludeTables values
-
-('dbo', 'dv_default_column', 1),
-('dbo', 'dv_defaults', 2), 
-('dbo', 'dv_source_system', 3),
-('dbo', 'dv_source_table', 4),
-('dbo', 'dv_column', 5),
-('dbo', 'dv_source_table_hiearchy', 6),
-('dbo', 'dv_column_relationship', 7),
-('dbo', 'dv_hub', 8),
-('dbo', 'dv_hub_key_column', 9),
-('dbo', 'dv_hub_column', 10),
-('dbo', 'dv_link', 11),
-('dbo', 'dv_hub_link', 12),
-('dbo', 'dv_satellite', 13),
-('dbo', 'dv_satellite_column', 14)
+insert @IncludeTables 
+SELECT dv_schema_name	
+      ,dv_table_name	
+	  ,dv_load_order
+FROM [dv_release].[fn_ConfigTableList] ()
 
 
 DECLARE

@@ -1,0 +1,4 @@
+﻿CREATE MESSAGE TYPE [dv_scheduler_m002]
+    AUTHORIZATION [dbo]
+    VALIDATION = NONE;
+

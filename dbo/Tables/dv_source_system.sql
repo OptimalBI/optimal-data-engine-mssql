@@ -11,5 +11,3 @@
     CONSTRAINT [source_system_unique] UNIQUE NONCLUSTERED ([source_system_name] ASC)
 );
 
-
-

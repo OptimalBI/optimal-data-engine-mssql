@@ -13,5 +13,3 @@
     CONSTRAINT [dv_hub_column_unique] UNIQUE NONCLUSTERED ([hub_key_column_key] ASC, [column_key] ASC)
 );
 
-
-

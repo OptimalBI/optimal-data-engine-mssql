@@ -4,6 +4,7 @@
     [source_table_schema]    VARCHAR (128)      NOT NULL,
     [source_table_name]      VARCHAR (128)      NOT NULL,
     [source_table_load_type] VARCHAR (50)       CONSTRAINT [DF__dv_source__sourc__07C12930] DEFAULT ('Full') NOT NULL,
+    [source_procedure_name]  VARCHAR (128)      NULL,
     [release_key]            INT                CONSTRAINT [DF_dv_source_table_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]         INT                CONSTRAINT [DF__dv_source__versi__08B54D69] DEFAULT ((1)) NULL,
     [updated_by]             VARCHAR (30)       CONSTRAINT [DF__dv_source__updat__09A971A2] DEFAULT (user_name()) NULL,

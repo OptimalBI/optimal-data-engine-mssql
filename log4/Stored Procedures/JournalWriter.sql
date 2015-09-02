@@ -245,10 +245,6 @@ OnComplete:
 	RETURN(@Error)
 
 END
-
-
-
-
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Adds a journal entry summarising task progress, completion or failure msgs etc.', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'PROCEDURE', @level1name = N'JournalWriter';
 

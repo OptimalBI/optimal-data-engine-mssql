@@ -168,10 +168,6 @@ OnComplete:
 	RETURN(@Error)
 
 END
-
-
-
-
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Returns all Exceptions matching the specified search criteria', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'PROCEDURE', @level1name = N'ExceptionReader';
 

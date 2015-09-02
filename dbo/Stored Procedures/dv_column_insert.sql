@@ -35,4 +35,3 @@ AS
                
 	COMMIT
        RETURN SCOPE_IDENTITY()
-

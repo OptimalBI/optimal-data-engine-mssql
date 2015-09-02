@@ -16,5 +16,3 @@
     CONSTRAINT [Default_Type_Key] UNIQUE NONCLUSTERED ([default_type] ASC, [default_subtype] ASC)
 );
 
-
-

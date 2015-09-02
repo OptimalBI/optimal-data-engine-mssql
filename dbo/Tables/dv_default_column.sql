@@ -23,5 +23,3 @@
     CONSTRAINT [dv_default_column_unique] UNIQUE NONCLUSTERED ([object_type] ASC, [column_name] ASC)
 );
 
-
-

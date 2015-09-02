@@ -104,10 +104,6 @@ BEGIN
 
 	RETURN @Duration
 END
-
-
-
-
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Returns a string describing the time elapsed between start and end time', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'FUNCTION', @level1name = N'FormatElapsedTime';
 

@@ -12,5 +12,3 @@
     CONSTRAINT [dv_column_relationship_unique] UNIQUE NONCLUSTERED ([primary_column_key] ASC, [foreign_column_key] ASC)
 );
 
-
-

@@ -20,5 +20,3 @@
     CONSTRAINT [dv_satellite_unique] UNIQUE NONCLUSTERED ([satellite_name] ASC)
 );
 
-
-

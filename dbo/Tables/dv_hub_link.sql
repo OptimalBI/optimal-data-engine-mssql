@@ -13,5 +13,3 @@
     CONSTRAINT [dv_hub_link_unique] UNIQUE NONCLUSTERED ([link_key] ASC, [hub_key] ASC)
 );
 
-
-

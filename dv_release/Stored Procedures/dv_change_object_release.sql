@@ -75,21 +75,11 @@ IF @DoGenerateError = 1
 SET @_Step = 'Validate inputs';
 
 DECLARE @IncludeTables table(dv_schema_name sysname, dv_table_name sysname, dv_key_name sysname)
-insert @IncludeTables values
-('dbo', 'dv_default_column'			, 'default_column_key'),
-('dbo', 'dv_defaults'				, 'default_key'), 
-('dbo', 'dv_source_system'			, 'system_key'),
-('dbo', 'dv_source_table'			, 'table_key'),
-('dbo', 'dv_column'					, 'column_key'),
-('dbo', 'dv_source_table_hiearchy'	, 'table_hiearchy_key'),
-('dbo', 'dv_column_relationship'	, 'column_relationship_key'),
-('dbo', 'dv_hub'					, 'hub_key'),
-('dbo', 'dv_hub_key_column'			, 'hub_key_column_key'),
-('dbo', 'dv_hub_column'				, 'hub_col_key'),
-('dbo', 'dv_link'					, 'link_key'),
-('dbo', 'dv_hub_link'				, 'hub_link_key'),
-('dbo', 'dv_satellite'				, 'satellite_key'),
-('dbo', 'dv_satellite_column'		, 'satellite_col_key')
+insert @IncludeTables 
+SELECT dv_schema_name	
+      ,dv_table_name	
+	  ,dv_key_name
+FROM [dv_release].[fn_ConfigTableList] ()
 
 IF (select count(*) from @IncludeTables where dv_table_name = @vault_config_table) <> 1
 			RAISERROR('Invalid Config Table Name Selected: %s', 16, 1, @vault_config_table);

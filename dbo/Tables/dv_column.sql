@@ -23,5 +23,3 @@
     CONSTRAINT [dv_column_unique] UNIQUE NONCLUSTERED ([table_key] ASC, [column_name] ASC)
 );
 
-
-

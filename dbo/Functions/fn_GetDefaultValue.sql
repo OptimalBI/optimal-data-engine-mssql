@@ -23,6 +23,3 @@ and [default_subtype] = @default_name
 RETURN @ResultVar
 
 END
-
-
-

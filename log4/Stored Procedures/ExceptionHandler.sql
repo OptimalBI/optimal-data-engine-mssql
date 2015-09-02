@@ -186,8 +186,6 @@ OnComplete:
 
 	RETURN;
 END
-
-
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Returns error info as output parameters and writes info to Exception table', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'PROCEDURE', @level1name = N'ExceptionHandler';
 

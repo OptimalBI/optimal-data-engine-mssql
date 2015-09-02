@@ -22,7 +22,3 @@ and [default_subtype] in('prefix', 'suffix')
 RETURN @ResultVar
 
 END
-
-
-
-

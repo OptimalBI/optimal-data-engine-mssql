@@ -141,4 +141,3 @@ set @ResultVar = rtrim(@ResultVar) + case when isnull (@is_nullable, 1) = 1 then
 RETURN @ResultVar
 
 END
-

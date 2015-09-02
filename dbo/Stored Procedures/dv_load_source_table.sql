@@ -173,9 +173,9 @@ where ss.source_system_name		= @vault_source_system_name
 --from @load_details
 /*****************************************************************************************************************/
 SET @_Step = 'Load Hub Tables'
-print ''
-print 'Load Hub Tables'
-print '----------------'
+--print ''
+--print 'Load Hub Tables'
+--print '----------------'
 declare @hub_database			varchar(128)
        ,@hub_name				varchar(128)
 
@@ -191,9 +191,10 @@ FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name
 WHILE @@FETCH_STATUS = 0   
 BEGIN   
        SET @_Step = 'Load Hub: ' + @hub_name
-	   print @hub_name
-	   print '/*********\'
-	   EXECUTE [dbo].[dv_load_hub_table] @source_system, @source_schema, @source_table, @hub_database, @hub_name 
+	   --print @hub_name
+	   --print '/*********\'
+	   
+	   EXECUTE [dbo].[dv_load_hub_table] @source_system, @source_schema, @source_table, @hub_database, @hub_name
 	   FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name  
 END   
 
@@ -203,9 +204,9 @@ DEALLOCATE hub_cursor
 
 /*****************************************************************************************************************/
 SET @_Step = 'Load Link Tables'
-print ''
-print 'Load Link Tables'
-print '----------------'
+--print ''
+--print 'Load Link Tables'
+--print '----------------'
 declare @link_database			varchar(128)
        ,@link_name				varchar(128)
 
@@ -221,8 +222,8 @@ FETCH NEXT FROM link_cursor INTO @link_database, @link_name
 WHILE @@FETCH_STATUS = 0   
 BEGIN   
        SET @_Step = 'Load Link: ' + @link_name
-	   print @link_name
-	   print '/*********\'
+	   --print @link_name
+	   --print '/*********\'
 	   EXECUTE [dbo].[dv_load_link_table] @source_system, @source_schema, @source_table, @link_database, @link_name 
 	   FETCH NEXT FROM link_cursor INTO @link_database, @link_name  
 END   
@@ -233,11 +234,10 @@ DEALLOCATE link_cursor
 
 /*****************************************************************************************************************/
 SET @_Step = 'Load Sat Tables for: ' + @source_database + ' ' + @source_schema + ' ' + @source_table
-print ''
-print 'Load Sat Tables'
-print '----------------'
-print @_Step
-print '/*********\'
+--print ''
+--print 'Load Sat Tables'
+--print '----------------'
+--print '/*********\'
 EXECUTE [dv_load_sats_for_source_table] @source_system, @source_schema, @source_table
 /*--------------------------------------------------------------------------------------------------------------*/
 

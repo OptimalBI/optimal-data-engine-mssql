@@ -23,4 +23,3 @@ and object_type = @object_type
 and object_column_type = 'Object_Key'
 
 )
-

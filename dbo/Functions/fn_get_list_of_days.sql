@@ -22,6 +22,3 @@ from (select dateadd(day,-(a.a + (10 * b.a) + (100 * c.a) + (1000 * d.a) + (1000
 ) a
 where a.Date > dateadd(day, -1, @start_date) 
 )
-
-
-
