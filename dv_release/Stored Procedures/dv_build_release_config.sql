@@ -16,7 +16,7 @@ insert @IncludeTables
 SELECT dv_schema_name	
       ,dv_table_name	
 	  ,dv_load_order
-FROM [dv_release].[fn_ConfigTableList] ()
+FROM [dv_release].[fn_config_table_list] ()
 
 
 DECLARE

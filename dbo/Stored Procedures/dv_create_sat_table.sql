@@ -141,23 +141,23 @@ SET @_Step = 'Get Defaults'
 -- System Wide Defaults
 select
 -- Global Defaults
- @def_global_lowdate				= cast([dbo].[fn_GetDefaultValue] ('LowDate','Global')				as datetime)			
-,@def_global_highdate				= cast([dbo].[fn_GetDefaultValue] ('HighDate','Global')				as datetime)	
-,@def_global_default_load_date_time	= cast([dbo].[fn_GetDefaultValue] ('DefaultLoadDateTime','Global')	as varchar(128))
-,@def_global_failed_lookup_key		= cast([dbo].[fn_GetDefaultValue] ('FailedLookupKey', 'Global')     as integer)
+ @def_global_lowdate				= cast([dbo].[fn_get_default_value] ('LowDate','Global')				as datetime)			
+,@def_global_highdate				= cast([dbo].[fn_get_default_value] ('HighDate','Global')				as datetime)	
+,@def_global_default_load_date_time	= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')	as varchar(128))
+,@def_global_failed_lookup_key		= cast([dbo].[fn_get_default_value] ('FailedLookupKey', 'Global')     as integer)
 
 -- Hub Defaults								
-,@def_hub_prefix					= cast([dbo].[fn_GetDefaultValue] ('prefix','hub')					as varchar(128))	
-,@def_hub_schema					= cast([dbo].[fn_GetDefaultValue] ('schema','hub')					as varchar(128))	
-,@def_hub_filegroup					= cast([dbo].[fn_GetDefaultValue] ('filegroup','hub')				as varchar(128))	
+,@def_hub_prefix					= cast([dbo].[fn_get_default_value] ('prefix','hub')					as varchar(128))	
+,@def_hub_schema					= cast([dbo].[fn_get_default_value] ('schema','hub')					as varchar(128))	
+,@def_hub_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','hub')				as varchar(128))	
 -- Link Defaults																						
-,@def_link_prefix					= cast([dbo].[fn_GetDefaultValue] ('prefix','lnk')					as varchar(128))	
-,@def_link_schema					= cast([dbo].[fn_GetDefaultValue] ('schema','lnk')					as varchar(128))	
-,@def_link_filegroup				= cast([dbo].[fn_GetDefaultValue] ('filegroup','lnk')				as varchar(128))	
+,@def_link_prefix					= cast([dbo].[fn_get_default_value] ('prefix','lnk')					as varchar(128))	
+,@def_link_schema					= cast([dbo].[fn_get_default_value] ('schema','lnk')					as varchar(128))	
+,@def_link_filegroup				= cast([dbo].[fn_get_default_value] ('filegroup','lnk')				as varchar(128))	
 -- Sat Defaults																							
-,@def_sat_prefix					= cast([dbo].[fn_GetDefaultValue] ('prefix','sat')					as varchar(128))	
-,@def_sat_schema					= cast([dbo].[fn_GetDefaultValue] ('schema','sat')					as varchar(128))	
-,@def_sat_filegroup					= cast([dbo].[fn_GetDefaultValue] ('filegroup','sat')				as varchar(128))
+,@def_sat_prefix					= cast([dbo].[fn_get_default_value] ('prefix','sat')					as varchar(128))	
+,@def_sat_schema					= cast([dbo].[fn_get_default_value] ('schema','sat')					as varchar(128))	
+,@def_sat_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','sat')				as varchar(128))
 
 --Satellite Details
 select @sat_start_date_col = quotename(column_name)
@@ -187,10 +187,10 @@ and object_column_type = 'Tombstone_Indicator'
 select 	 @sat_database			= sat.[satellite_database]						
 		,@sat_schema			= coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')		
 		,@sat_table				= sat.[satellite_name]		
-		,@sat_surrogate_keyname	= [dbo].[fn_GetObjectName] (sat.[satellite_name],'SatSurrogate')		
+		,@sat_surrogate_keyname	= [dbo].[fn_get_object_name] (sat.[satellite_name],'SatSurrogate')		
 		,@sat_config_key		= sat.[satellite_key]		
 		,@sat_link_hub_flag		= sat.[link_hub_satellite_flag]		
-		,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_GetObjectName] (sat.[satellite_name], 'sat')))       
+		,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat')))       
 from [dbo].[dv_column] c
 inner join [dbo].[dv_satellite_column] sc
 on sc.column_key = c.column_key
@@ -222,7 +222,7 @@ select top 1 k.[column_name]
   on hc.column_key = c.column_key
   inner join [dbo].[dv_hub] h
   on s.[hub_key] = h.[hub_key]
-  cross apply [dbo].[fn_GetKeyDefinition] (h.hub_name, 'hub') k
+  cross apply [dbo].[fn_get_key_definition] (h.hub_name, 'hub') k
   where s.[satellite_key] = @sat_config_key
 else 
 insert @payload_columns
@@ -244,7 +244,7 @@ select top 1 k.[column_name]
   on hc.column_key = c.column_key
   inner join [dbo].[dv_link] l
   on s.[link_key] = l.[link_key]
-  cross apply [dbo].[fn_GetKeyDefinition] (l.link_name, 'lnk') k
+  cross apply [dbo].[fn_get_key_definition] (l.link_name, 'lnk') k
   where s.[satellite_key] = @sat_config_key
 
 select @hub_link_surrogate_key = [column_name] from @payload_columns

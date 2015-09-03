@@ -1,5 +1,5 @@
 ﻿CREATE 
-FUNCTION [dbo].[fn_GetObjectName] 
+FUNCTION [dbo].[fn_get_object_name] 
 (
 	@object_name varchar(256)
    ,@object_type varchar(50)   

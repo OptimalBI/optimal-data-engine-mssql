@@ -176,23 +176,23 @@ SET @_Step = 'Get Defaults'
 -- System Wide Defaults
 select
 -- Global Defaults
- @def_global_lowdate                            = cast([dbo].[fn_GetDefaultValue] ('LowDate','Global')                          as datetime)
-,@def_global_highdate                           = cast([dbo].[fn_GetDefaultValue] ('HighDate','Global')                         as datetime)
-,@def_global_default_load_date_time     = cast([dbo].[fn_GetDefaultValue] ('DefaultLoadDateTime','Global')      as varchar(128))
-,@def_global_failed_lookup_key          = cast([dbo].[fn_GetDefaultValue] ('FailedLookupKey', 'Global')     as integer)
+ @def_global_lowdate                            = cast([dbo].[fn_get_default_value] ('LowDate','Global')                          as datetime)
+,@def_global_highdate                           = cast([dbo].[fn_get_default_value] ('HighDate','Global')                         as datetime)
+,@def_global_default_load_date_time     = cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')      as varchar(128))
+,@def_global_failed_lookup_key          = cast([dbo].[fn_get_default_value] ('FailedLookupKey', 'Global')     as integer)
 
 -- Hub Defaults
-,@def_hub_prefix                                        = cast([dbo].[fn_GetDefaultValue] ('prefix','hub')                                      as varchar(128))
-,@def_hub_schema                                        = cast([dbo].[fn_GetDefaultValue] ('schema','hub')                                      as varchar(128))
-,@def_hub_filegroup                                     = cast([dbo].[fn_GetDefaultValue] ('filegroup','hub')                           as varchar(128))
+,@def_hub_prefix                                        = cast([dbo].[fn_get_default_value] ('prefix','hub')                                      as varchar(128))
+,@def_hub_schema                                        = cast([dbo].[fn_get_default_value] ('schema','hub')                                      as varchar(128))
+,@def_hub_filegroup                                     = cast([dbo].[fn_get_default_value] ('filegroup','hub')                           as varchar(128))
 -- Link Defaults
-,@def_link_prefix                                       = cast([dbo].[fn_GetDefaultValue] ('prefix','lnk')                                      as varchar(128))
-,@def_link_schema                                       = cast([dbo].[fn_GetDefaultValue] ('schema','lnk')                                      as varchar(128))
-,@def_link_filegroup                            = cast([dbo].[fn_GetDefaultValue] ('filegroup','lnk')                           as varchar(128))
+,@def_link_prefix                                       = cast([dbo].[fn_get_default_value] ('prefix','lnk')                                      as varchar(128))
+,@def_link_schema                                       = cast([dbo].[fn_get_default_value] ('schema','lnk')                                      as varchar(128))
+,@def_link_filegroup                            = cast([dbo].[fn_get_default_value] ('filegroup','lnk')                           as varchar(128))
 -- Sat Defaults
-,@def_sat_prefix                                        = cast([dbo].[fn_GetDefaultValue] ('prefix','sat')                                      as varchar(128))
-,@def_sat_schema                                        = cast([dbo].[fn_GetDefaultValue] ('schema','sat')                                      as varchar(128))
-,@def_sat_filegroup                                     = cast([dbo].[fn_GetDefaultValue] ('filegroup','sat')                           as varchar(128))
+,@def_sat_prefix                                        = cast([dbo].[fn_get_default_value] ('prefix','sat')                                      as varchar(128))
+,@def_sat_schema                                        = cast([dbo].[fn_get_default_value] ('schema','sat')                                      as varchar(128))
+,@def_sat_filegroup                                     = cast([dbo].[fn_get_default_value] ('filegroup','sat')                           as varchar(128))
 
 select @sat_start_date_col = quotename(column_name)
 from [dbo].[dv_default_column]
@@ -211,11 +211,11 @@ select   @source_system                         = s.[source_system_name]
         ,@source_database                       = s.[timevault_name]
                 ,@source_schema                         = t.[source_table_schema]
                 ,@source_table                          = t.[source_table_name]
-                ,@source_table_config_key       = t.[table_key]
+                ,@source_table_config_key       = t.[source_table_key]
                 ,@source_qualified_name         = quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
 from [dbo].[dv_source_system] s
 inner join [dbo].[dv_source_table] t
-on t.system_key = s.system_key
+on t.system_key = s.[source_system_key]
 where 1=1
 and s.[source_system_name]              = @vault_source_system_name
 and t.[source_table_schema]             = @vault_source_table_schema
@@ -228,22 +228,22 @@ select
           ,@sat_link_hub_flag = sat.[link_hub_satellite_flag]
 from [dbo].[dv_source_table] t
 inner join [dbo].[dv_column] c
-on c.table_key = t.table_key
+on c.table_key = t.[source_table_key]
 inner join [dbo].[dv_satellite_column] sc
 on sc.column_key = c.column_key
 inner join [dbo].[dv_satellite] sat
 on sat.satellite_key = sc.satellite_key
 where 1=1
-and t.table_key = @source_table_config_key
+and t.[source_table_key] = @source_table_config_key
 
 -- Owner Hub Table
 if @sat_link_hub_flag = 'H'
         select   @hub_database                  = h.[hub_database]
                 ,@hub_schema                    = coalesce([hub_schema], @def_hub_schema, 'dbo')
                         ,@hub_table                             = h.[hub_name]
-                        ,@hub_surrogate_keyname = [dbo].[fn_GetObjectName] ([dbo].[fn_GetObjectName] ([hub_name], 'hub'),'HubSurrogate')
+                        ,@hub_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
                         ,@hub_config_key                = h.[hub_key]
-                        ,@hub_qualified_name    = quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_GetObjectName] ([hub_name], 'hub')))
+                        ,@hub_qualified_name    = quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))
         from [dbo].[dv_satellite] s
         inner join [dbo].[dv_hub] h
         on s.hub_key = h.hub_key
@@ -256,9 +256,9 @@ begin
         select   @link_database                 = l.[link_database]
                 ,@link_schema                   = coalesce(l.[link_schema], @def_link_schema, 'dbo')
                         ,@link_table                    = l.[link_name]
-                        ,@link_surrogate_keyname = [dbo].[fn_GetObjectName] ([dbo].[fn_GetObjectName] ([link_name], 'lnk'),'LnkSurrogate')
+                        ,@link_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
                         ,@link_config_key               = l.[link_key]
-                        ,@link_qualified_name   = quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_GetObjectName] ([link_name], 'lnk')))
+                        ,@link_qualified_name   = quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([link_name], 'lnk')))
         from [dbo].[dv_satellite] s
         inner join [dbo].[dv_link] l
         on s.link_key = l.link_key
@@ -307,31 +307,9 @@ INTO @c_hub_key
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
- --   select  @wrk_link_joins += @c_hub_abbreviation + '.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(hkc.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
-        --from (
-        --select distinct
-        --    h.hub_name
-        --   ,hkc.[hub_key_column_name]
-        --   ,hkc.[hub_key_column_type]
-        --   ,hkc.hub_key_ordinal_position
-        --   ,c.[column_name]
-        --from [dbo].[dv_hub] h
-        --inner join [dbo].[dv_hub_key_column] hkc
-        --on h.hub_key = hkc.hub_key
-        --inner join [dbo].[dv_hub_column] hc
-        --on hc.hub_key_column_key = hkc.hub_key_column_key
-        --inner join [dbo].[dv_column] c
-        --on c.column_key = hc.column_key
-        --inner join [dbo].[dv_source_table] st
-        --on c.[table_key] = st.table_key
-        --where 1=1
-        --and h.hub_key = @c_hub_key
-        --and st.table_key = @source_table_config_key
-        --and c.discard_flag <> 1) hkc
-        --ORDER BY hkc.hub_key_ordinal_position
-
-        select  @wrk_hub_joins += quotename([dbo].[fn_GetObjectName] ([dbo].[fn_GetObjectName] ([hub_name], 'hub'),'HubSurrogate')) + ', '
-               ,@wrk_link_keys +=  ' tmp.' + quotename([dbo].[fn_GetObjectName] ([dbo].[fn_GetObjectName] ([hub_name], 'hub'),'HubSurrogate')) + ' = link.' + quotename([dbo].[fn_GetObjectName] ([dbo].[fn_GetObjectName] ([hub_name], 'hub'),'HubSurrogate')) + @crlf + ' AND '
+ 
+        select  @wrk_hub_joins += quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')) + ', '
+               ,@wrk_link_keys +=  ' tmp.' + quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')) + ' = link.' + quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')) + @crlf + ' AND '
                         from (
         select distinct
             h.hub_name
@@ -344,10 +322,10 @@ BEGIN
         inner join [dbo].[dv_column] c
         on c.column_key = hc.column_key
         inner join [dbo].[dv_source_table] st
-        on c.[table_key] = st.table_key
+        on c.[table_key] = st.[source_table_key]
         where 1=1
         and h.hub_key = @c_hub_key
-        and st.table_key = @source_table_config_key
+        and st.[source_table_key] = @source_table_config_key
         and c.discard_flag <> 1) hkc
         ORDER BY hkc.hub_key_ordinal_position
         --select @surrogate_key_match = left(@sql, len(@sql) - 4)
@@ -372,9 +350,9 @@ end
 select @source_load_date_time = [column_name]
 from [dbo].[dv_source_table] st
 inner join [dbo].[dv_column] c
-on st.table_key = c.table_key
+on st.[source_table_key] = c.table_key
 where 1=1
-and st.[table_key] = @source_table_config_key
+and st.[source_table_key] = @source_table_config_key
 and c.[is_source_date] = 1
 --NB do not check Discard Flag here as the Date Column may not be included in the Sat.
 if @@rowcount > 1 RAISERROR ('Source Table has Multiple Source Dates Defined',16,1);
@@ -415,14 +393,14 @@ begin
         inner join [dbo].[dv_column] c
         on c.column_key = hc.column_key
         inner join [dbo].[dv_source_table] st
-        on c.[table_key] = st.table_key
+        on c.[table_key] = st.[source_table_key]
         where 1=1
         and h.hub_key = @hub_config_key
-        and st.table_key = @source_table_config_key
+        and st.[source_table_key] = @source_table_config_key
         and c.discard_flag <> 1
         ORDER BY hkc.hub_key_ordinal_position
         select @surrogate_key_match =  left(@sql, len(@sql) - 4)
-        select '@surrogate_key_match', @surrogate_key_match
+        --select '@surrogate_key_match', @surrogate_key_match
 end
 -- Compile the SQL
 --SQL to do the look up the hub keys that make up the link
@@ -445,7 +423,7 @@ IF @_JournalOnOff = 'ON'
         SET @_ProgressText += @SQL
 SET @ParmDefinition = N'@insertcount int OUTPUT';
 EXECUTE sp_executesql @SQL, @ParmDefinition, @insertcount = @insert_count OUTPUT;
-print @SQL  --*******************************************************************************************************************
+--print @SQL  
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE

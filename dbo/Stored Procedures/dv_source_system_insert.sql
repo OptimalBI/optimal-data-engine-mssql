@@ -19,9 +19,9 @@ AS
 	SELECT @source_system_name, @timevault_name, @release_key
 	
 	-- Begin Return Select <- do not remove
-	SELECT [system_key], [source_system_name], [timevault_name],[release_key]
+	SELECT [source_system_key], [source_system_name], [timevault_name],[release_key]
 	FROM   [dbo].[dv_source_system]
-	WHERE  [system_key] = SCOPE_IDENTITY()
+	WHERE  [source_system_key] = SCOPE_IDENTITY()
 	-- End Return Select <- do not remove
                
 	COMMIT

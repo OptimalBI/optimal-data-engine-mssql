@@ -10,12 +10,12 @@ AS
 
 	UPDATE [dbo].[dv_source_system]
 	SET    [source_system_name] = @source_system_name, [timevault_name] = @timevault_name
-	WHERE  [system_key] = @system_key
+	WHERE  [source_system_key] = @system_key
 	
 	-- Begin Return Select <- do not remove
-	SELECT [system_key], [source_system_name], [timevault_name]
+	SELECT [source_system_key], [source_system_name], [timevault_name]
 	FROM   [dbo].[dv_source_system]
-	WHERE  [system_key] = @system_key	
+	WHERE  [source_system_key] = @system_key	
 	-- End Return Select <- do not remove
 
 	COMMIT

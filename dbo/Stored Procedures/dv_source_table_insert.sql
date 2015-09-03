@@ -21,9 +21,9 @@ AS
 	SELECT @system_key, @source_table_schema, @source_table_name, @source_table_load_type, @release_key 
 	
 	-- Begin Return Select <- do not remove
-	SELECT [table_key], [system_key], [source_table_schema], [source_table_name], [source_table_load_type],[release_key]
+	SELECT [source_table_key], [system_key], [source_table_schema], [source_table_name], [source_table_load_type],[release_key]
 	FROM   [dbo].[dv_source_table]
-	WHERE  [table_key] = SCOPE_IDENTITY()
+	WHERE  [source_table_key] = SCOPE_IDENTITY()
 	-- End Return Select <- do not remove
                
 	COMMIT

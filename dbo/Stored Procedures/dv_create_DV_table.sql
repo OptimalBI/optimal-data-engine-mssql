@@ -97,7 +97,7 @@ IF isnull(@recreate_flag, '') not in ('Y', 'N') RAISERROR('Valid values for recr
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults'
 
-select @varobject_name = [dbo].[fn_GetObjectName](@object_name, @object_type)
+select @varobject_name = [dbo].[fn_get_object_name](@object_name, @object_type)
 select @table_name = quotename(@object_database) + '.' + quotename (@object_schema) + '.' + quotename(@varobject_name)
 
 insert @default_columns	
@@ -132,11 +132,11 @@ select @SQL += 'CREATE TABLE ' + @table_name + '(' + @crlf + ' '
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Add the Columns'
 --1. Primary Key
-select @SQL = @SQL + column_name + dbo.fn_BuildColumnDefinition([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 0, 1) + @crlf + ',' 
-from fn_GetKeyDefinition(@object_name, @object_type)
+select @SQL = @SQL + column_name + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 0, 1) + @crlf + ',' 
+from [fn_get_key_definition](@object_name, @object_type)
 
 --Payload
-select @SQL = @SQL + column_name + ' ' + dbo.fn_BuildColumnDefinition([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
+select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
 from
 (select *
 from @default_columns
@@ -147,14 +147,14 @@ order by satellite_ordinal_position, column_name
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Add the Primary Key'
-select @pk_name = column_name from fn_GetKeyDefinition(@object_name, @object_type)
+select @pk_name = column_name from [fn_get_key_definition](@object_name, @object_type)
 select @SQL += 'PRIMARY KEY CLUSTERED (' + @pk_name + ') ON ' + quotename(@object_filegroup) + @crlf
 select @SQL += ') ON ' + quotename(@object_filegroup) + ';' + @crlf
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Table'
 IF @_JournalOnOff = 'ON'
 	SET @_ProgressText += @SQL
-print @SQL
+--print @SQL
 exec (@SQL)
 
 /*--------------------------------------------------------------------------------------------------------------*/
