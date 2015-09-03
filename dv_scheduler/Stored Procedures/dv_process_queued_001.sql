@@ -1,4 +1,5 @@
 ﻿
+
 CREATE PROCEDURE [dv_scheduler].[dv_process_queued_001]
 
 WITH EXECUTE AS OWNER
@@ -6,15 +7,21 @@ AS
 BEGIN
 SET NOCOUNT ON
 -- Declare Variables for use by the SP.
-DECLARE @task						nvarchar(512)
-       ,@message_type_name			nvarchar(512)
-	   ,@queue_name					nvarchar(512)
-	   ,@msg						xml
-	   ,@msgChar					nvarchar(200)
-	   ,@dialog_handle				uniqueidentifier
-	   ,@vault_source_system_name	nvarchar(50)
-	   ,@vault_source_table_schema	nvarchar(128)
-	   ,@vault_source_table_name	nvarchar(128)
+DECLARE @task							nvarchar(512)
+       ,@message_type_name				nvarchar(512)
+	   ,@queue_name						nvarchar(512)
+	   ,@msg							xml
+	   ,@msgChar						nvarchar(500)
+	   ,@sql							nvarchar(4000)
+	   ,@dialog_handle					uniqueidentifier
+	   ,@vault_source_system_name		nvarchar(50)
+	   ,@vault_source_timevault_name	nvarchar(50)
+	   ,@vault_source_table_schema		nvarchar(128)
+	   ,@vault_source_table_name		nvarchar(128)
+	   ,@vault_procedure_schema			nvarchar(128)
+	   ,@vault_procedure_name			nvarchar(128)
+	   ,@vault_runkey					varchar(20)
+	   ,@rowcount						int
 
 -- Set Constant Values
 
@@ -23,7 +30,7 @@ set @queue_name = 'dv_scheduler_m001' -- Change for each Reveiver Procedure
 -- Log4TSQL Journal Constants 
 DECLARE @dogenerateerror		bit		 = 0
 	   ,@dothrowerror			bit		 = 1
-
+	    
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
 DECLARE @SEVERITY_SEVERE        smallint = 2;
 DECLARE @SEVERITY_MAJOR         smallint = 4;
@@ -61,9 +68,6 @@ SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- l
 
 -- set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @queue_name                   : ' + COALESCE(@queue_name, '<NULL>')
-						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
-						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
 						+ @NEW_LINE
 
 BEGIN TRY
@@ -77,21 +81,54 @@ SET @_Step = 'Pull From the Queue';
 WAITFOR ( RECEIVE TOP (1) @dialog_handle		= conversation_handle
                         , @message_type_name	= message_type_name
 						, @msg					= convert(xml,message_body)
-FROM [dv_scheduler_q001])   -- Change for each Receiver Procedure
-                        , TIMEOUT 1000
-IF (@@ROWCOUNT > 0)
+FROM [dv_scheduler_q001]), TIMEOUT 1000   -- Change for each Reveiver Procedure
+                        
+select @rowcount = @@ROWCOUNT
+
+IF (@rowcount > 0)
+	END CONVERSATION @dialog_handle;
 	BEGIN
 	SET @_Step = 'Process the Message';	
-	SET @msgChar = cast(@msg as varchar(200))
+	SET @msgChar = cast(@msg as varchar(500))
 	IF @message_type_name = @queue_name
 		BEGIN
 		    SELECT
-				 @vault_source_system_name	= x.value('(/Request/SourceSystem)[1]','VARCHAR(50)')
-				,@vault_source_table_schema	= x.value('(/Request/SourceSchema)[1]','VARCHAR(128)')
-				,@vault_source_table_name	= x.value('(/Request/SourceTable)[1]','VARCHAR(128)')
+			     @vault_runkey			    = x.value('(/Request/RunKey)[1]'		,'VARCHAR(20)')
+				,@vault_source_system_name	= x.value('(/Request/SourceSystem)[1]'	,'VARCHAR(50)')
+				,@vault_source_table_schema	= x.value('(/Request/SourceSchema)[1]'	,'VARCHAR(128)')
+				,@vault_source_table_name	= x.value('(/Request/SourceTable)[1]'	,'VARCHAR(128)')
+				,@vault_procedure_schema	= x.value('(/Request/ProcSchema)[1]'	,'VARCHAR(128)')
+				,@vault_procedure_name		= x.value('(/Request/ProcName)[1]'		,'VARCHAR(128)')
 			FROM @msg.nodes('/Request') AS T(x);
+			
+			UPDATE [dv_scheduler].[dv_run_manifest]
+			SET [run_status] = 'Processing'
+               ,[row_count] = 0
+               ,[session_id] = @@SPID
+			WHERE [run_key] = cast(ltrim(rtrim(@vault_runkey)) as int)
+			  AND [source_system_name] = @vault_source_system_name
+			  AND [source_table_schema] = @vault_source_table_schema
+              AND [source_table_name] = @vault_source_table_name
 			WAITFOR DELAY '00:00:10'
+			if not (ltrim(rtrim(@vault_procedure_schema)) = '' or ltrim(rtrim(@vault_procedure_name)) = '')
+			    BEGIN
+				select @vault_source_timevault_name = [timevault_name] from [dbo].[dv_source_system] where [source_system_name] = @vault_source_system_name
+				SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault_name) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
+				print @_Step	
+				set @sql = 'EXEC ' + quotename(@vault_source_timevault_name) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name)
+				exec (@SQL)
+				END
+			SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
 			exec [dbo].[dv_load_source_table] @vault_source_system_name, @vault_source_table_schema, @vault_source_table_name
+			SET @_Step = 'Load Completed'
+			UPDATE [dv_scheduler].[dv_run_manifest]
+			SET [completed_datetime] = getdate()
+               ,[run_status] = 'Completed'
+               ,[row_count] = 0
+			WHERE [run_key] = cast(ltrim(rtrim(@vault_runkey)) as int)
+			  AND [source_system_name] = @vault_source_system_name
+			  AND [source_table_schema] = @vault_source_table_schema
+              AND [source_table_name] = @vault_source_table_name
 			--END CONVERSATION @dialog_handle;
 		END		
 	ELSE 
@@ -108,6 +145,7 @@ IF @@TRANCOUNT > 0 COMMIT TRAN;
 
 SET @_Message   = 'Completed Load of: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
 print @_Message
+
 END TRY
 BEGIN CATCH
 SET @_ErrorContext	= 'Failed Load of: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
@@ -117,7 +155,15 @@ OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transact
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
 	END
-	
+UPDATE [dv_scheduler].[dv_run_manifest]
+	SET [completed_datetime] = getdate()
+      ,[run_status] = 'Failed'
+      ,[row_count] = 0
+	WHERE [run_key] = cast(ltrim(rtrim(@vault_runkey)) as int)
+	  AND [source_system_name] = @vault_source_system_name
+	  AND [source_table_schema] = @vault_source_table_schema
+      AND [source_table_name] = @vault_source_table_name	
+
 EXEC log4.ExceptionHandler
 		  @ErrorContext  = @_ErrorContext
 		, @ErrorNumber   = @_Error OUT

@@ -155,7 +155,7 @@ select @SQL += ') ON ' + quotename(@object_filegroup) + ';' + @crlf
 SET @_Step = 'Create The Table'
 IF @_JournalOnOff = 'ON'
 	SET @_ProgressText += @SQL
-print @SQL
+--print @SQL
 exec (@SQL)
 
 /*--------------------------------------------------------------------------------------------------------------*/
