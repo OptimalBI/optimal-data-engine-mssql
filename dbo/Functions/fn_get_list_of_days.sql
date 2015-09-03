@@ -1,6 +1,4 @@
-﻿
-
-CREATE FUNCTION [dbo].[fn_get_list_of_days]
+﻿CREATE FUNCTION [dbo].[fn_get_list_of_days]
 -- Note that this function works in Local Server Time, as opposed to Offset time as used elsewhere.
 -- That is because this function is setting midnight, in User Terms (local).
 -- When joining against this function , with Offset columns, be sure to convert them to dateime2(7) to get the required result.

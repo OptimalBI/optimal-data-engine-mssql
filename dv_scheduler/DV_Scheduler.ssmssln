@@ -1,0 +1,17 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# SQL Server Management Studio Solution File, Format Version 12.00
+Project("{4F2E2C19-372F-40D8-9FA7-9D2138C6997A}") = "DV_Scheduler", "DV_Scheduler\DV_Scheduler.ssmssqlproj", "{2AFA1F7D-9D3B-4404-B61B-12A8FEF62CF8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Default|Default = Default|Default
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2AFA1F7D-9D3B-4404-B61B-12A8FEF62CF8}.Default|Default.ActiveCfg = Default
+		{BA76E7E0-B1DE-4505-9495-B9FF2A6C0DB7}.Default|Default.ActiveCfg = Default
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

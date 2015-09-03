@@ -11,4 +11,3 @@
     CONSTRAINT [FK_dv_source_table_hiearchy__source_table] FOREIGN KEY ([table_key]) REFERENCES [dbo].[dv_source_table] ([table_key]),
     CONSTRAINT [FK_dv_source_table_hiearchy_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key])
 );
-

@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROCEDURE [dbo].[dv_create_sat_table]
+﻿CREATE PROCEDURE [dbo].[dv_create_sat_table]
 (
   @vault_database                varchar(128)   = NULL
 , @vault_sat_name                varchar(128)   = NULL

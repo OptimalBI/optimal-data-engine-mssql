@@ -7,4 +7,3 @@
     [updated_datetime]   DATETIMEOFFSET (7) CONSTRAINT [DF__dv_run__updated___3A179ED3] DEFAULT (sysdatetimeoffset()) NOT NULL,
     CONSTRAINT [PK__dv_run__AEDC1D6EF837117B] PRIMARY KEY CLUSTERED ([run_key] ASC)
 );
-

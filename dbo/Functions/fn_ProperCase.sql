@@ -1,5 +1,4 @@
-﻿
-CREATE FUNCTION [dbo].[fn_ProperCase](@Text as varchar(1000))
+﻿CREATE FUNCTION [dbo].[fn_ProperCase](@Text as varchar(1000))
 returns varchar(1000)
 as
 begin

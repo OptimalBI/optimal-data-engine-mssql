@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_log].[dv_log_progress]
+﻿CREATE PROCEDURE [dv_log].[dv_log_progress]
 (
   @vault_object_type             varchar(50)    = NULL
 , @vault_object_name             varchar(128)   = NULL

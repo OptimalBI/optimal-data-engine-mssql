@@ -1,7 +1,4 @@
-﻿
-
-
-CREATE 
+﻿CREATE 
 --alter
 FUNCTION [dbo].[fn_BuildColumnDefinition] 
 (

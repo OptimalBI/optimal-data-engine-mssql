@@ -1,5 +1,4 @@
-﻿
-CREATE FUNCTION [dbo].[fn_GetKeyDefinition]
+﻿CREATE FUNCTION [dbo].[fn_GetKeyDefinition]
 (@object_name varchar(256)
 ,@object_type varchar(30)
 )

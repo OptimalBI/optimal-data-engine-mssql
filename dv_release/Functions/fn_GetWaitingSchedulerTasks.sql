@@ -1,5 +1,4 @@
-﻿
-CREATE FUNCTION [dv_release].[fn_GetWaitingSchedulerTasks]
+﻿CREATE FUNCTION [dv_release].[fn_GetWaitingSchedulerTasks]
 (@run_key int
 )
 RETURNS TABLE 

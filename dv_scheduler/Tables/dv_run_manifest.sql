@@ -4,6 +4,7 @@
     [source_system_name]     [sysname]          NOT NULL,
     [source_table_schema]    [sysname]          NOT NULL,
     [source_table_name]      [sysname]          NOT NULL,
+	[source_table_key] [int] NOT NULL,
     [source_table_load_type] VARCHAR (50)       NOT NULL,
     [source_procedure_name]  VARCHAR (128)      NULL,
     [priority]               VARCHAR (10)       NOT NULL,
@@ -15,4 +16,3 @@
     [session_id]             INT                NULL,
     CONSTRAINT [PK__dv_run_m__C9D207B6B86E4AF4] PRIMARY KEY CLUSTERED ([run_manifest_key] ASC)
 );
-

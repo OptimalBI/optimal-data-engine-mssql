@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_scheduler].[dv_process_queued_001]
+﻿CREATE PROCEDURE [dv_scheduler].[dv_process_queued_001]
 
 WITH EXECUTE AS OWNER
 AS

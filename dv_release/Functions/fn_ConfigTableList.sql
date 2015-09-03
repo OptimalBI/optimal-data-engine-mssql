@@ -1,8 +1,4 @@
-﻿
-
-
-
-CREATE FUNCTION [dv_release].[fn_ConfigTableList]()
+﻿CREATE FUNCTION [dv_release].[fn_ConfigTableList]()
 RETURNS TABLE 
 AS
 RETURN 

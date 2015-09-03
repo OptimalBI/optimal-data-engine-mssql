@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_release].[dv_change_object_release]
+﻿CREATE PROCEDURE [dv_release].[dv_change_object_release]
 (
   @vault_config_table		varchar(128)	= NULL
 , @vault_config_table_key   int				= NULL

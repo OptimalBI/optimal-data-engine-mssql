@@ -15,4 +15,3 @@
     CONSTRAINT [FK_dv_defaults_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),
     CONSTRAINT [Default_Type_Key] UNIQUE NONCLUSTERED ([default_type] ASC, [default_subtype] ASC)
 );
-

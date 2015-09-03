@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_release].[dv_build_release_config]
+﻿CREATE PROCEDURE [dv_release].[dv_build_release_config]
 (
   @vault_release_number			int			 = NULL
 , @vault_return_change_script	bit          = 0

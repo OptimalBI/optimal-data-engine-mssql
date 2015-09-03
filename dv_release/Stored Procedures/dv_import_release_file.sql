@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_release].[dv_import_release_file] 
+﻿CREATE PROCEDURE [dv_release].[dv_import_release_file] 
 (
   @vault_file_location			varchar(256)	=''
 , @vault_file_name				varchar(256)	=''
