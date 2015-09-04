@@ -15,12 +15,13 @@ DECLARE @task							nvarchar(512)
 	   ,@sql							nvarchar(4000)
 	   ,@dialog_handle					uniqueidentifier
 	   ,@vault_source_system_name		nvarchar(50)
-	   ,@vault_source_timevault_name	nvarchar(50)
+	   ,@vault_source_timevault			nvarchar(50)
 	   ,@vault_source_table_schema		nvarchar(128)
 	   ,@vault_source_table_name		nvarchar(128)
 	   ,@vault_procedure_schema			nvarchar(128)
 	   ,@vault_procedure_name			nvarchar(128)
 	   ,@vault_runkey					varchar(20)
+	   ,@vault_run_key					int
 	   ,@rowcount						int
 
 -- Set Constant Values
@@ -91,44 +92,33 @@ IF (@rowcount > 0)
 	SET @_Step = 'Process the Message';	
 	SET @msgChar = cast(@msg as varchar(500))
 	IF @message_type_name = @queue_name
-		BEGIN
+		BEGIN 
 		    SELECT
-			     @vault_runkey			    = x.value('(/Request/RunKey)[1]'		,'VARCHAR(20)')
-				,@vault_source_system_name	= x.value('(/Request/SourceSystem)[1]'	,'VARCHAR(50)')
-				,@vault_source_table_schema	= x.value('(/Request/SourceSchema)[1]'	,'VARCHAR(128)')
-				,@vault_source_table_name	= x.value('(/Request/SourceTable)[1]'	,'VARCHAR(128)')
-				,@vault_procedure_schema	= x.value('(/Request/ProcSchema)[1]'	,'VARCHAR(128)')
-				,@vault_procedure_name		= x.value('(/Request/ProcName)[1]'		,'VARCHAR(128)')
+			     @vault_runkey			    = x.value('(/Request/RunKey)[1]'			,'VARCHAR(20)')
+				,@vault_source_timevault	= x.value('(/Request/SourceTimeVault)[1]'	,'VARCHAR(50)')
+				,@vault_source_system_name	= x.value('(/Request/SourceSystem)[1]'		,'VARCHAR(50)')
+				,@vault_source_table_schema	= x.value('(/Request/SourceSchema)[1]'		,'VARCHAR(128)')
+				,@vault_source_table_name	= x.value('(/Request/SourceTable)[1]'		,'VARCHAR(128)')
+				,@vault_procedure_schema	= x.value('(/Request/ProcSchema)[1]'		,'VARCHAR(128)')
+				,@vault_procedure_name		= x.value('(/Request/ProcName)[1]'			,'VARCHAR(128)')
 			FROM @msg.nodes('/Request') AS T(x);
 			
-			UPDATE [dv_scheduler].[dv_run_manifest]
-			SET [run_status] = 'Processing'
-               ,[row_count] = 0
-               ,[session_id] = @@SPID
-			WHERE [run_key] = cast(ltrim(rtrim(@vault_runkey)) as int)
-			  AND [source_system_name] = @vault_source_system_name
-			  AND [source_table_schema] = @vault_source_table_schema
-              AND [source_table_name] = @vault_source_table_name
-			WAITFOR DELAY '00:00:10'
+			set @vault_run_key = cast(ltrim(rtrim(@vault_runkey)) as int)
+			EXECUTE[dv_scheduler].[dv_update_manifest_status] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Processing'
+
+			--WAITFOR DELAY '00:00:10'
 			if not (ltrim(rtrim(@vault_procedure_schema)) = '' or ltrim(rtrim(@vault_procedure_name)) = '')
 			    BEGIN
-				select @vault_source_timevault_name = [timevault_name] from [dbo].[dv_source_system] where [source_system_name] = @vault_source_system_name
-				SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault_name) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
+				SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
 				print @_Step	
-				set @sql = 'EXEC ' + quotename(@vault_source_timevault_name) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name)
+				set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name)
 				exec (@SQL)
 				END
 			SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
 			exec [dbo].[dv_load_source_table] @vault_source_system_name, @vault_source_table_schema, @vault_source_table_name
 			SET @_Step = 'Load Completed'
-			UPDATE [dv_scheduler].[dv_run_manifest]
-			SET [completed_datetime] = getdate()
-               ,[run_status] = 'Completed'
-               ,[row_count] = 0
-			WHERE [run_key] = cast(ltrim(rtrim(@vault_runkey)) as int)
-			  AND [source_system_name] = @vault_source_system_name
-			  AND [source_table_schema] = @vault_source_table_schema
-              AND [source_table_name] = @vault_source_table_name
+			EXECUTE[dv_scheduler].[dv_update_manifest_status] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Completed'
+
 			--END CONVERSATION @dialog_handle;
 		END		
 	ELSE 
@@ -155,14 +145,7 @@ OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transact
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
 	END
-UPDATE [dv_scheduler].[dv_run_manifest]
-	SET [completed_datetime] = getdate()
-      ,[run_status] = 'Failed'
-      ,[row_count] = 0
-	WHERE [run_key] = cast(ltrim(rtrim(@vault_runkey)) as int)
-	  AND [source_system_name] = @vault_source_system_name
-	  AND [source_table_schema] = @vault_source_table_schema
-      AND [source_table_name] = @vault_source_table_name	
+EXECUTE[dv_scheduler].[dv_update_manifest_status] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Failed'
 
 EXEC log4.ExceptionHandler
 		  @ErrorContext  = @_ErrorContext

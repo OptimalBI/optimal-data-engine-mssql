@@ -1,7 +1,8 @@
 ﻿CREATE TABLE [dv_scheduler].[dv_run_manifest] (
     [run_manifest_key]        INT                IDENTITY (1, 1) NOT NULL,
     [run_key]                 INT                NOT NULL,
-    [source_system_name]      [sysname]          NOT NULL,
+    [source_system_name]      VARCHAR (50)       NOT NULL,
+    [source_timevault]        VARCHAR (50)       NULL,
     [source_table_schema]     [sysname]          NOT NULL,
     [source_table_name]       [sysname]          NOT NULL,
     [source_table_load_type]  VARCHAR (50)       NOT NULL,
@@ -19,6 +20,8 @@
     CONSTRAINT [CK_dv_run_manifest__queue] CHECK ([queue]='001' OR [queue]='002'),
     CONSTRAINT [CK_dv_run_manifest__run_status] CHECK ([run_status]='Scheduled' OR [run_status]='Queued' OR [run_status]='Processing' OR [run_status]='Completed' OR [run_status]='Failed')
 );
+
+
 
 
 

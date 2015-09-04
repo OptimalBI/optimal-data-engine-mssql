@@ -1,4 +1,6 @@
 *.sqlproj
 *.dbmdl
+*.sln
+*.user
 bin/
 obj/
