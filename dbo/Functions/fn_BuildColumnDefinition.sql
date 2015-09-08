@@ -1,8 +1,4 @@
-﻿
-
-
-CREATE 
---alter
+﻿CREATE
 FUNCTION [dbo].[fn_BuildColumnDefinition] 
 (
 	@DataType varchar(50)
@@ -34,7 +30,7 @@ select @ResultVar = UPPER(@DataType)
                     + SPACE(16 - LEN(UPPER(@DataType)))
                     
 --FLOAT
-               WHEN  UPPER(@DataType) IN ('float', 'datetime2') --,'real')
+               WHEN  UPPER(@DataType) IN ('float', 'datetime2') 
                THEN
                     CASE
                       WHEN @precision = 53
@@ -42,7 +38,6 @@ select @ResultVar = UPPER(@DataType)
                            + SPACE(7)
                            + SPACE(16 - LEN(UPPER(@DataType)))
                       ELSE '('
-                           --+ CONVERT(VARCHAR,@precision)
 						   + CONVERT(VARCHAR,@scale)
                            + ') '
                            + SPACE(6 - LEN(CONVERT(VARCHAR,@precision)))
@@ -57,22 +52,11 @@ select @ResultVar = UPPER(@DataType)
                             + SPACE(6 - LEN(CONVERT(VARCHAR,@DataLength)))
                             + SPACE(7) + SPACE(16 - LEN(UPPER(@DataType)))
 
-                            --+ CASE
-                            --    WHEN isnull(@CollationName, '') = ''
-                            --    THEN ''
-                            --    ELSE ' COLLATE ' + @CollationName
-                            --  END
- 
                       ELSE '('
                            + CONVERT(VARCHAR,@DataLength)
                            + ') '
                            + SPACE(6 - LEN(CONVERT(VARCHAR,@DataLength)))
                            + SPACE(7) + SPACE(16 - LEN(UPPER(@DataType)))
-                           --+ CASE
-                           --     WHEN isnull(@CollationName, '') = ''
-                           --     THEN ''
-                           --     ELSE ' COLLATE ' + @CollationName
-                           --   END
  
                     END
 --NVARCHAR
@@ -83,23 +67,12 @@ select @ResultVar = UPPER(@DataType)
                            + SPACE(6 - LEN(CONVERT(VARCHAR,(@DataLength / 2))))
                            + SPACE(7)
                            + SPACE(16 - LEN(UPPER(@DataType)))
-                           --+ CASE
-                           --     WHEN isnull(@CollationName, '') = ''
-                           --     THEN ''
-                           --     ELSE ' COLLATE ' + @CollationName
-                           --   END
-  
                       ELSE '('
                            + CONVERT(VARCHAR,(@DataLength / 2))
                            + ') '
                            + SPACE(6 - LEN(CONVERT(VARCHAR,(@DataLength / 2))))
                            + SPACE(7)
                            + SPACE(16 - LEN(UPPER(@DataType)))
-                           --+ CASE
-                           --     WHEN isnull(@CollationName, '') = ''
-                           --     THEN ''
-                           --     ELSE ' COLLATE ' + @CollationName
-                           --   END
   
                     END
 --datetime

@@ -6,6 +6,7 @@
     [source_table_schema]     [sysname]          NOT NULL,
     [source_table_name]       [sysname]          NOT NULL,
     [source_table_load_type]  VARCHAR (50)       NOT NULL,
+	[source_table_key]        [int]              NOT NULL,
     [source_procedure_schema] VARCHAR (128)      NULL,
     [source_procedure_name]   VARCHAR (128)      NULL,
     [priority]                VARCHAR (10)       NOT NULL,
@@ -20,8 +21,3 @@
     CONSTRAINT [CK_dv_run_manifest__queue] CHECK ([queue]='001' OR [queue]='002'),
     CONSTRAINT [CK_dv_run_manifest__run_status] CHECK ([run_status]='Scheduled' OR [run_status]='Queued' OR [run_status]='Processing' OR [run_status]='Completed' OR [run_status]='Failed')
 );
-
-
-
-
-

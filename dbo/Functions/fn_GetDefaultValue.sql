@@ -1,5 +1,4 @@
-﻿
-CREATE 
+﻿CREATE 
 FUNCTION [dbo].[fn_GetDefaultValue] 
 (
 	@default_name varchar(50)

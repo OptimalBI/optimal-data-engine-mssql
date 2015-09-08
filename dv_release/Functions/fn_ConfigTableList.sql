@@ -1,8 +1,4 @@
-﻿
-
-
-
-CREATE FUNCTION [dv_release].[fn_ConfigTableList]()
+﻿CREATE FUNCTION [dv_release].[fn_ConfigTableList]()
 RETURNS TABLE 
 AS
 RETURN 
@@ -13,7 +9,7 @@ union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_source_table'				as sysname), dv_key_name = cast('table_key'					as sysname), dv_load_order = cast(40  as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_column'					as sysname), dv_key_name = cast('column_key'				as sysname), dv_load_order = cast(50  as int)
 union SELECT dv_schema_name = cast('dv_scheduler'	as sysname), dv_table_name = cast('dv_schedule'					as sysname), dv_key_name = cast('schedule_key'				as sysname), dv_load_order = cast(60  as int)
-union SELECT dv_schema_name = cast('dv_scheduler'	as sysname), dv_table_name = cast('dv_source_table_hiearchy'	as sysname), dv_key_name = cast('table_hiearchy_key'		as sysname), dv_load_order = cast(70  as int)
+union SELECT dv_schema_name = cast('dv_scheduler'	as sysname), dv_table_name = cast('dv_source_table_hierarchy'	as sysname), dv_key_name = cast('source_table_hiearchy_key'		as sysname), dv_load_order = cast(70  as int)
 union SELECT dv_schema_name = cast('dv_scheduler'	as sysname), dv_table_name = cast('dv_schedule_source_table'	as sysname), dv_key_name = cast('schedule_source_table_key'	as sysname), dv_load_order = cast(80  as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_column_relationship'		as sysname), dv_key_name = cast('column_relationship_key'	as sysname), dv_load_order = cast(90  as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_hub'						as sysname), dv_key_name = cast('hub_key'					as sysname), dv_load_order = cast(100 as int)

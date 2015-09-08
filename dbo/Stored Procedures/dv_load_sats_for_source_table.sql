@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[dv_load_sats_for_source_table]
+﻿CREATE PROCEDURE [dbo].[dv_load_sats_for_source_table]
 (
   @vault_source_system_name		varchar(128) = NULL
 , @vault_source_table_schema	varchar(128) = NULL
@@ -299,7 +298,7 @@ set @sql = @sql1 + @sql2
 SET @_Step = 'Load The Source into Sat(s)'
 IF @_JournalOnOff = 'ON'
 	SET @_ProgressText += @SQL
-print @SQL
+--print @SQL
 EXECUTE(@SQL);
 /*--------------------------------------------------------------------------------------------------------------*/
 

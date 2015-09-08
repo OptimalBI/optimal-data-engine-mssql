@@ -21,4 +21,3 @@
     [SessionLoginTime]  DATETIME       NULL,
     CONSTRAINT [PK_Exception] PRIMARY KEY NONCLUSTERED ([ExceptionId] ASC) WITH (FILLFACTOR = 100)
 );
-

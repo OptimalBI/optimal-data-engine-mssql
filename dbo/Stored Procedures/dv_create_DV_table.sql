@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[dv_create_DV_table]
+﻿CREATE PROCEDURE [dbo].[dv_create_DV_table]
 (
   @object_name                   varchar(128)   = NULL
 , @object_schema				 varchar(128)   = NULL

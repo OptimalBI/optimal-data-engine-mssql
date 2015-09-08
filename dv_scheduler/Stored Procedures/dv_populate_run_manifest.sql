@@ -1,26 +1,28 @@
-﻿CREATE PROCEDURE [dv_release].[dv_change_object_release]
+﻿CREATE PROCEDURE [dv_scheduler].[dv_populate_run_manifest]
 (
-  @vault_config_table		varchar(128)	= NULL
-, @vault_config_table_key   int				= NULL
-, @vault_old_release		int				= NULL
-, @vault_new_release		int				= NULL
-, @dogenerateerror			bit				= 0
-, @dothrowerror				bit				= 1
+	 @schedule_name		varchar(max)
+	,@run_key			int
+	,@DoGenerateError   bit          = 0
+	,@DoThrowError      bit			 = 1
 )
 AS
 BEGIN
-SET NOCOUNT ON
+SET NOCOUNT ON;
 
---declare @filegroup		varchar(256)
---declare @schema			varchar(256)
---declare @database		varchar(256)
---declare @table_name		varchar(256)
---declare @pk_name		varchar(256)
---declare @crlf			char(2) = CHAR(13) + CHAR(10)
-declare @SQL							nvarchar(max) = ''
-declare @new_release_key				int
-declare @old_release_key				int
-declare @vault_config_table_key_name	varchar(128)
+-- Internal use variables
+
+DECLARE
+    @vault_statement		nvarchar(max),
+	@vault_change_count		int,
+	@release_key			int,
+	@release_number			int,
+	@change_count			int = 0,
+	@currtable				SYSNAME,
+	@currschema				SYSNAME,
+	@dv_schema_name			sysname,
+	@dv_table_name			sysname,
+    @parm_definition		nvarchar(500),
+	@rc						int	
 
 -- Log4TSQL Journal Constants 
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
@@ -56,13 +58,11 @@ SET @_Severity          = @SEVERITY_INFORMATION;
 SET @_SprocStartTime    = sysdatetimeoffset();
 SET @_ProgressText      = '' 
 SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-
--- set the Parameters for logging:
+			
+	
+--set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_config_table           : ' + COALESCE(@vault_config_table, '<NULL>')
-						+ @NEW_LINE + '    @vault_config_table_key       : ' + COALESCE(cast(@vault_config_table_key as varchar(20)), '<NULL>')
-						+ @NEW_LINE + '    @vault_old_release            : ' + COALESCE(cast(@vault_old_release as varchar(20)), '<NULL>')
-						+ @NEW_LINE + '    @vault_new_release            : ' + COALESCE(cast(@vault_new_release as varchar(20)), '<NULL>')
+						+ @NEW_LINE + '    @schedule_name		         : ' + COALESCE(cast(@run_key as varchar(20)), '<NULL>')
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
 						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
 						+ @NEW_LINE
@@ -71,48 +71,34 @@ BEGIN TRY
 SET @_Step = 'Generate any required error';
 IF @DoGenerateError = 1
    select 1 / 0
-SET @_Step = 'Validate inputs';
+SET @_Step = 'Validate Inputs';
 
-DECLARE @IncludeTables table(dv_schema_name sysname, dv_table_name sysname, dv_key_name sysname)
-insert @IncludeTables 
-SELECT dv_schema_name	
-      ,dv_table_name	
-	  ,dv_key_name
-FROM [dv_release].[fn_ConfigTableList] ()
+SET @_Step = 'Initialise Variables';
 
-IF (select count(*) from @IncludeTables where dv_table_name = @vault_config_table) <> 1
-			RAISERROR('Invalid Config Table Name Selected: %s', 16, 1, @vault_config_table);
+SET @_Step = 'Initialise Release';
 
-select @old_release_key = [release_key] from [dv_release].[dv_release_master] where [release_number] = @vault_old_release
-if @@rowcount <> 1 RAISERROR('Invalid Old Release Number Selected: %i', 16, 1, @vault_old_release)
-select @new_release_key = [release_key] from [dv_release].[dv_release_master] where [release_number] = @vault_new_release
-if @@rowcount <> 1 RAISERROR('Invalid New Release Number Selected: %i', 16, 1, @vault_new_release)
+
+-- insert all tables to be run into the dv_run_manifest table
+insert into dv_scheduler.dv_run_manifest (run_key, source_system_name, source_timevault, source_table_schema, source_table_name, source_table_key, source_table_load_type, source_procedure_schema, source_procedure_name, priority, queue)
+select @run_key as run_key, src_system.source_system_name, src_system.timevault_name, src_table.source_table_schema, src_table.source_table_name, src_table.table_key, schd_src_table.source_table_load_type, src_table.source_procedure_schema, src_table.source_procedure_name, schd_src_table.priority, schd_src_table.queue
+from dv_scheduler.dv_schedule as schd
+inner join dv_scheduler.dv_schedule_source_table as schd_src_table
+on schd.schedule_key = schd_src_table.schedule_key
+inner join dbo.dv_source_table as src_table
+on schd_src_table.source_table_key = src_table.table_key
+inner join dbo.dv_source_system as src_system
+on src_table.system_key = src_system.system_key
+where upper(schedule_name) in (select replace(Item,' ','') from dbo.fn_split_strings(upper(@schedule_name),','));
+
+
 /*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Get Required Parameters'
-
-select @vault_config_table_key_name = dv_key_name from @IncludeTables where dv_table_name = @vault_config_table
-set @SQL = 'UPDATE [dbo].#config_table# SET [release_key] = #new_release_key# WHERE [release_key] = #old_release_key# and #vault_config_table_key_name# = #vault_config_table_key#'
-set @SQL = replace(@SQL, '#config_table#', quotename(@vault_config_table))
-set @SQL = replace(@SQL, '#new_release_key#', format(@new_release_key, '000000000'))
-set @SQL = replace(@SQL, '#old_release_key#', format(@old_release_key, '000000000'))
-set @SQL = replace(@SQL, '#vault_config_table_key_name#', @vault_config_table_key_name)
-set @SQL = replace(@SQL, '#vault_config_table_key#', format(@vault_config_table_key, '000000000'))
-/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Move the Object to the New Release'
---print @SQL
-exec (@SQL)
-/*--------------------------------------------------------------------------------------------------------------*/
-
-SET @_ProgressText  = @_ProgressText + @NEW_LINE
-				+ 'Step: [' + @_Step + '] completed ' 
-
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Successfully Moved ' + @vault_config_table + '(' +  format(@vault_config_table_key, '00000000') + ')' 
+SET @_Message   = 'Successfully Applied Release: ' + cast(@run_key as varchar(20))
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Move ' + @vault_config_table + '(' +  format(@vault_config_table_key, '00000000') + ')'
+SET @_ErrorContext	= 'Failed to Apply Release: ' + cast(@run_key as varchar(20)) 
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN

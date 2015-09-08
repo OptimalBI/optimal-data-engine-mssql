@@ -1,6 +1,4 @@
-﻿
-
-/*************************************************************************************************/
+﻿/*************************************************************************************************/
 --</MaintenanceHeader>
 
 CREATE PROCEDURE [log4].[JournalReader]
@@ -206,4 +204,3 @@ OnComplete:
 END
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Returns all Journal entries matching the specified search criteria', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'PROCEDURE', @level1name = N'JournalReader';
-

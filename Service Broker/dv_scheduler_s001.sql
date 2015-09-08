@@ -2,4 +2,3 @@
     AUTHORIZATION [dbo]
     ON QUEUE [dbo].[dv_scheduler_q001]
     ([dv_scheduler_c001]);
-

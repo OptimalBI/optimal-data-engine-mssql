@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[dv_create_hub_table]
+﻿CREATE PROCEDURE [dbo].[dv_create_hub_table]
 (
   @vault_database			varchar(128)	= NULL
 , @vault_hub_name			varchar(128)	= NULL

@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[dv_load_source_table]
+﻿CREATE PROCEDURE [dbo].[dv_load_source_table]
 (
   @vault_source_system_name		varchar(128) = NULL
 , @vault_source_table_schema	varchar(128) = NULL

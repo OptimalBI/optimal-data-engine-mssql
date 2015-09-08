@@ -1,5 +1,4 @@
-﻿ 
-CREATE FUNCTION dbo.fn_split_strings
+﻿CREATE FUNCTION dbo.fn_split_strings
 (
    @List NVARCHAR(MAX),
    @Delimiter NVARCHAR(255)

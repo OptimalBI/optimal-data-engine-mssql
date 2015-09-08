@@ -11,4 +11,3 @@
     CONSTRAINT [FK_dv_column_relationship_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),
     CONSTRAINT [dv_column_relationship_unique] UNIQUE NONCLUSTERED ([primary_column_key] ASC, [foreign_column_key] ASC)
 );
-

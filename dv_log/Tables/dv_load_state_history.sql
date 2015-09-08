@@ -12,4 +12,3 @@
     [updated_by]       VARCHAR (30)       NULL,
     [update_date_time] DATETIMEOFFSET (7) NULL
 );
-

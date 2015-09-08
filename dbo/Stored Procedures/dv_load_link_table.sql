@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[dv_load_link_table]
+﻿CREATE PROCEDURE [dbo].[dv_load_link_table]
 (
   @vault_source_system_name             varchar(256)    = NULL
 , @vault_source_table_schema    varchar(256)    = NULL
@@ -308,29 +307,7 @@ INTO @c_hub_key
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
- --   select  @wrk_link_joins += @c_hub_abbreviation + '.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(hkc.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
-        --from (
-        --select distinct
-        --    h.hub_name
-        --   ,hkc.[hub_key_column_name]
-        --   ,hkc.[hub_key_column_type]
-        --   ,hkc.hub_key_ordinal_position
-        --   ,c.[column_name]
-        --from [dbo].[dv_hub] h
-        --inner join [dbo].[dv_hub_key_column] hkc
-        --on h.hub_key = hkc.hub_key
-        --inner join [dbo].[dv_hub_column] hc
-        --on hc.hub_key_column_key = hkc.hub_key_column_key
-        --inner join [dbo].[dv_column] c
-        --on c.column_key = hc.column_key
-        --inner join [dbo].[dv_source_table] st
-        --on c.[table_key] = st.table_key
-        --where 1=1
-        --and h.hub_key = @c_hub_key
-        --and st.table_key = @source_table_config_key
-        --and c.discard_flag <> 1) hkc
-        --ORDER BY hkc.hub_key_ordinal_position
-
+ 
         select  @wrk_hub_joins += quotename([dbo].[fn_GetObjectName] ([dbo].[fn_GetObjectName] ([hub_name], 'hub'),'HubSurrogate')) + ', '
                ,@wrk_link_keys +=  ' tmp.' + quotename([dbo].[fn_GetObjectName] ([dbo].[fn_GetObjectName] ([hub_name], 'hub'),'HubSurrogate')) + ' = link.' + quotename([dbo].[fn_GetObjectName] ([dbo].[fn_GetObjectName] ([hub_name], 'hub'),'HubSurrogate')) + @crlf + ' AND '
                         from (
@@ -423,7 +400,7 @@ begin
         and c.discard_flag <> 1
         ORDER BY hkc.hub_key_ordinal_position
         select @surrogate_key_match =  left(@sql, len(@sql) - 4)
-        select '@surrogate_key_match', @surrogate_key_match
+        --select '@surrogate_key_match', @surrogate_key_match
 end
 -- Compile the SQL
 --SQL to do the look up the hub keys that make up the link
@@ -446,7 +423,7 @@ IF @_JournalOnOff = 'ON'
         SET @_ProgressText += @SQL
 SET @ParmDefinition = N'@insertcount int OUTPUT';
 EXECUTE sp_executesql @SQL, @ParmDefinition, @insertcount = @insert_count OUTPUT;
-print @SQL  --*******************************************************************************************************************
+--print @SQL  
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE

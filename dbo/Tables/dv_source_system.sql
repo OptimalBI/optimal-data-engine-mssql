@@ -10,4 +10,3 @@
     CONSTRAINT [FK_dv_source_system_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),
     CONSTRAINT [source_system_unique] UNIQUE NONCLUSTERED ([source_system_name] ASC)
 );
-

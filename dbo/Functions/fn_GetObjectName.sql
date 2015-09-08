@@ -1,6 +1,4 @@
-﻿
-
-CREATE 
+﻿CREATE 
 FUNCTION [dbo].[fn_GetObjectName] 
 (
 	@object_name varchar(256)

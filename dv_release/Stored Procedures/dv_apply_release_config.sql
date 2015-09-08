@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_release].[dv_apply_release_config]
+﻿CREATE PROCEDURE [dv_release].[dv_apply_release_config]
 (
   @vault_release_number			int			 = NULL
 , @DoGenerateError              bit          = 0

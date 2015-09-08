@@ -1,3 +1,4 @@
 ﻿CREATE LOGIN [SBLogin]
-    WITH PASSWORD = N'ytdDglyy{t_Dwxtpkw0iod+TmsFT7_&#$!~<fhr:x:6Rbahk', SID = 0x9C6193190B47B8439A634EA31E0E8FC6, DEFAULT_LANGUAGE = [us_english], CHECK_POLICY = OFF;
+    WITH PASSWORD = N'}wzgIeqrVgpzKbkz^_edutekmsFT7_&#$!~<c5eCo2dq>f{.', DEFAULT_LANGUAGE = [us_english], CHECK_POLICY = OFF;
+
 

@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[dv_create_link_table]
+﻿CREATE PROCEDURE [dbo].[dv_create_link_table]
 (
   @vault_database				varchar(256)	= NULL
 , @vault_link_name				varchar(256)	= NULL
