@@ -77,6 +77,11 @@ SET @_Step = 'Validate Inputs';
 if not exists (select 1 from [dv_scheduler].[dv_run] where [run_key] = @vault_run_key and [run_status] = 'Scheduled')
    raiserror('Run must be "Scheduled" to be able to Start it', 16, 1)
 
+if (SELECT count(*) from [dv_scheduler].[fn_CheckManifestForCircularReference] (@vault_run_key)) <> 0
+	begin
+	select @_Message = 'Run Key: ' + cast(@vault_run_key as varchar(20)) + ' Contains Circular References. Please Investigate'
+    RAISERROR(@_Message, 16, 1);
+	end
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults';
 select @delay_in_seconds = cast([dbo].[fn_GetDefaultValue] ('PollDelayInSeconds','Scheduler') as int)
@@ -191,7 +196,7 @@ SET @_Step = 'Queue as Set of Tasks'
 			MESSAGE TYPE dv_scheduler_m002 (@Msg)
 	END
 	END CONVERSATION @SBDialog
-	EXECUTE[dv_scheduler].[dv_update_manifest_status] @run_key ,@source_system_name ,@source_table_schema ,@source_table_name ,'Queued'
+	EXECUTE[dv_scheduler].[dv_manifest_status_update] @run_key ,@source_system_name ,@source_table_schema ,@source_table_name ,'Queued'
 	COMMIT
 	FETCH NEXT FROM manifest_cursor 
 	  INTO @source_system_name
@@ -220,8 +225,7 @@ SET @_Message   = 'Successfully Completed Schedule with Run_Key: ' + cast(@run_k
 END TRY
 BEGIN CATCH
 SET @_ErrorContext	= 'Failed to Complete Schedule with Run_Key: ' + cast(@run_key as varchar(20))
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
+IF (XACT_STATE() = -1) OR (@@TRANCOUNT > 0) -- undocumented uncommitable transaction
 	BEGIN
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';

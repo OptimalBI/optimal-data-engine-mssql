@@ -1,8 +1,8 @@
 ﻿
-CREATE PROCEDURE [dv_scheduler].[dv_populate_run_manifest]
+
+CREATE PROCEDURE [dv_scheduler].[dv_process_schedule]
 (
 	@schedule_list		varchar(4000)
-   ,@vault_run_key		int				output 
    ,@DoGenerateError	bit				= 0
    ,@DoThrowError		bit				= 1
 )
@@ -12,8 +12,7 @@ SET NOCOUNT ON;
 
 -- Internal use variables
 
-DECLARE		@RC					int;
-DECLARE		@run_key			int;
+DECLARE		@vault_run_key			int = 0;
 DECLARE     @schedule_list_var	varchar(4000)
 
 -- Log4TSQL Journal Constants 
@@ -59,7 +58,6 @@ SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_Spr
 						+ @NEW_LINE + '    @DoThrowError         : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
 						+ @NEW_LINE
 
-BEGIN TRANSACTION
 BEGIN TRY
 SET @_Step = 'Generate any required error';
 IF @DoGenerateError = 1
@@ -68,26 +66,20 @@ IF @DoGenerateError = 1
 SET @_Step = 'Initialise Variables';
 select @schedule_list_var = replace(@schedule_list, ' ','')
 
-SET @_Step = 'insert one row for the run into dv_run table'
-EXECUTE @run_key = [dv_scheduler].[dv_run_insert] @schedule_list_var 
+SET @_Step = 'Build a Manifest for the Schedule'
+EXECUTE [dv_scheduler].[dv_populate_run_manifest] @schedule_list_var, @vault_run_key output
 
-SET @_Step = 'execute dv_populate_manifest to insert data in dv_run_manifest table'
-EXECUTE @RC = [dv_scheduler].[dv_populate_manifest] @schedule_list_var, @run_key
+SET @_Step = 'Execute the Manifest'
+EXECUTE [dv_scheduler].[dv_process_manifest] @vault_run_key
   
-SET @_Step = 'execute dv_populate_run_manifest_hierarchy to insert data in dv_run_manifest_hierarchy table'
-EXECUTE @RC = [dv_scheduler].[dv_populate_manifest_hierarchy] @run_key
-
--- Return the Run Key to the controlling Proc.
-select @vault_run_key = @run_key
-
 /*--------------------------------------------------------------------------------------------------------------*/
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Successfully Built Manifest Schedule: ' + @schedule_list
+SET @_Message   = 'Successfully Processed Schedule: ' + @schedule_list
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Build Manifest Schedule: ' + @schedule_list 
+SET @_ErrorContext	= 'Failed to Process Schedule: ' + @schedule_list 
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 ) --AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 IF @@TRANCOUNT > 0

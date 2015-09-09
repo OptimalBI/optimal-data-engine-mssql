@@ -102,7 +102,7 @@ IF (@rowcount > 0)
 			FROM @msg.nodes('/Request') AS T(x);
 			
 			set @vault_run_key = cast(ltrim(rtrim(@vault_runkey)) as int)
-			EXECUTE[dv_scheduler].[dv_update_manifest_status] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Processing'
+			EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Processing'
 
 			--WAITFOR DELAY '00:00:10'
 			if not (ltrim(rtrim(@vault_procedure_schema)) = '' or ltrim(rtrim(@vault_procedure_name)) = '')
@@ -115,7 +115,7 @@ IF (@rowcount > 0)
 			SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
 			exec [dbo].[dv_load_source_table] @vault_source_system_name, @vault_source_table_schema, @vault_source_table_name
 			SET @_Step = 'Load Completed'
-			EXECUTE[dv_scheduler].[dv_update_manifest_status] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Completed'
+			EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Completed'
 
 			--END CONVERSATION @dialog_handle;
 		END		
@@ -143,7 +143,7 @@ OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transact
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
 	END
-EXECUTE[dv_scheduler].[dv_update_manifest_status] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Failed'
+EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Failed'
 
 EXEC log4.ExceptionHandler
 		  @ErrorContext  = @_ErrorContext

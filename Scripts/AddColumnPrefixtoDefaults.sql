@@ -30,6 +30,3 @@ MERGE INTO [dbo].[dv_default_column] AS trgt USING	(VALUES (1,'Hub','Object_Key'
 	
 	;
 SET IDENTITY_INSERT [dbo].[dv_default_column] OFF;
-
-
-

@@ -1,10 +1,10 @@
 ﻿
-CREATE PROCEDURE [dv_scheduler].[dv_populate_run_manifest]
+CREATE PROCEDURE [dv_scheduler].[dv_populate_manifest]
 (
-	@schedule_list		varchar(4000)
-   ,@vault_run_key		int				output 
-   ,@DoGenerateError	bit				= 0
-   ,@DoThrowError		bit				= 1
+	 @schedule_name		varchar(4000)
+	,@run_key			int
+	,@DoGenerateError   bit          = 0
+	,@DoThrowError      bit			 = 1
 )
 AS
 BEGIN
@@ -12,9 +12,18 @@ SET NOCOUNT ON;
 
 -- Internal use variables
 
-DECLARE		@RC					int;
-DECLARE		@run_key			int;
-DECLARE     @schedule_list_var	varchar(4000)
+DECLARE
+    @vault_statement		nvarchar(max),
+	@vault_change_count		int,
+	@release_key			int,
+	@release_number			int,
+	@change_count			int = 0,
+	@currtable				SYSNAME,
+	@currschema				SYSNAME,
+	@dv_schema_name			sysname,
+	@dv_table_name			sysname,
+    @parm_definition		nvarchar(500),
+	@rc						int	
 
 -- Log4TSQL Journal Constants 
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
@@ -54,43 +63,46 @@ SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- l
 	
 --set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @schedule_list        : ' + COALESCE(@schedule_list, '<NULL>')
-						+ @NEW_LINE + '    @DoGenerateError      : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
-						+ @NEW_LINE + '    @DoThrowError         : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
+						+ @NEW_LINE + '    @schedule_name	: ' + COALESCE(@schedule_name					, '<NULL>')
+						+ @NEW_LINE + '    @run_key			: ' + COALESCE(CAST(@run_key as varchar(20))	, '<NULL>')
+						+ @NEW_LINE + '    @DoGenerateError : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
+						+ @NEW_LINE + '    @DoThrowError    : ' + COALESCE(CAST(@DoThrowError AS varchar)	, '<NULL>')
 						+ @NEW_LINE
-
 BEGIN TRANSACTION
 BEGIN TRY
 SET @_Step = 'Generate any required error';
 IF @DoGenerateError = 1
    select 1 / 0
+SET @_Step = 'Validate Inputs';
 
 SET @_Step = 'Initialise Variables';
-select @schedule_list_var = replace(@schedule_list, ' ','')
 
-SET @_Step = 'insert one row for the run into dv_run table'
-EXECUTE @run_key = [dv_scheduler].[dv_run_insert] @schedule_list_var 
+SET @_Step = 'Initialise Release';
 
-SET @_Step = 'execute dv_populate_manifest to insert data in dv_run_manifest table'
-EXECUTE @RC = [dv_scheduler].[dv_populate_manifest] @schedule_list_var, @run_key
-  
-SET @_Step = 'execute dv_populate_run_manifest_hierarchy to insert data in dv_run_manifest_hierarchy table'
-EXECUTE @RC = [dv_scheduler].[dv_populate_manifest_hierarchy] @run_key
 
--- Return the Run Key to the controlling Proc.
-select @vault_run_key = @run_key
+-- insert all tables to be run into the dv_run_manifest table
+insert into dv_scheduler.dv_run_manifest (run_key, source_system_name, source_timevault, source_table_schema, source_table_name, source_table_key, source_table_load_type, source_procedure_schema, source_procedure_name, priority, queue)
+select @run_key as run_key, src_system.source_system_name, src_system.timevault_name, src_table.source_table_schema, src_table.source_table_name, src_table.table_key, schd_src_table.source_table_load_type, src_table.source_procedure_schema, src_table.source_procedure_name, schd_src_table.priority, schd_src_table.queue
+from dv_scheduler.dv_schedule as schd
+inner join dv_scheduler.dv_schedule_source_table as schd_src_table
+on schd.schedule_key = schd_src_table.schedule_key
+inner join dbo.dv_source_table as src_table
+on schd_src_table.source_table_key = src_table.table_key
+inner join dbo.dv_source_system as src_system
+on src_table.system_key = src_system.system_key
+where upper(schedule_name) in (select replace(Item,' ','') from dbo.fn_split_strings(upper(@schedule_name),','));
+
 
 /*--------------------------------------------------------------------------------------------------------------*/
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Successfully Built Manifest Schedule: ' + @schedule_list
+SET @_Message   = 'Successfully Populated Manifest for Schedule: ' + @schedule_name
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Build Manifest Schedule: ' + @schedule_list 
+SET @_ErrorContext	= 'Failed to Populate Manifest for Schedule: ' + @schedule_name
 IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 ) --AND XACT_STATE() != 1) -- undocumented uncommitable transaction
-IF @@TRANCOUNT > 0
+OR (@@TRANCOUNT > 0) -- AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';

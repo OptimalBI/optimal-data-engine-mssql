@@ -6,7 +6,7 @@
     [source_table_schema]     [sysname]          NOT NULL,
     [source_table_name]       [sysname]          NOT NULL,
     [source_table_load_type]  VARCHAR (50)       NOT NULL,
-	[source_table_key]        [int]              NOT NULL,
+    [source_table_key]        INT                NOT NULL,
     [source_procedure_schema] VARCHAR (128)      NULL,
     [source_procedure_name]   VARCHAR (128)      NULL,
     [priority]                VARCHAR (10)       NOT NULL,
@@ -19,5 +19,7 @@
     CONSTRAINT [PK__dv_run_m__C9D207B6B86E4AF4] PRIMARY KEY CLUSTERED ([run_manifest_key] ASC),
     CONSTRAINT [CK_dv_run_manifest__priority] CHECK ([priority]='high' OR [priority]='low'),
     CONSTRAINT [CK_dv_run_manifest__queue] CHECK ([queue]='001' OR [queue]='002'),
-    CONSTRAINT [CK_dv_run_manifest__run_status] CHECK ([run_status]='Scheduled' OR [run_status]='Queued' OR [run_status]='Processing' OR [run_status]='Completed' OR [run_status]='Failed')
+    CONSTRAINT [CK_dv_run_manifest__run_status] CHECK ([run_status]='Scheduled' OR [run_status]='Queued' OR [run_status]='Processing' OR [run_status]='Completed' OR [run_status]='Failed'),
+    CONSTRAINT [FK_dv_run_manifest__dv_run] FOREIGN KEY ([run_key]) REFERENCES [dv_scheduler].[dv_run] ([run_key])
 );
+

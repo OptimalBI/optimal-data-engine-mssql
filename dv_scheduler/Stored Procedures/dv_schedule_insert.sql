@@ -15,22 +15,23 @@ AS
 	set @rc = @@rowcount
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
-
-	INSERT INTO [dv_scheduler].[dv_schedule]
-           ([schedule_name],[schedule_description],[schedule_frequency],[release_key])
-	SELECT @schedule_name, @schedule_description, @schedule_frequency, @release_key
-	
+    else
+	begin
+		INSERT INTO [dv_scheduler].[dv_schedule]
+			   ([schedule_name],[schedule_description],[schedule_frequency],[release_key])
+		SELECT @schedule_name, @schedule_description, @schedule_frequency, @release_key
+	end
 	-- Begin Return Select <- do not remove
-SELECT [schedule_key]
-      ,[schedule_name]
-      ,[schedule_description]
-      ,[schedule_frequency]
-      ,[release_key]
-      ,[version_number]
-      ,[updated_by]
-      ,[updated_datetime]
-  FROM [dv_scheduler].[dv_schedule]
-	WHERE  [schedule_key] = SCOPE_IDENTITY()
+		SELECT [schedule_key]
+			  ,[schedule_name]
+			  ,[schedule_description]
+			  ,[schedule_frequency]
+			  ,[release_key]
+			  ,[version_number]
+			  ,[updated_by]
+			  ,[updated_datetime]
+		  FROM [dv_scheduler].[dv_schedule]
+			WHERE  [schedule_key] = SCOPE_IDENTITY()
 	-- End Return Select <- do not remove
                
 	COMMIT
