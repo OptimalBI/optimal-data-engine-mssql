@@ -100,30 +100,41 @@ IF (@rowcount > 0)
 				,@vault_procedure_schema	= x.value('(/Request/ProcSchema)[1]'		,'VARCHAR(128)')
 				,@vault_procedure_name		= x.value('(/Request/ProcName)[1]'			,'VARCHAR(128)')
 			FROM @msg.nodes('/Request') AS T(x);
+	
+	
 			
 			set @vault_run_key = cast(ltrim(rtrim(@vault_runkey)) as int)
-			EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Processing'
+			SELECT 1
+			  FROM [dv_scheduler].[dv_run] r
+			  inner join [dv_scheduler].[dv_run_manifest] m
+			  on r.run_key = m.run_key
+			  where 1=1
+				and r.run_key = @vault_run_key
+				and m.source_system_name = @vault_source_system_name
+				and r.run_status = 'Started'
+				and m.run_status = 'Queued'
+			if @@rowcount > 0
+			BEGIN
+				EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Processing'
 
-			--WAITFOR DELAY '00:00:10'
-			if not (ltrim(rtrim(@vault_procedure_schema)) = '' or ltrim(rtrim(@vault_procedure_name)) = '')
-			    BEGIN
-				SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
-				print @_Step	
-				set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name)
-				exec (@SQL)
-				END
-			SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
-			exec [dbo].[dv_load_source_table] @vault_source_system_name, @vault_source_table_schema, @vault_source_table_name
-			SET @_Step = 'Load Completed'
-			EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Completed'
-
-			--END CONVERSATION @dialog_handle;
+				--WAITFOR DELAY '00:00:30'
+				if not (ltrim(rtrim(@vault_procedure_schema)) = '' or ltrim(rtrim(@vault_procedure_name)) = '')
+					BEGIN
+					SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
+					print @_Step	
+					set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name)
+					exec (@SQL)
+					END
+				SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
+				exec [dbo].[dv_load_source_table] @vault_source_system_name, @vault_source_table_schema, @vault_source_table_name
+				SET @_Step = 'Load Completed'
+				EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Completed'
+			END
 		END		
 	ELSE 
 		BEGIN		
 			set @_Message = 'Message ' + quotename(@message_type_name) +  'Received but not Processed on Queue: ' + quotename(@queue_name) + quotename(@msgChar)
 		    set @_ProgressText = @_ProgressText + @_Message + @NEW_LINE
-			--END CONVERSATION @dialog_handle;
 		END
 	END
 SET @_ProgressText  = @_ProgressText + @NEW_LINE
@@ -137,8 +148,7 @@ print @_Message
 END TRY
 BEGIN CATCH
 SET @_ErrorContext	= 'Failed Load of: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
+IF (XACT_STATE() = -1) OR (@@TRANCOUNT > 0)
 	BEGIN
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';

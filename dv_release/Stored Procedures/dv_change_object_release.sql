@@ -78,7 +78,7 @@ insert @IncludeTables
 SELECT dv_schema_name	
       ,dv_table_name	
 	  ,dv_key_name
-FROM [dv_release].[fn_ConfigTableList] ()
+FROM [dv_release].[fn_config_table_list] ()
 
 IF (select count(*) from @IncludeTables where dv_table_name = @vault_config_table) <> 1
 			RAISERROR('Invalid Config Table Name Selected: %s', 16, 1, @vault_config_table);

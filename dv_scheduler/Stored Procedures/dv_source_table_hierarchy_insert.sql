@@ -26,7 +26,7 @@ BEGIN
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 
-	select @source_table_qualified_name = quotename(@source_system_name) + '.' + quotename(@source_table_schema) + quotename(@source_table_name)
+	select @source_table_qualified_name = quotename(@source_system_name) + '.' + quotename(@source_table_schema) + '.' + quotename(@source_table_name)
 	select @source_table_key = [table_key] 
 	from [dbo].[dv_source_system] s
 	inner join [dbo].[dv_source_table] st
@@ -38,7 +38,7 @@ BEGIN
 	if @rc <> 1 
 		RAISERROR('Source Table %s Does Not Exist', 16, 1, @source_table_qualified_name)
 
-	select @prior_source_table_qualified_name = quotename(@prior_source_system_name) + '.' + quotename(@prior_source_table_schema) + quotename(@prior_source_table_name)
+	select @prior_source_table_qualified_name = quotename(@prior_source_system_name) + '.' + quotename(@prior_source_table_schema) + '.' + quotename(@prior_source_table_name)
 	select @prior_source_table_key = [table_key] 
 	from [dbo].[dv_source_system] s
 	inner join [dbo].[dv_source_table] st

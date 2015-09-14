@@ -67,17 +67,19 @@ SET @_Step = 'Initialise Variables';
 SET @_Step = 'Build the Hierarchy';
 ;with cte_manifest_current as
 (select src_table_hierarchy.source_table_hierarchy_key,run_mani.run_manifest_key 
-from dv_scheduler.dv_source_table_hierarchy src_table_hierarchy
+from dv_scheduler.vw_dv_source_table_hierarchy_current src_table_hierarchy
 inner join dv_scheduler.dv_run_manifest run_mani
 on src_table_hierarchy.source_table_key = run_mani.source_table_key
-where run_mani.run_key = @run_key
+where run_mani.run_key = @run_key 
+--and src_table_hierarchy.is_deleted <> 1
 ),
 cte_manifest_prior as (
 select src_table_hierarchy_prior.source_table_hierarchy_key, run_mani_prior.run_manifest_key as prior_manifest_key
-from dv_scheduler.dv_source_table_hierarchy src_table_hierarchy_prior
+from dv_scheduler.vw_dv_source_table_hierarchy_current src_table_hierarchy_prior
 inner join dv_scheduler.dv_run_manifest run_mani_prior
 on src_table_hierarchy_prior.prior_table_key = run_mani_prior.source_table_key
-where run_mani_prior.run_key = @run_key
+where run_mani_prior.run_key = @run_key 
+--and src_table_hierarchy_prior.is_deleted <> 1
 ) 
 insert into dv_scheduler.dv_run_manifest_hierarchy (run_manifest_key, run_manifest_prior_key)
 select mani_cur.run_manifest_key, mani_prev.prior_manifest_key  
@@ -85,7 +87,7 @@ from cte_manifest_current mani_cur
 inner join cte_manifest_prior mani_prev
 on mani_cur.source_table_hierarchy_key = mani_prev.source_table_hierarchy_key;
 
-if (SELECT count(*) from [dv_scheduler].[fn_CheckManifestForCircularReference] (@run_key)) <> 0
+if (SELECT count(*) from [dv_scheduler].[fn_check_manifest_for_circular_reference] (@run_key)) <> 0
     BEGIN 
 	SET @_ProgressText  = @_ProgressText + @NEW_LINE
 						+ 'the Manifest created for @run_key: ' + cast(@run_key as varchar(20)) + ' Has Created a Circular Reference. Please Investigate'

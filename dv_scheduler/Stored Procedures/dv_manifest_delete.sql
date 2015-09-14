@@ -1,29 +1,15 @@
-﻿
-CREATE PROCEDURE [dv_scheduler].[dv_populate_manifest]
-(
-	 @schedule_name		varchar(4000)
-	,@run_key			int
-	,@DoGenerateError   bit          = 0
-	,@DoThrowError      bit			 = 1
+﻿CREATE procedure [dv_scheduler].[dv_manifest_delete]
+( 
+  @vault_run_key int
+, @dogenerateerror               bit            = 0
+, @dothrowerror                  bit			= 1
 )
-AS
+as
+
 BEGIN
-SET NOCOUNT ON;
+set nocount on
 
--- Internal use variables
-
-DECLARE
-    @vault_statement		nvarchar(max),
-	@vault_change_count		int,
-	@release_key			int,
-	@release_number			int,
-	@change_count			int = 0,
-	@currtable				SYSNAME,
-	@currschema				SYSNAME,
-	@dv_schema_name			sysname,
-	@dv_table_name			sysname,
-    @parm_definition		nvarchar(500),
-	@rc						int	
+-- Local Variables
 
 -- Log4TSQL Journal Constants 
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
@@ -59,51 +45,56 @@ SET @_Severity          = @SEVERITY_INFORMATION;
 SET @_SprocStartTime    = sysdatetimeoffset();
 SET @_ProgressText      = '' 
 SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-			
-	
---set the Parameters for logging:
+
+
+-- set the Parameters for logging:
+
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @schedule_name	: ' + COALESCE(@schedule_name					, '<NULL>')
-						+ @NEW_LINE + '    @run_key			: ' + COALESCE(CAST(@run_key as varchar(20))	, '<NULL>')
-						+ @NEW_LINE + '    @DoGenerateError : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
-						+ @NEW_LINE + '    @DoThrowError    : ' + COALESCE(CAST(@DoThrowError AS varchar)	, '<NULL>')
+						+ @NEW_LINE + '    @vault_run_key                : ' + COALESCE(CAST(@vault_run_key AS varchar(20)), '<NULL>')
+						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
+						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
 						+ @NEW_LINE
-BEGIN TRANSACTION
+
 BEGIN TRY
 SET @_Step = 'Generate any required error';
 IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate Inputs';
 
-SET @_Step = 'Initialise Variables';
-
-SET @_Step = 'Initialise Release';
-
-
--- insert all tables to be run into the dv_run_manifest table
-insert into dv_scheduler.dv_run_manifest (run_key, source_system_name, source_timevault, source_table_schema, source_table_name, source_table_key, source_table_load_type, source_procedure_schema, source_procedure_name, priority, queue)
-select @run_key as run_key, src_system.source_system_name, src_system.timevault_name, src_table.source_table_schema, src_table.source_table_name, src_table.table_key, schd_src_table.source_table_load_type, src_table.source_procedure_schema, src_table.source_procedure_name, schd_src_table.priority, schd_src_table.queue
-from dv_scheduler.vw_dv_schedule_current as schd
-inner join dv_scheduler.vw_dv_schedule_source_table_current as schd_src_table
-on schd.schedule_key = schd_src_table.schedule_key
-inner join dbo.dv_source_table as src_table
-on schd_src_table.source_table_key = src_table.table_key
-inner join dbo.dv_source_system as src_system
-on src_table.system_key = src_system.system_key
-where upper(schedule_name) in (select replace(Item,' ','') from dbo.fn_split_strings(upper(@schedule_name),','))
---and (schd_src_table.is_deleted | schd.is_deleted <> 1);  -- Bitwise OR to check if one or both bits are set
-
+if not exists (select 1 from [dv_scheduler].[dv_run] where [run_key] = @vault_run_key 
+													   and [run_status] in('Failed', 'Completed', 'Cancelled')
+													   and [run_start_datetime] < dateadd(dd, -1, sysdatetimeoffset())
+				)
+   raiserror('Run Manifest must be "Completed", "Cancelled" or "Failed" and older than 24 hours, to be able to Delete it', 16, 1)
 
 /*--------------------------------------------------------------------------------------------------------------*/
+SET @_Step = 'Get Defaults';
+
+BEGIN TRANSACTION
+delete from [dv_scheduler].[dv_run_manifest_hierarchy] where [run_manifest_hierarchy_key] in(
+select distinct [run_manifest_hierarchy_key]
+from [dv_scheduler].[dv_run_manifest_hierarchy]
+where [run_manifest_key] in(select [run_manifest_key] from [dv_scheduler].[dv_run_manifest] where run_key = @vault_run_key))
+
+delete from [dv_scheduler].[dv_run_manifest] 
+where run_key = @vault_run_key
+
+delete from [dv_scheduler].[dv_run]
+where run_key = @vault_run_key
+
+/*--------------------------------------------------------------------------------------------------------------*/
+
+SET @_ProgressText  = @_ProgressText + @NEW_LINE
+				+ 'Step: [' + @_Step + '] completed ' 
+
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Successfully Populated Manifest for Schedule: ' + @schedule_name
+SET @_Message   = 'Successfully Removed Manifest with Run_Key: ' + cast(@vault_run_key as varchar(20))
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Populate Manifest for Schedule: ' + @schedule_name
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0) -- AND XACT_STATE() != 1) -- undocumented uncommitable transaction
+SET @_ErrorContext	= 'Failed to Remove Manifest with Run_Key: ' + cast(@vault_run_key as varchar(20))
+IF (XACT_STATE() = -1) OR (@@TRANCOUNT > 0) -- undocumented uncommitable transaction
 	BEGIN
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';

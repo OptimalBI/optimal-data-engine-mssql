@@ -77,7 +77,7 @@ SET @_Step = 'Validate Inputs';
 if not exists (select 1 from [dv_scheduler].[dv_run] where [run_key] = @vault_run_key and [run_status] = 'Scheduled')
    raiserror('Run must be "Scheduled" to be able to Start it', 16, 1)
 
-if (SELECT count(*) from [dv_scheduler].[fn_CheckManifestForCircularReference] (@vault_run_key)) <> 0
+if (SELECT count(*) from [dv_scheduler].[fn_check_manifest_for_circular_reference] (@vault_run_key)) <> 0
 	begin
 	select @_Message = 'Run Key: ' + cast(@vault_run_key as varchar(20)) + ' Contains Circular References. Please Investigate'
     RAISERROR(@_Message, 16, 1);
@@ -121,14 +121,37 @@ SET @_Step = 'Check Whether the Schedule is Complete'
 		on m.run_key = r.run_key
 		where 1=1
 		and r.run_key = @run_key
-		and isnull(m.run_status, '') = 'Failed')
+		and (isnull(r.run_status, '') = 'Failed' or isnull(m.run_status, '') = 'Failed')
+		)
 		BEGIN
 -- If so, Is there anything to run, assuming that what is queued or running now will succeed?
-			if not exists(SELECT 1 FROM [dv_scheduler].[fn_GetWaitingSchedulerTasks] (1, 'Potential'))
+			if not exists(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (1, 'Potential'))
 			BEGIN
 -- If not, Fail the run.
 				UPDATE [dv_scheduler].[dv_run] 
 					set [run_status] = 'Failed'
+	                   ,[run_end_datetime] = SYSDATETIMEOFFSET()
+					where [run_key] = @run_key
+				BREAK
+			END
+        END
+-- has there been a Cancellation?	
+	if exists (
+		select 1
+		from [dv_scheduler].[dv_run] r
+		inner join [dv_scheduler].[dv_run_manifest] m
+		on m.run_key = r.run_key
+		where 1=1
+		and r.run_key = @run_key
+		and (isnull(r.run_status, '') = 'Cancelled' or isnull(m.run_status, '') = 'Cancelled')
+		)
+		BEGIN
+-- If so, Is there anything to run, assuming that what is queued or running now will succeed?
+			if not exists(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (1, 'Potential'))
+			BEGIN
+-- If not, Cancel the run.
+				UPDATE [dv_scheduler].[dv_run] 
+					set [run_status] = 'Cancelled'
 	                   ,[run_end_datetime] = SYSDATETIMEOFFSET()
 					where [run_key] = @run_key
 				BREAK
@@ -145,7 +168,7 @@ SET @_Step = 'Queue as Set of Tasks'
 		  ,[source_procedure_name]	
 		  ,[source_table_load_type]	
 		  ,[queue]
-	FROM [dv_scheduler].[fn_GetWaitingSchedulerTasks] (@run_key, DEFAULT)
+	FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (@run_key, DEFAULT)
 
 	OPEN manifest_cursor
 	FETCH NEXT FROM manifest_cursor 

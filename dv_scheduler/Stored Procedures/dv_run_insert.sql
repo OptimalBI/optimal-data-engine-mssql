@@ -16,7 +16,7 @@ AS
 	insert @tbl_schedule_list select item from [dbo].[fn_split_strings] (@schedule_list_var, ',')	
 	select @rc = count(*) 
 		from @tbl_schedule_list
-		where schedule_name not in (select schedule_name from [dv_scheduler].[dv_schedule])
+		where schedule_name not in (select schedule_name from [dv_scheduler].[vw_dv_schedule_current])
 	if @rc > 0 
 		RAISERROR('Invalid Schedule Name Provided:  %s', 16, 1, @schedule_list)
 	else 

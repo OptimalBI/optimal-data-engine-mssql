@@ -25,27 +25,32 @@ BEGIN
 	set @rc = @@rowcount
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
-
-	select @schedule_key = [schedule_key] from [dv_scheduler].[dv_schedule] where [schedule_name] = @schedule_name
-	set @rc = @@rowcount
-	if @rc <> 1 
-		RAISERROR('Schedule Name %s Does Not Exist', 16, 1, @schedule_name)
-    
-	select @source_table_qualified_name = quotename(@source_system_name) + '.' + quotename(@source_table_schema) + quotename(@source_table_name)
-	select @source_table_key = [table_key] 
-	from [dbo].[dv_source_system] s
-	inner join [dbo].[dv_source_table] st
-	on s.[system_key] = st.[system_key]
-	where s.[source_system_name]	= @source_system_name
-	  and st.[source_table_schema]	= @source_table_schema
-	  and [source_table_name]		= @source_table_name
-	set @rc = @@rowcount
-	if @rc <> 1 
-		RAISERROR('Source Table %s Does Not Exist', 16, 1, @source_table_qualified_name)
-
-	INSERT INTO [dv_scheduler].[dv_schedule_source_table] ([schedule_key] ,[source_table_key] ,[source_table_load_type] ,[priority] ,[queue] ,[release_key])
-     VALUES (@schedule_key ,@source_table_key,@source_table_load_type,@priority,@queue,@release_key)
-
+		else
+			begin
+			select @schedule_key = [schedule_key] from [dv_scheduler].[dv_schedule] 
+				where [schedule_name] = @schedule_name
+				  and is_cancelled <> 1
+			set @rc = @@rowcount
+			if @rc <> 1 
+				RAISERROR('Schedule Name %s Does Not Exist', 16, 1, @schedule_name)
+				else
+					begin
+					select @source_table_qualified_name = quotename(@source_system_name) + '.' + quotename(@source_table_schema) + quotename(@source_table_name)
+					select @source_table_key = [table_key] 
+					from [dbo].[dv_source_system] s
+					inner join [dbo].[dv_source_table] st
+					on s.[system_key] = st.[system_key]
+					where s.[source_system_name]	= @source_system_name
+					  and st.[source_table_schema]	= @source_table_schema
+					  and [source_table_name]		= @source_table_name
+					set @rc = @@rowcount
+					if @rc <> 1 
+						RAISERROR('Source Table %s Does Not Exist', 16, 1, @source_table_qualified_name)
+						else
+							INSERT INTO [dv_scheduler].[dv_schedule_source_table] ([schedule_key] ,[source_table_key] ,[source_table_load_type] ,[priority] ,[queue] ,[release_key])
+							 VALUES (@schedule_key ,@source_table_key,@source_table_load_type,@priority,@queue,@release_key)
+					end
+			end
 	-- Begin Return Select <- do not remove
 
 	SELECT [schedule_source_table_key]
