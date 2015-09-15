@@ -103,12 +103,12 @@ inner join [dbo].[dv_hub_link] hl
 on l.link_key = hl.link_key
 inner join [dbo].[dv_hub] h
 on h.hub_key = hl.hub_key
-cross apply fn_GetKeyDefinition(h.hub_name, 'hub') hd
+cross apply [fn_get_key_definition](h.hub_name, 'hub') hd
 where l.[link_name] = @vault_link_name
 
-select @varobject_name = [dbo].[fn_GetObjectName](@vault_link_name, 'lnk')
+select @varobject_name = [dbo].[fn_get_object_name](@vault_link_name, 'lnk')
 select @table_name = quotename(@database) + '.' + quotename (@schema) + '.' + quotename(@varobject_name)
-select @filegroup = coalesce(cast([dbo].[fn_GetDefaultValue] ('filegroup','lnk') as varchar(128)), 'Primary')
+select @filegroup = coalesce(cast([dbo].[fn_get_default_value] ('filegroup','lnk') as varchar(128)), 'Primary')
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create the Link'

@@ -104,18 +104,18 @@ SET @_Step = 'Get Defaults'
 select @declare = 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf
 select @count_rows = 'OUTPUT $action into @rowcounts;' + @crlf + 'select @insertcount = count(*) from @rowcounts;'
 
-select @hub_table_name				= [dbo].[fn_GetObjectName](@vault_hub_name, 'hub') --from [dbo].[dv_hub] where hub_name = 'AdventureWorks2014_production_productinventory'
+select @hub_table_name				= [dbo].[fn_get_object_name](@vault_hub_name, 'hub') --from [dbo].[dv_hub] where hub_name = 'AdventureWorks2014_production_productinventory'
 select @default_load_date_time		= [default_varchar] from [dbo].[dv_defaults]		where default_type = 'Global'	and default_subtype = 'DefaultLoadDateTime'
 select @dv_load_date_time_column	= [column_name]		from [dbo].[dv_default_column]	where [object_type] = 'hub'		and object_column_type = 'Load_Date_Time'
 select @dv_data_source_column		= [column_name]		from [dbo].[dv_default_column]	where [object_type] = 'hub'		and object_column_type = 'Data_Source'
 select @dv_load_date_time			= c.column_name 
-      ,@dv_data_source_key			= st.table_key
+      ,@dv_data_source_key			= st.[source_table_key]
 	  ,@dv_timevault_name			= s.timevault_name
 from [dbo].[dv_source_system] s
 inner join [dbo].[dv_source_table] st
-on st.system_key = s.system_key
+on st.system_key = s.[source_system_key]
 left join [dbo].[dv_column] c
-on c.table_key = st.table_key
+on c.table_key = st.[source_table_key]
 and c.[is_source_date] = 1
 where 1=1
 and s.source_system_name	= @vault_source_system
@@ -144,9 +144,9 @@ on hc.hub_key_column_key = hkc.hub_key_column_key
 inner join [dbo].[dv_column] c
 on c.column_key = hc.column_key
 inner join [dbo].[dv_source_table] st
-on c.[table_key] = st.table_key
+on c.[table_key] = st.[source_table_key]
 inner join [dbo].[dv_source_system] s
-on s.system_key = st.system_key
+on s.[source_system_key] = st.system_key
 where 1=1
 and h.hub_name				= @vault_hub_name
 and h.hub_database			= @vault_database

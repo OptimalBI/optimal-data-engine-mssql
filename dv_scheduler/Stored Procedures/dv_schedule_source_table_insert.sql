@@ -36,10 +36,10 @@ BEGIN
 				else
 					begin
 					select @source_table_qualified_name = quotename(@source_system_name) + '.' + quotename(@source_table_schema) + quotename(@source_table_name)
-					select @source_table_key = [table_key] 
+					select @source_table_key = [source_table_key] 
 					from [dbo].[dv_source_system] s
 					inner join [dbo].[dv_source_table] st
-					on s.[system_key] = st.[system_key]
+					on s.[source_system_key] = st.[system_key]
 					where s.[source_system_name]	= @source_system_name
 					  and st.[source_table_schema]	= @source_table_schema
 					  and [source_table_name]		= @source_table_name

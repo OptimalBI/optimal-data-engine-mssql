@@ -164,22 +164,22 @@ SET @_Step = 'Validate inputs';
 SET @_Step = 'Get Defaults'
 select
 -- Global Defaults
- @def_global_lowdate				= cast([dbo].[fn_GetDefaultValue] ('LowDate','Global')				as datetime)			
-,@def_global_highdate				= cast([dbo].[fn_GetDefaultValue] ('HighDate','Global')				as datetime)	
-,@def_global_default_load_date_time	= cast([dbo].[fn_GetDefaultValue] ('DefaultLoadDateTime','Global')	as varchar(128))
-,@def_global_failed_lookup_key		= cast([dbo].[fn_GetDefaultValue] ('FailedLookupKey', 'Global')     as integer)
+ @def_global_lowdate				= cast([dbo].[fn_get_default_value] ('LowDate','Global')				as datetime)			
+,@def_global_highdate				= cast([dbo].[fn_get_default_value] ('HighDate','Global')				as datetime)	
+,@def_global_default_load_date_time	= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')	as varchar(128))
+,@def_global_failed_lookup_key		= cast([dbo].[fn_get_default_value] ('FailedLookupKey', 'Global')     as integer)
 -- Hub Defaults								
-,@def_hub_prefix					= cast([dbo].[fn_GetDefaultValue] ('prefix','hub')					as varchar(128))	
-,@def_hub_schema					= cast([dbo].[fn_GetDefaultValue] ('schema','hub')					as varchar(128))	
-,@def_hub_filegroup					= cast([dbo].[fn_GetDefaultValue] ('filegroup','hub')				as varchar(128))	
+,@def_hub_prefix					= cast([dbo].[fn_get_default_value] ('prefix','hub')					as varchar(128))	
+,@def_hub_schema					= cast([dbo].[fn_get_default_value] ('schema','hub')					as varchar(128))	
+,@def_hub_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','hub')				as varchar(128))	
 -- Link Defaults																						
-,@def_link_prefix					= cast([dbo].[fn_GetDefaultValue] ('prefix','lnk')					as varchar(128))	
-,@def_link_schema					= cast([dbo].[fn_GetDefaultValue] ('schema','lnk')					as varchar(128))	
-,@def_link_filegroup				= cast([dbo].[fn_GetDefaultValue] ('filegroup','lnk')				as varchar(128))	
+,@def_link_prefix					= cast([dbo].[fn_get_default_value] ('prefix','lnk')					as varchar(128))	
+,@def_link_schema					= cast([dbo].[fn_get_default_value] ('schema','lnk')					as varchar(128))	
+,@def_link_filegroup				= cast([dbo].[fn_get_default_value] ('filegroup','lnk')				as varchar(128))	
 -- Sat Defaults																							
-,@def_sat_prefix					= cast([dbo].[fn_GetDefaultValue] ('prefix','sat')					as varchar(128))	
-,@def_sat_schema					= cast([dbo].[fn_GetDefaultValue] ('schema','sat')					as varchar(128))	
-,@def_sat_filegroup					= cast([dbo].[fn_GetDefaultValue] ('filegroup','sat')				as varchar(128))
+,@def_sat_prefix					= cast([dbo].[fn_get_default_value] ('prefix','sat')					as varchar(128))	
+,@def_sat_schema					= cast([dbo].[fn_get_default_value] ('schema','sat')					as varchar(128))	
+,@def_sat_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','sat')				as varchar(128))
 
 select @sat_start_date_col = quotename(column_name)
 from [dbo].[dv_default_column]
@@ -209,12 +209,12 @@ select 	 @source_system				= s.[source_system_name]
         ,@source_database			= s.[timevault_name]
 		,@source_schema				= t.[source_table_schema]
 		,@source_table				= t.[source_table_name]
-		,@source_table_config_key	= t.[table_key]
+		,@source_table_config_key	= t.[source_table_key]
 		,@source_qualified_name		= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
 		,@source_load_type			= t.[source_table_load_type]
 from [dbo].[dv_source_system] s
 inner join [dbo].[dv_source_table] t
-on t.system_key = s.system_key
+on t.system_key = s.[source_system_key]
 where 1=1
 and s.[source_system_name]		= @vault_source_system_name
 and t.[source_table_schema]		= @vault_source_table_schema
@@ -224,19 +224,19 @@ and t.[source_table_name]		= @vault_source_table_name
 select 	 @sat_database			= sat.[satellite_database]						
 		,@sat_schema			= coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')		
 		,@sat_table				= sat.[satellite_name]		
-		,@sat_surrogate_keyname	= [dbo].[fn_GetObjectName] (sat.[satellite_name],'SatSurrogate')		
+		,@sat_surrogate_keyname	= [dbo].[fn_get_object_name] (sat.[satellite_name],'SatSurrogate')		
 		,@sat_config_key		= sat.[satellite_key]		
 		,@sat_link_hub_flag		= sat.[link_hub_satellite_flag]		
-		,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_GetObjectName] (sat.[satellite_name], 'sat')))       
+		,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat')))       
 from [dbo].[dv_source_table] t
 inner join [dbo].[dv_column] c
-on c.table_key = t.table_key
+on c.table_key = t.[source_table_key]
 inner join [dbo].[dv_satellite_column] sc
 on sc.column_key = c.column_key
 inner join [dbo].[dv_satellite] sat
 on sat.satellite_key = sc.satellite_key
 where 1=1
-and t.table_key = @source_table_config_key
+and t.[source_table_key] = @source_table_config_key
 and sat.[satellite_name] = @vault_sat_name
 
 -- Owner Hub Table
@@ -245,9 +245,9 @@ if @sat_link_hub_flag = 'H'
 	select   @hub_database			= h.[hub_database]
 	        ,@hub_schema			= coalesce([hub_schema], @def_hub_schema, 'dbo')				
 			,@hub_table				= h.[hub_name]
-			,@hub_surrogate_keyname = [dbo].[fn_GetObjectName] ([dbo].[fn_GetObjectName] ([hub_name], 'hub'),'HubSurrogate')
+			,@hub_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
 			,@hub_config_key		= h.[hub_key]
-			,@hub_qualified_name	= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_GetObjectName] ([hub_name], 'hub')))	
+			,@hub_qualified_name	= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))	
 	from [dbo].[dv_satellite] s
 	inner join [dbo].[dv_hub] h
 	on s.hub_key = h.hub_key
@@ -260,9 +260,9 @@ begin
 	select   @link_database			= l.[link_database]
 	        ,@link_schema			= coalesce(l.[link_schema], @def_link_schema, 'dbo')				
 			,@link_table			= l.[link_name]
-			,@link_surrogate_keyname = [dbo].[fn_GetObjectName] ([dbo].[fn_GetObjectName] ([link_name], 'lnk'),'LnkSurrogate')
+			,@link_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
 			,@link_config_key		= l.[link_key]
-			,@link_qualified_name	= quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_GetObjectName] ([link_name], 'lnk')))
+			,@link_qualified_name	= quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([link_name], 'lnk')))
 	from [dbo].[dv_satellite] s
 	inner join [dbo].[dv_link] l
 	on s.link_key = l.link_key

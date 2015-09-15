@@ -6,8 +6,9 @@ AS
 BEGIN
 
 DECLARE @ResultVar char(4)
+
 -- See Jeff Modem's article The "Numbers" or "Tally" Table: What it is and how it replaces a loop.
--- at http://www.sqlservercentral.com/articles/T-SQL/62867/.
+-- at http://www.sqlservercentral.com/articles/T-SQL/62867/  .
 ;WITH 
 Tens     (N) AS (SELECT 0 UNION ALL SELECT 0 UNION ALL SELECT 0 UNION ALL 
                  SELECT 0 UNION ALL SELECT 0 UNION ALL SELECT 0 UNION ALL 

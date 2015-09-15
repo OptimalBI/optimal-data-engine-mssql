@@ -27,10 +27,10 @@ BEGIN
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 
 	select @source_table_qualified_name = quotename(@source_system_name) + '.' + quotename(@source_table_schema) + '.' + quotename(@source_table_name)
-	select @source_table_key = [table_key] 
+	select @source_table_key = [source_table_key] 
 	from [dbo].[dv_source_system] s
 	inner join [dbo].[dv_source_table] st
-	on s.[system_key] = st.[system_key]
+	on s.[source_system_key] = st.[system_key]
 	where s.[source_system_name]	= @source_system_name
 	  and st.[source_table_schema]	= @source_table_schema
 	  and [source_table_name]		= @source_table_name
@@ -39,10 +39,10 @@ BEGIN
 		RAISERROR('Source Table %s Does Not Exist', 16, 1, @source_table_qualified_name)
 
 	select @prior_source_table_qualified_name = quotename(@prior_source_system_name) + '.' + quotename(@prior_source_table_schema) + '.' + quotename(@prior_source_table_name)
-	select @prior_source_table_key = [table_key] 
+	select @prior_source_table_key = [source_table_key] 
 	from [dbo].[dv_source_system] s
 	inner join [dbo].[dv_source_table] st
-	on s.[system_key] = st.[system_key]
+	on s.[source_system_key] = st.[system_key]
 	where s.[source_system_name]	= @prior_source_system_name
 	  and st.[source_table_schema]	= @prior_source_table_schema
 	  and [source_table_name]		= @prior_source_table_name

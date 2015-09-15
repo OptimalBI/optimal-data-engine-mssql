@@ -84,7 +84,7 @@ if (SELECT count(*) from [dv_scheduler].[fn_check_manifest_for_circular_referenc
 	end
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults';
-select @delay_in_seconds = cast([dbo].[fn_GetDefaultValue] ('PollDelayInSeconds','Scheduler') as int)
+select @delay_in_seconds = cast([dbo].[fn_get_default_value] ('PollDelayInSeconds','Scheduler') as int)
 select @delayChar = '00' + format(CONVERT(DATETIME, DATEADD(SECOND, @delay_in_seconds, 0)), ':mm:ss');
 
 set @run_key = @vault_run_key

@@ -12,12 +12,12 @@ AS
 
 	UPDATE [dbo].[dv_source_table]
 	SET    [system_key] = @system_key, [source_table_schema] = @source_table_schema, [source_table_name] = @source_table_name, [source_table_load_type] = @source_table_load_type
-	WHERE  [table_key] = @table_key
+	WHERE  [source_table_key] = @table_key
 	
 	-- Begin Return Select <- do not remove
-	SELECT [table_key], [system_key], [source_table_schema], [source_table_name], [source_table_load_type], [version_number], [updated_by], [update_date_time]
+	SELECT [source_table_key], [system_key], [source_table_schema], [source_table_name], [source_table_load_type], [version_number], [updated_by], [update_date_time]
 	FROM   [dbo].[dv_source_table]
-	WHERE  [table_key] = @table_key	
+	WHERE  [source_table_key] = @table_key	
 	-- End Return Select <- do not remove
 
 	COMMIT
