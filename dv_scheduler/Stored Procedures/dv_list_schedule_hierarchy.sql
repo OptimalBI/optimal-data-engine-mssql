@@ -85,7 +85,7 @@ inner join wBOM AS cte
     ON cte.source_table_key = b.table_key_prior 
 )
 
-select source_table_name 
+select distinct source_table_name 
 from wBOM
 order by source_table_name
 OPTION (MAXRECURSION 5000)

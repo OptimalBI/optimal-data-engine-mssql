@@ -19,8 +19,3 @@ select
 from [dv_scheduler].[dv_run] r
 inner join [dv_scheduler].[dv_run_manifest] m
 on m.run_key = r.run_key
---where 1=1
---and m.run_key = (select max(run_key) from [dv_scheduler].[dv_run])
---order by 5 desc,
---case when  m.run_status = 'Failed' then 0 when  m.run_status = 'Scheduled' then 1 when m.run_status = 'queued' then 2 when m.run_status = 'processing' then 3 else 4 end --desc
---, m.start_datetime

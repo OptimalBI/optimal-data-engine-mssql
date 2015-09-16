@@ -1,5 +1,6 @@
 ﻿
-create view dbo.vw_running_processes 
+
+create view [dv_scheduler].[vw_running_processes] 
 as
 SELECT spid
       , CAST(((DATEDIFF(s,start_time,GetDate()))/3600) as varchar) + ' hour(s), '

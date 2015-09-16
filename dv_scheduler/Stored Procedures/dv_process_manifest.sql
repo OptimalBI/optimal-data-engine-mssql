@@ -125,7 +125,7 @@ SET @_Step = 'Check Whether the Schedule is Complete'
 		)
 		BEGIN
 -- If so, Is there anything to run, assuming that what is queued or running now will succeed?
-			if not exists(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (1, 'Potential'))
+			if not exists(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (@run_key, 'Potential'))
 			BEGIN
 -- If not, Fail the run.
 				UPDATE [dv_scheduler].[dv_run] 
@@ -147,7 +147,7 @@ SET @_Step = 'Check Whether the Schedule is Complete'
 		)
 		BEGIN
 -- If so, Is there anything to run, assuming that what is queued or running now will succeed?
-			if not exists(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (1, 'Potential'))
+			if not exists(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (@run_key, 'Potential'))
 			BEGIN
 -- If not, Cancel the run.
 				UPDATE [dv_scheduler].[dv_run] 

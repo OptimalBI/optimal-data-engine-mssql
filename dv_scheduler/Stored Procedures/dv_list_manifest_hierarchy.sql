@@ -77,7 +77,7 @@ inner join wBOM AS cte
     ON cte.run_manifest_key = b.run_manifest_key_prior
 )
 
-select source_table_name 
+select distinct source_table_name 
 from wBOM
 order by source_table_name
 OPTION (MAXRECURSION 5000)
