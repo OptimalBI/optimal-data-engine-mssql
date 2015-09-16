@@ -94,3 +94,275 @@ USING	(VALUES ('Hub','Object_Key',1,'h_','%','_key','int',NULL,NULL,NULL,NULL,0,
 		VALUES ([object_type],[object_column_type],[ordinal_position],[column_prefix],[column_name],[column_suffix],[column_type],[column_length],[column_precision],[column_scale],[collation_Name],[is_nullable],[is_pk],[discard_flag],[release_key])
 	;
 
+	
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 1
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        1
+      , 'Showstopper/Critical Failure'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Showstopper/Critical Failure'
+    WHERE
+        [SeverityId] = 1
+GO
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 2
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        2
+      , 'Severe Failure'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Severe Failure'
+    WHERE
+        [SeverityId] = 2
+GO
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 4
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        4
+      , 'Major Failure'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Major Failure'
+    WHERE
+        [SeverityId] = 4
+GO
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 8
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        8
+      , 'Moderate Failure'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Moderate Failure'
+    WHERE
+        [SeverityId] = 8
+GO
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 16
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        16
+      , 'Minor Failure'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Minor Failure'
+    WHERE
+        [SeverityId] = 16
+GO
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 32
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        32
+      , 'Concurrency Violation'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Concurrency Violation'
+    WHERE
+        [SeverityId] = 32
+GO
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 64
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        64
+      , 'Reserved for future Use 1'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Reserved for future Use 1'
+    WHERE
+        [SeverityId] = 64
+GO
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 128
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        128
+      , 'Reserved for future Use 2'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Reserved for future Use 2'
+    WHERE
+        [SeverityId] = 128
+GO
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 256
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        256
+      , 'Informational'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Informational'
+    WHERE
+        [SeverityId] = 256
+GO
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 512
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        512
+      , 'Success'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Success'
+    WHERE
+        [SeverityId] = 512
+GO
+
+IF NOT EXISTS
+    (
+        SELECT 1 FROM [log4].[Severity] WHERE [SeverityId] = 1024
+    )
+  INSERT INTO [log4].[Severity]
+      (
+        [SeverityId]
+      , [SeverityName]
+      )
+  VALUES
+      (
+        1024
+      , 'Debug'
+      )
+ELSE
+    UPDATE
+        [log4].[Severity]
+    SET
+          [SeverityName] = 'Debug'
+    WHERE
+        [SeverityId] = 1024
+GO
+
+
+IF NOT EXISTS (SELECT 1 FROM [log4].[JournalControl] WHERE ModuleName = 'SYSTEM_OVERRIDE')
+	INSERT [log4].[JournalControl]([ModuleName], [OnOffSwitch]) VALUES('SYSTEM_OVERRIDE', 'ON')
+ELSE
+	UPDATE [log4].[JournalControl] SET OnOffSwitch = 'ON' WHERE ModuleName = 'SYSTEM_OVERRIDE'
+GO
+
+IF NOT EXISTS (SELECT 1 FROM [log4].[JournalControl] WHERE ModuleName = 'SYSTEM_DEFAULT')
+	INSERT [log4].[JournalControl]([ModuleName], [OnOffSwitch]) VALUES('SYSTEM_DEFAULT', 'OFF')
+ELSE
+	UPDATE [log4].[JournalControl] SET OnOffSwitch = 'OFF' WHERE ModuleName = 'SYSTEM_DEFAULT'
+GO
+
+
+
+
+
