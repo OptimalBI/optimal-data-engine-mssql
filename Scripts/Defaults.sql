@@ -1,4 +1,4 @@
-﻿MERGE INTO [dbo].[dv_defaultsq] AS trgt 
+﻿MERGE INTO [dbo].[dv_defaults] AS trgt 
 USING (VALUES	('Global','LowDate',1,'datetime',NULL,NULL,'Jan  1 1900 12:00:00:000AM',0),
 				('Global','HighDate',1,'datetime',NULL,NULL,'Dec 31 9999 12:00:00:000AM',0),
 				('Global','DefaultLoadDateTime',1,'varchar',NULL,'sysdatetimeoffset()',NULL,0),
