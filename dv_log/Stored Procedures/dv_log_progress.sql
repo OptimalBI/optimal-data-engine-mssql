@@ -26,10 +26,10 @@ set @source_table_key = 0
 
 if @vault_object_type = 'sat'
 begin
-	select @source_table_key = st.table_key
+	select @source_table_key = st.[source_table_key]
 	from [dbo].[dv_source_system] ss
 	inner join [dbo].[dv_source_table] st
-	on ss.system_key = st.system_key
+	on ss.[source_system_key] = st.system_key
 	where 1=1
 	and ss.source_system_name	= @vault_source_system
 	and st.source_table_name	= @vault_source_name

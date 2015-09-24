@@ -106,9 +106,9 @@ select  hkc.[hub_key_column_name]
    and h.[hub_database] = @vault_database
    and h.[hub_name]		= @vault_hub_name
 
-select @varobject_name = [dbo].[fn_GetObjectName](@vault_hub_name, 'hub')
+select @varobject_name = [dbo].[fn_get_object_name](@vault_hub_name, 'hub')
 select @table_name = quotename(@database) + '.' + quotename (@schema) + '.' + quotename(@varobject_name)
-select @filegroup = coalesce(cast([dbo].[fn_GetDefaultValue] ('filegroup','hub') as varchar(128)), 'Primary')
+select @filegroup = coalesce(cast([dbo].[fn_get_default_value] ('filegroup','hub') as varchar(128)), 'Primary')
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Hub'

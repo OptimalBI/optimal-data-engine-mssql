@@ -1,4 +1,4 @@
-﻿CREATE FUNCTION [dbo].[fn_GetKeyDefinition]
+﻿CREATE FUNCTION [dbo].[fn_get_key_definition]
 (@object_name varchar(256)
 ,@object_type varchar(30)
 )
@@ -6,7 +6,7 @@ RETURNS TABLE
 AS
 RETURN 
 (
-select top 1 [column_name] = rtrim(quotename(isnull(column_prefix, '') + replace(column_name, '%', [dbo].[fn_GetObjectName](@object_name,@object_type) ) + isnull(column_suffix, '')))
+select top 1 [column_name] = rtrim(quotename(isnull(column_prefix, '') + replace(column_name, '%',@object_name) + isnull(column_suffix, '')))
     ,[column_type]
     ,[column_length]
 	,[column_precision]
@@ -18,7 +18,5 @@ select top 1 [column_name] = rtrim(quotename(isnull(column_prefix, '') + replace
 FROM [dbo].[dv_default_column]
 where 1=1
 and object_type = @object_type
---and is_pk = 1
 and object_column_type = 'Object_Key'
-
 )

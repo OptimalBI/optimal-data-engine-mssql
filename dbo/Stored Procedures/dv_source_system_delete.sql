@@ -8,6 +8,6 @@ AS
 
 	DELETE
 	FROM   [dbo].[dv_source_system]
-	WHERE  [system_key] = @system_key
+	WHERE  [source_system_key] = @system_key
 
 	COMMIT

@@ -110,11 +110,11 @@ select 	 @source_system				= s.[source_system_name]
         ,@source_database			= s.[timevault_name]
 		,@source_schema				= t.[source_table_schema]
 		,@source_table				= t.[source_table_name]
-		,@source_table_config_key	= t.[table_key]
+		,@source_table_config_key	= t.[source_table_key]
 		,@source_qualified_name		= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
 from [dbo].[dv_source_system] s
 inner join [dbo].[dv_source_table] t
-on t.system_key = s.system_key
+on t.system_key = s.[source_system_key]
 where 1=1
 and s.[source_system_name]		= @vault_source_system_name
 and t.[source_table_schema]		= @vault_source_table_schema
@@ -124,7 +124,7 @@ SET @_Step = 'Get All Components related to the Source Table'
 insert @load_details            
 select  distinct
         ss.timevault_name
-       ,st.table_key as source_table_key
+       ,st.[source_table_key] as source_table_key
        ,st.source_table_schema	
 	   ,st.source_table_name	
 	   ,st.source_table_load_type
@@ -139,9 +139,9 @@ select  distinct
 from
 [dbo].[dv_source_system] ss
 inner join [dbo].[dv_source_table] st
-on st.system_key = ss.system_key
+on st.system_key = ss.[source_system_key]
 inner join [dbo].[dv_column] c
-on c.table_key = st.table_key
+on c.table_key = st.[source_table_key]
 inner join [dbo].[dv_satellite_column] sc
 on sc.column_key = c.column_key
 inner join [dbo].[dv_satellite] s

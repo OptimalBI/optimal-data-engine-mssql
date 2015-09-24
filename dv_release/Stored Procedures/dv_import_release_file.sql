@@ -100,7 +100,7 @@ insert [dv_release].[dv_release_build]
 	   Tbl.Col.value('release_statement_sequence[1]', 'varchar(4000)') as release_statement_sequence, 
 	   Tbl.Col.value('release_number[1]', 'varchar(4000)') as release_number,
 	   Tbl.Col.value('release_statement_type[1]', 'varchar(4000)') as release_statement_type,
-	   Tbl.Col.value('release_statement[1]', 'varchar(4000)') as release_statement,
+	   Tbl.Col.value('release_statement[1]', 'varchar(max)') as release_statement,
 	   Tbl.Col.value('affected_row_count[1]', 'varchar(4000)') as affected_row_count
 FROM   @xml.nodes('//statement') Tbl(Col) 
 
