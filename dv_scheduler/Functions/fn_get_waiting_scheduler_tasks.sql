@@ -1,4 +1,5 @@
 ﻿
+
 CREATE FUNCTION [dv_scheduler].[fn_get_waiting_scheduler_tasks]
 (@run_key int
 ,@runnable varchar(10) = 'Runnable' 
@@ -17,6 +18,7 @@ select m.source_system_name
 	  ,m.source_procedure_name
 	  ,m.source_table_load_type	
 	  ,m.[queue]
+	  ,m.[priority]
 	from [dv_scheduler].[dv_run] r
 	inner join [dv_scheduler].[dv_run_manifest] m
 	on m.run_key = r.run_key
@@ -53,6 +55,7 @@ select m.source_system_name
 	  ,m.source_procedure_name
 	  ,m.source_table_load_type	
 	  ,m.[queue]
+	  ,m.[priority]
 	from [dv_scheduler].[dv_run] r
 	inner join [dv_scheduler].[dv_run_manifest] m
 	on m.run_key = r.run_key
