@@ -37,11 +37,7 @@ Using the Data Vault methodology, ODE breaks each complex part of your data proc
 * 
 
 ## Current functionality: ##
-* Time Variant Layer - a place for all of your data's history
-* Raw Vault - Simplified view of the business
-* Business Vault - A business focused view of your data, using scripts to populate
-* Reporting Layer - A familiar dimensional model view of the data
-* Scheduling Engine - Multi-threaded data loading with dependencies allowing you to efficiently load the data in the correct order
+Details of the current functionality can be found here http://www.ode.ninja/category/features/
 
 ## Notes ##
 * Untested on SQL Server editions prior to 2014
@@ -51,7 +47,7 @@ Using the Data Vault methodology, ODE breaks each complex part of your data proc
 Please submit these to GitHub issue tracking or join us in developing by forking the project and then making a pull request!
 
 ## Find out more: ##
-Visit http://www.ode.ninja/ - this is where we keep our guides and share our knowledge. To find out more about OptimalBI and the work we do visit http://www.optimalbi.com or check out our blogs at http://optimalbi.com/blog/tag/data-vault/ for all the latest on our Data Vault journey. 
+Visit http://www.ode.ninja/ - this is where we keep our guides and share our knowledge. To find out more about OptimalBI and the work we do visit http://www.optimalbi.com or check out our blogs at http://optimalbi.com/blog/tag/data-vault/ for all the latest on our Data Vault journey. If you want to get in touch, you can email us at hey@optimalbi.com
 
 ## Change log: ##
 ```
