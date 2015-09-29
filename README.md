@@ -13,7 +13,7 @@ Using the Data Vault methodology, ODE breaks each complex part of your data proc
 * Access to a running Microsoft SQL Server (for example, Express Edition)
 * SQL Server Management Studio installed on a computer which you can access
 * Administrative rights to be able to create databases
-* Visual Studio 2015 Community Edition installed on a computer which you can access
+* Visual Studio 2015 Community Edition installed on a computer which you can access. This can be downloaded from https://www.visualstudio.com/en-us/mt171547.aspx
 
 ## Download and build instructions: ##
 * Connect SQL Server Management Studio to the SQL Server instance where you want to install ODE.
