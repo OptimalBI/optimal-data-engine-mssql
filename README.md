@@ -24,17 +24,15 @@ Using the Data Vault methodology, ODE breaks each complex part of your data proc
 * Tick Trustworthy
 * Change 'Service broker options' to 'EnableBroker'
 * Click OK
-* Requires a username of 'SBLogin' - expand security folder (project explorer) > Select SBLogin.sql > Edit password as desired and execute script
+* If you already have a login on your SQL Server instance called 'SBLogin': Find SBLogin.sql in Solution Explorer under Security > SBLogin.sql, right-click it and 'Exclude from project'. 
 * Right click Project > Add > Database Reference > System Database > Master > OK 
 * Save project
 * Right click Project > Build
 * Right click Project > Publish
 * Specify Database Name
-* Click Edit for 'Target database connection'
-* Specify Settings for connection > Use Master for Database name > Click OK
+* Click Edit for 'Target database connection' and enter the connection string for your SQL Server instance
 * Click Publish
-* Expand Scripts in Project Explorer > Click ScriptsIgnoredOnImport.sql > Copy script into a new SQL Management Studio window and connect to your published database > Execute script
-* 
+* Expand Scripts in Project Explorer > Click ScriptsIgnoredOnImport.sql > Copy this script into a new SQL Management Studio window and connect to your published database > Execute script
 
 ## Current functionality: ##
 Details of the current functionality can be found here http://www.ode.ninja/category/features/
