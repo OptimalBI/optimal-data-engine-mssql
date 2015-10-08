@@ -1,5 +1,4 @@
-﻿
-CREATE procedure [dv_scheduler].[dv_list_manifest_hierarchy]
+﻿CREATE procedure [dv_scheduler].[dv_list_manifest_hierarchy]
 ( 
   @vault_run_key int
 )

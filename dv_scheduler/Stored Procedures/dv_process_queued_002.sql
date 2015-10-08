@@ -18,6 +18,7 @@ DECLARE @task							nvarchar(512)
 	   ,@vault_source_table_name		nvarchar(128)
 	   ,@vault_procedure_schema			nvarchar(128)
 	   ,@vault_procedure_name			nvarchar(128)
+	   ,@vault_source_table_run_type	nvarchar(50)
 	   ,@vault_runkey					varchar(20)
 	   ,@vault_run_key					int
 	   ,@rowcount						int
@@ -99,9 +100,11 @@ IF (@rowcount > 0)
 				,@vault_source_table_name	= x.value('(/Request/SourceTable)[1]'		,'VARCHAR(128)')
 				,@vault_procedure_schema	= x.value('(/Request/ProcSchema)[1]'		,'VARCHAR(128)')
 				,@vault_procedure_name		= x.value('(/Request/ProcName)[1]'			,'VARCHAR(128)')
+				,@vault_source_table_run_type	= x.value('(/Request/RunType)[1]'			,'VARCHAR(50)')
 			FROM @msg.nodes('/Request') AS T(x);
 			
 			set @vault_run_key = cast(ltrim(rtrim(@vault_runkey)) as int)
+			select @vault_source_table_run_type = case when @vault_source_table_run_type = 'Default' then null else @vault_source_table_run_type end
 
 			SELECT 1
 			  FROM [dv_scheduler].[dv_run] r
@@ -125,7 +128,7 @@ IF (@rowcount > 0)
 					exec (@SQL)
 					END
 				SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
-				exec [dbo].[dv_load_source_table] @vault_source_system_name, @vault_source_table_schema, @vault_source_table_name
+				exec [dbo].[dv_load_source_table] @vault_source_system_name, @vault_source_table_schema, @vault_source_table_name, @vault_source_table_run_type
 				SET @_Step = 'Load Completed'
 				EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Completed'
 			END

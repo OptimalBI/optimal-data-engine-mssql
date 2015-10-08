@@ -20,17 +20,14 @@
     CONSTRAINT [CK_dv_run_manifest__priority] CHECK ([priority]='high' OR [priority]='low'),
     CONSTRAINT [CK_dv_run_manifest__queue] CHECK ([queue]='001' OR [queue]='002'),
     CONSTRAINT [CK_dv_run_manifest__run_status] CHECK ([run_status]='Scheduled' OR [run_status]='Queued' OR [run_status]='Processing' OR [run_status]='Completed' OR [run_status]='Cancelled' OR [run_status]='Failed'),
+    CONSTRAINT [CK_dv_run_manifest__run_type] CHECK ([source_table_load_type]='Full' OR [source_table_load_type]='Delta'),
     CONSTRAINT [FK_dv_run_manifest__dv_run] FOREIGN KEY ([run_key]) REFERENCES [dv_scheduler].[dv_run] ([run_key])
 );
-
-
 
 
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [UX_dv_run_manifest__run_key_source_table]
     ON [dv_scheduler].[dv_run_manifest]([run_key] ASC, [source_system_name] ASC, [source_table_schema] ASC, [source_table_name] ASC);
-
-
 GO
 CREATE Trigger [dv_scheduler].[trg_dv_manifest_status] on [dv_scheduler].[dv_run_manifest]
 AFTER UPDATE AS

@@ -1,5 +1,4 @@
-﻿
-CREATE FUNCTION [dv_scheduler].[fn_check_manifest_for_circular_reference](@run_key int)
+﻿CREATE FUNCTION [dv_scheduler].[fn_check_manifest_for_circular_reference](@run_key int)
 
 RETURNS TABLE	
 AS

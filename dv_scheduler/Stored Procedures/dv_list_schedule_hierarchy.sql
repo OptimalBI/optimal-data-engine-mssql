@@ -1,5 +1,4 @@
-﻿
-CREATE procedure [dv_scheduler].[dv_list_schedule_hierarchy]
+﻿CREATE procedure [dv_scheduler].[dv_list_schedule_hierarchy]
 ( 
   @schedule_list varchar(4000)
 )

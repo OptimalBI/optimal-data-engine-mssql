@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_scheduler].[dv_populate_run_manifest]
+﻿CREATE PROCEDURE [dv_scheduler].[dv_populate_run_manifest]
 (
 	@schedule_list		varchar(4000)
    ,@vault_run_key		int				output 

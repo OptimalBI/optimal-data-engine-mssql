@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROC [dv_scheduler].[dv_source_table_hierarchy_update] 
+﻿CREATE PROC [dv_scheduler].[dv_source_table_hierarchy_update] 
     @source_table_hierarchy_key int,
     @source_table_key int,
     @prior_table_key int,

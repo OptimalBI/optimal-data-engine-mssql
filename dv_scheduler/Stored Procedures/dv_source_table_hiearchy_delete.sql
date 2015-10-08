@@ -1,5 +1,4 @@
-﻿
-CREATE PROC [dv_scheduler].[dv_source_table_hiearchy_delete] 
+﻿CREATE PROC [dv_scheduler].[dv_source_table_hiearchy_delete] 
     @source_table_hiearchy_key int
    ,@force					   int = 0
 AS 

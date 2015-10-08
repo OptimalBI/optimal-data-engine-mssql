@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_scheduler].[dv_manifest_status_update]
+﻿CREATE PROCEDURE [dv_scheduler].[dv_manifest_status_update]
 (
   @vault_run_key				 int			= NULL
 , @vault_source_system_name      varchar(50)	= NULL

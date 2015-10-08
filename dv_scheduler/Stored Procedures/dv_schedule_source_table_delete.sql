@@ -1,5 +1,4 @@
-﻿
-CREATE PROC [dv_scheduler].[dv_schedule_source_table_delete] 
+﻿CREATE PROC [dv_scheduler].[dv_schedule_source_table_delete] 
     @schedule_source_table_key	int
    ,@force						int = 0
 AS 

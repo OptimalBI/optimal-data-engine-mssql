@@ -8,6 +8,3 @@
     CONSTRAINT [PK__dv_run__AEDC1D6EF837117B] PRIMARY KEY CLUSTERED ([run_key] ASC),
     CONSTRAINT [CK_dv_run_status] CHECK ([run_status]='Scheduled' OR [run_status]='Started' OR [run_status]='Completed' OR [run_status]='Disabled' OR [run_status]='Cancelled' OR [run_status]='Failed')
 );
-
-
-

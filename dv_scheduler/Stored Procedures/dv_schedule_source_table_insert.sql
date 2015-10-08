@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROC [dv_scheduler].[dv_schedule_source_table_insert] 
+﻿CREATE PROC [dv_scheduler].[dv_schedule_source_table_insert] 
      @schedule_name				varchar(128)
 	,@source_system_name		varchar(50)
 	,@source_table_schema		varchar(128)
