@@ -67,7 +67,7 @@ Visit http://www.ode.ninja/ - this is where we keep our guides and share our kno
 ```
 Build 20151020
 	* Automated Install Script.
-	* Added new schema (dv_config) which holds helper scripts to populate some configuration tables, with more expected to be added in future. 
+	* Added new schema (dv_config) which holds helper scripts to populate some configuration tables.
 
 Build 20150928
 	* Initial Build.
