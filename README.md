@@ -1,4 +1,4 @@
-# Optimal Data Engine (ODE) Build 20150928 #
+# Optimal Data Engine (ODE) Build 20151020 #
 Copyright 2015 OptimalBI - Licensed under the GNU GENERAL PUBLIC LICENSE Version 3.0 (GPL-3.0)
 
 ## The Approach: ##
@@ -16,6 +16,22 @@ Using the Data Vault methodology, ODE breaks each complex part of your data proc
 * Visual Studio 2015 Community Edition installed on a computer which you can access. This can be downloaded from https://www.visualstudio.com/en-us/mt171547.aspx
 
 ## Download and build instructions: ##
+
+### Pre-requisites ###
+
+* Download a copy of the zip and extract to a temporary folder
+* Create Database for ODE, default name is ODE_Config
+
+### Scripted Install ###
+
+* Open SQL Server Management studio and load ODV_Config_create.sql from the extracted zip file
+* Within SQL Server Management Studio > Click Query Menu > SQLCMD Mode 
+* Within the script optionally change the DatabaseName and DefaultFilePrefix in the code to the correct database name, default is 'ODE_Config'
+* Click Execute from the toolbar, this should run with a result of 'Command Completely Successfully'
+* Validate the script has executed correctly by checking the last populated table; log4.JournalControl - this should contain 13 records.
+
+### Manual Install ###
+
 * Connect SQL Server Management Studio to the SQL Server instance where you want to install ODE.
 * Download the Optimal Data Engine code from GitHub, into a directory e.g. "C:\Git\OptimalDataEngine\"
 * Using Visual Studio, create a SQL Server Database Project, for example "ODE_Config"
@@ -49,6 +65,10 @@ Visit http://www.ode.ninja/ - this is where we keep our guides and share our kno
 
 ## Change log: ##
 ```
+Build 20151020
+	* Automated Install Script.
+	* Added new schema (dv_config) which holds helper scripts to populate some configuration tables.
+
 Build 20150928
 	* Initial Build.
 

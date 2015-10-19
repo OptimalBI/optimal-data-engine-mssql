@@ -175,8 +175,7 @@ select @SQL = replace(
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Load The Hub'
-IF @_JournalOnOff = 'ON'
-	SET @_ProgressText += @SQL
+IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
 SET @ParmDefinition = N'@insertcount int OUTPUT';
  --print @sql 
 

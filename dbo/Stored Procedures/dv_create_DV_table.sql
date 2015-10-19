@@ -4,8 +4,9 @@
 , @object_schema				 varchar(128)   = NULL
 , @object_database				 varchar(128)   = NULL
 , @object_filegroup              varchar(128)   = NULL
-, @object_type					 varchar(30)     = NULL
+, @object_type					 varchar(30)    = NULL
 , @payload_columns			     [dbo].[dv_column_type] READONLY
+, @sat_is_columnstore			 bit			= 0
 , @recreate_flag                 char(1)		= 'N'
 , @dogenerateerror               bit            = 0
 , @dothrowerror                  bit			= 1
@@ -76,6 +77,7 @@ SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_Spr
 						+ @NEW_LINE + '    @object_filegroup             : ' + COALESCE(@object_filegroup, '<NULL>')
 						+ @NEW_LINE + '    @object_type                  : ' + COALESCE(@object_type, '<NULL>')
 						+ @NEW_LINE + '    @payload_columns              : ' + COALESCE(@payload_columns_string, '<NULL>')
+						+ @NEW_LINE + '    @sat_is_columnstore           : ' + COALESCE(CAST(@sat_is_columnstore AS varchar), '<NULL>')
 						+ @NEW_LINE + '    @recreate_flag                : ' + COALESCE(@recreate_flag, '<NULL>')
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
 						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
@@ -139,21 +141,27 @@ from [fn_get_key_definition](@object_name, @object_type)
 select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
 from
 (select *
-from @default_columns
-union all
-select *
+from @default_columns) a
+order by source_ordinal_position
+select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
+from
+(select *
 from @payload_columns) a
 order by satellite_ordinal_position, column_name
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Add the Primary Key'
-select @pk_name = column_name from [fn_get_key_definition](@object_name, @object_type)
-select @SQL += 'PRIMARY KEY CLUSTERED (' + @pk_name + ') ON ' + quotename(@object_filegroup) + @crlf
+if @sat_is_columnstore = 0
+	begin
+	select @pk_name = column_name from [fn_get_key_definition](@object_name, @object_type)
+	select @SQL += 'PRIMARY KEY CLUSTERED (' + @pk_name + ') ON ' + quotename(@object_filegroup) + @crlf
+	end
+	
 select @SQL += ') ON ' + quotename(@object_filegroup) + ';' + @crlf
+
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Table'
-IF @_JournalOnOff = 'ON'
-	SET @_ProgressText += @SQL
+IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
 --print @SQL
 exec (@SQL)
 

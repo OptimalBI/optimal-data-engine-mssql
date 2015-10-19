@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROC [dv_scheduler].[dv_run_insert] 
+﻿CREATE PROC [dv_scheduler].[dv_run_insert] 
      @schedule_list				varchar(4000)
 AS 
 	SET NOCOUNT ON 

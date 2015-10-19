@@ -1,8 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[dv_load_source_table]
+﻿
+CREATE PROCEDURE [dbo].[dv_load_source_table]
 (
   @vault_source_system_name		varchar(128) = NULL
 , @vault_source_table_schema	varchar(128) = NULL
 , @vault_source_table_name		varchar(128) = NULL
+, @vault_source_load_type		varchar(50)  = NULL
 , @dogenerateerror				bit				= 0
 , @dothrowerror					bit				= 1
 )
@@ -81,12 +83,12 @@ SET @_SprocStartTime    = sysdatetimeoffset();
 SET @_ProgressText      = '' 
 SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
 
-
 -- set Log4TSQL Parameters for Logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
 						+ @NEW_LINE + '    @vault_source_system_name     : ' + COALESCE(@vault_source_system_name, 'NULL')
 						+ @NEW_LINE + '    @vault_source_table_schema    : ' + COALESCE(@vault_source_table_schema, 'NULL')
 						+ @NEW_LINE + '    @vault_source_table_name      : ' + COALESCE(@vault_source_table_name, 'NULL')
+						+ @NEW_LINE + '    @vault_source_load_type       : ' + COALESCE(@vault_source_load_type, 'NULL')
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
 						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
 						+ @NEW_LINE
@@ -98,8 +100,8 @@ IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate inputs';
 
---IF (select count(*) from [dbo].[dv_sat] where sat_name = @sat_name) <> 1
---			RAISERROR('Invalid sat Name: %s', 16, 1, @sat_name);
+IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
+			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
 --IF isnull(@recreate_flag, '') not in ('Y', 'N') 
 --			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
 /*--------------------------------------------------------------------------------------------------------------*/	   
@@ -237,7 +239,7 @@ SET @_Step = 'Load Sat Tables for: ' + @source_database + ' ' + @source_schema +
 --print 'Load Sat Tables'
 --print '----------------'
 --print '/*********\'
-EXECUTE [dv_load_sats_for_source_table] @source_system, @source_schema, @source_table
+EXECUTE [dv_load_sats_for_source_table] @source_system, @source_schema, @source_table, @vault_source_load_type
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE

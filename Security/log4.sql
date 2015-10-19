@@ -1,3 +1,2 @@
 ﻿CREATE SCHEMA [log4]
     AUTHORIZATION [dbo];
-

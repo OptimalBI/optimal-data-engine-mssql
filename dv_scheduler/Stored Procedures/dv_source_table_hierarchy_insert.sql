@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROC [dv_scheduler].[dv_source_table_hierarchy_insert] 
+﻿CREATE PROC [dv_scheduler].[dv_source_table_hierarchy_insert] 
 	 @source_system_name		varchar(50)
 	,@source_table_schema		varchar(128)
     ,@source_table_name			varchar(128)

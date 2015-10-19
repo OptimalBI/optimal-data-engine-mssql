@@ -1,6 +1,4 @@
-﻿
-
-CREATE view [dv_scheduler].[vw_dv_schedule_current] as 
+﻿CREATE view [dv_scheduler].[vw_dv_schedule_current] as 
 SELECT [schedule_key]
       ,[schedule_name]
       ,[schedule_description]

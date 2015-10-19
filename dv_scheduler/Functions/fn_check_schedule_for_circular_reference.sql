@@ -1,5 +1,4 @@
-﻿
-Create FUNCTION [dv_scheduler].[fn_check_schedule_for_circular_reference](@schedule_list varchar(4000))
+﻿Create FUNCTION [dv_scheduler].[fn_check_schedule_for_circular_reference](@schedule_list varchar(4000))
 
 RETURNS TABLE	
 AS

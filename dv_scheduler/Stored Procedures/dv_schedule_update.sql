@@ -1,5 +1,4 @@
-﻿
-CREATE PROC [dv_scheduler].[dv_schedule_update] 
+﻿CREATE PROC [dv_scheduler].[dv_schedule_update] 
     @schedule_key			int,
 	@schedule_name			varchar(128),	
     @schedule_description	varchar(256),	

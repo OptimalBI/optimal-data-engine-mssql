@@ -120,6 +120,7 @@ EXECUTE [dbo].[dv_create_DV_table]
   ,@filegroup
   ,'lnk'
   ,@payload_columns
+  ,0
   ,@recreate_flag
   ,@dogenerateerror
   ,@dothrowerror
@@ -127,7 +128,7 @@ EXECUTE [dbo].[dv_create_DV_table]
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Index the Link on the Hub Keys'
 select @SQL = ''
-select @SQL += 'CREATE UNIQUE NONCLUSTERED INDEX ' + quotename(@varobject_name + cast(newid() as varchar(56))) 
+select @SQL += 'CREATE UNIQUE NONCLUSTERED INDEX ' + quotename('UX__' + @varobject_name + cast(newid() as varchar(56))) 
 	select @SQL += ' ON ' + @table_name + '(' + @crlf + ' '
 	select @SQL = @SQL + rtrim(column_name) + @crlf +  ','
 		from @payload_columns

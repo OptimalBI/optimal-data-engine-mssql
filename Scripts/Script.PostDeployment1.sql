@@ -461,5 +461,5 @@ USING	(VALUES ('dv_create_DV_table'				,'OFF'),
 		INSERT ([ModuleName],[OnOffSwitch])
 		VALUES ([ModuleName],[OnOffSwitch])
 	;
---select * from [log4].[JournalControl]
+select * from [log4].[JournalControl]
 GO
