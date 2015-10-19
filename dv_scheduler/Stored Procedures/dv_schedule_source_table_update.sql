@@ -1,5 +1,4 @@
-﻿
-CREATE PROC [dv_scheduler].[dv_schedule_source_table_update] 
+﻿CREATE PROC [dv_scheduler].[dv_schedule_source_table_update] 
     @schedule_source_table_key		int,
     @schedule_key					int,
     @source_table_key				int,

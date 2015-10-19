@@ -1,14 +1,27 @@
-﻿CREATE PROCEDURE [dv_scheduler].[dv_populate_manifest_hierarchy]
+﻿
+Create PROCEDURE [dv_config].[dv_populate_hub_key_columns]
 (
-	@run_key			int
-   ,@DoGenerateError   bit          = 0
-   ,@DoThrowError      bit			= 1
+	 @vault_source_system					varchar(50)
+    ,@vault_source_schema					varchar(128)
+	,@vault_source_table					varchar(128)	
+	,@vault_source_column_name				varchar(128)
+	,@vault_hub_name						varchar(128)	= Null		
+	,@vault_hub_key_column_name				varchar(128)	= Null
+	,@vault_release_number					int				= 0
+	,@DoGenerateError						bit				= 0
+	,@DoThrowError							bit				= 1
 )
 AS
 BEGIN
 SET NOCOUNT ON;
 
 -- Internal use variables
+
+declare @column_key							int
+	   ,@hub_key_column_key					int
+	   ,@hub_key_fully_qualified			nvarchar(512)
+	   ,@column_fully_qualified				nvarchar(512)
+
 
 -- Log4TSQL Journal Constants 
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
@@ -44,65 +57,72 @@ SET @_Severity          = @SEVERITY_INFORMATION;
 SET @_SprocStartTime    = sysdatetimeoffset();
 SET @_ProgressText      = '' 
 SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-			
-	
+
 --set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @run_key		         : ' + COALESCE(cast(@run_key as varchar(20)), '<NULL>')
-						+ @NEW_LINE + '    @DoGenerateError      : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
-						+ @NEW_LINE + '    @DoThrowError         : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
+						+ @NEW_LINE + '    @vault_source_system          : ' + COALESCE(@vault_source_system						, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_schema          : ' + COALESCE(@vault_source_schema						, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_table           : ' + COALESCE(@vault_source_table							, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_column_name     : ' + COALESCE(@vault_source_column_name					, '<NULL>')
+						+ @NEW_LINE + '    @vault_hub_name               : ' + COALESCE(@vault_hub_name								, '<NULL>')
+						+ @NEW_LINE + '    @vault_hub_key_column_name    : ' + COALESCE(@vault_hub_key_column_name					, '<NULL>')
+						+ @NEW_LINE + '    @vault_release_number         : ' + COALESCE(cast(@vault_release_number as varchar)		, '<NULL>')
+						+ @NEW_LINE + '    @DoGenerateError : ' + COALESCE(CAST(@DoGenerateError AS varchar)						, '<NULL>')
+						+ @NEW_LINE + '    @DoThrowError    : ' + COALESCE(CAST(@DoThrowError AS varchar)							, '<NULL>')
 						+ @NEW_LINE
+
 BEGIN TRANSACTION
 BEGIN TRY
 SET @_Step = 'Generate any required error';
 IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate Inputs';
-IF (select count(*) from [dv_scheduler].[dv_run] where [run_key] = @run_key) <> 1
-			RAISERROR('@run_key: %i Does Not Exist', 16, 1, @run_key);
+
+select @column_fully_qualified = quotename(@vault_source_system) + '.' + quotename(@vault_source_schema) + '.' + quotename(@vault_source_table) + '.' + quotename(@vault_source_column_name)
+select @hub_key_fully_qualified = quotename(@vault_hub_name) + '.' + quotename(@vault_hub_key_column_name) 
 
 SET @_Step = 'Initialise Variables';
 
-SET @_Step = 'Build the Hierarchy';
-;with cte_manifest_current as
-(select src_table_hierarchy.source_table_hierarchy_key,run_mani.run_manifest_key 
-from dv_scheduler.vw_dv_source_table_hierarchy_current src_table_hierarchy
-inner join dv_scheduler.dv_run_manifest run_mani
-on src_table_hierarchy.source_table_key = run_mani.source_table_key
-where run_mani.run_key = @run_key 
---and src_table_hierarchy.is_deleted <> 1
-),
-cte_manifest_prior as (
-select src_table_hierarchy_prior.source_table_hierarchy_key, run_mani_prior.run_manifest_key as prior_manifest_key
-from dv_scheduler.vw_dv_source_table_hierarchy_current src_table_hierarchy_prior
-inner join dv_scheduler.dv_run_manifest run_mani_prior
-on src_table_hierarchy_prior.prior_table_key = run_mani_prior.source_table_key
-where run_mani_prior.run_key = @run_key 
---and src_table_hierarchy_prior.is_deleted <> 1
-) 
-insert into dv_scheduler.dv_run_manifest_hierarchy (run_manifest_key, run_manifest_prior_key)
-select mani_cur.run_manifest_key, mani_prev.prior_manifest_key  
-from cte_manifest_current mani_cur
-inner join cte_manifest_prior mani_prev
-on mani_cur.source_table_hierarchy_key = mani_prev.source_table_hierarchy_key;
+SET @_Step = 'Create Config For Hub Key';
 
-if (SELECT count(*) from [dv_scheduler].[fn_check_manifest_for_circular_reference] (@run_key)) <> 0
-    BEGIN 
-	SET @_ProgressText  = @_ProgressText + @NEW_LINE
-						+ 'the Manifest created for @run_key: ' + cast(@run_key as varchar(20)) + ' Has Created a Circular Reference. Please Investigate'
-						+ @NEW_LINE
-	print @_ProgressText
-	END
+select @column_key = c.column_key
+from [dbo].[dv_source_system] ss
+  left join [dbo].[dv_source_table] st
+  on st.system_key = ss.source_system_key
+  left join [dbo].[dv_column] c
+  on st.source_table_key = c.table_key 
+where ss.source_system_name = @vault_source_system
+  and st.source_table_schema = @vault_source_schema
+  and st.source_table_name = @vault_source_table 
+  and c.column_name = @vault_source_column_name
+
+select @hub_key_column_key = hkc.hub_key_column_key
+from [dbo].[dv_hub] h
+  left join [dbo].[dv_hub_key_column] hkc
+  on h.hub_key = hkc.hub_key
+where h.hub_name = @vault_hub_name
+  and hkc.hub_key_column_name = @vault_hub_key_column_name
+
+select @column_key			
+  	  ,@hub_key_column_key	
+
+EXECUTE[dbo].[dv_hub_column_insert] 
+   @hub_key_column_key 
+  ,@column_key
+  ,@vault_release_number
+		
+
 
 /*--------------------------------------------------------------------------------------------------------------*/
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Successfully Populated Manifest Hierarchy for Run: ' + cast(@run_key as varchar(20))
+SET @_Message   = 'Successfully Populated Config for Hub Key: ' + @hub_key_fully_qualified
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Populate Manifest Hierarchy for Run: ' + cast(@run_key as varchar(20)) 
-IF (XACT_STATE() = -1)  OR (@@TRANCOUNT > 0)
+SET @_ErrorContext	= 'Failed to Populate Config for Hub Key: ' + @hub_key_fully_qualified
+IF (XACT_STATE() = -1) -- uncommitable transaction
+OR (@@TRANCOUNT > 0) -- AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';

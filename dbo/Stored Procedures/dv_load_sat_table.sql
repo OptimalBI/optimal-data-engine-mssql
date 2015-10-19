@@ -1,10 +1,12 @@
-﻿CREATE PROCEDURE [dbo].[dv_load_sat_table]
+﻿
+CREATE PROCEDURE [dbo].[dv_load_sat_table]
 (
   @vault_source_system_name		varchar(128) = NULL
 , @vault_source_table_schema	varchar(128) = NULL
 , @vault_source_table_name		varchar(128) = NULL
 , @vault_sat_name				varchar(128) = NULL
 , @vault_temp_table_name        varchar(116) = NULL 
+, @vault_source_load_type		varchar(50)  = NULL 
 , @vault_sql_statement          nvarchar(max) OUTPUT
 , @dogenerateerror				bit				= 0
 , @dothrowerror					bit				= 1
@@ -144,8 +146,12 @@ SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- l
 
 -- set Log4TSQL Parameters for Logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_source_system          : ' + COALESCE(@source_system, 'NULL')
-						+ @NEW_LINE + '    @vault_source_table           : ' + COALESCE(@source_schema, 'NULL')
+						+ @NEW_LINE + '    @vault_source_system_name	 : ' + COALESCE(@vault_source_system_name, 'NULL')
+						+ @NEW_LINE + '    @vault_source_table_schema    : ' + COALESCE(@vault_source_table_schema, 'NULL')
+						+ @NEW_LINE + '    @vault_source_table_name      : ' + COALESCE(@vault_source_table_name, 'NULL')
+						+ @NEW_LINE + '    @vault_sat_name               : ' + COALESCE(@vault_sat_name, 'NULL')
+						+ @NEW_LINE + '    @vault_temp_table_name        : ' + COALESCE(@vault_temp_table_name, 'NULL')
+						+ @NEW_LINE + '    @vault_source_load_type       : ' + COALESCE(@vault_source_load_type, 'NULL')
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
 						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
 						+ @NEW_LINE
@@ -156,8 +162,8 @@ IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate inputs';
 
---IF (select count(*) from [dbo].[dv_sat] where sat_name = @sat_name) <> 1
---			RAISERROR('Invalid sat Name: %s', 16, 1, @sat_name);
+IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
+			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
 --IF isnull(@recreate_flag, '') not in ('Y', 'N') 
 --			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -211,7 +217,7 @@ select 	 @source_system				= s.[source_system_name]
 		,@source_table				= t.[source_table_name]
 		,@source_table_config_key	= t.[source_table_key]
 		,@source_qualified_name		= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
-		,@source_load_type			= t.[source_table_load_type]
+		,@source_load_type			= coalesce(@vault_source_load_type, t.[source_table_load_type]) --The Run Time Load Type, If provided, overides the Default for the Source Table
 from [dbo].[dv_source_system] s
 inner join [dbo].[dv_source_table] t
 on t.system_key = s.[source_system_key]
@@ -245,7 +251,8 @@ if @sat_link_hub_flag = 'H'
 	select   @hub_database			= h.[hub_database]
 	        ,@hub_schema			= coalesce([hub_schema], @def_hub_schema, 'dbo')				
 			,@hub_table				= h.[hub_name]
-			,@hub_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
+--			,@hub_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
+			,@hub_surrogate_keyname = (select replace(replace(column_name, '[', ''), ']', '') from [dbo].[fn_get_key_definition](h.[hub_name], 'hub'))
 			,@hub_config_key		= h.[hub_key]
 			,@hub_qualified_name	= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))	
 	from [dbo].[dv_satellite] s
@@ -260,7 +267,8 @@ begin
 	select   @link_database			= l.[link_database]
 	        ,@link_schema			= coalesce(l.[link_schema], @def_link_schema, 'dbo')				
 			,@link_table			= l.[link_name]
-			,@link_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
+			--,@link_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
+			,@link_surrogate_keyname= (select replace(replace(column_name, '[', ''), ']', '') from [dbo].[fn_get_key_definition](l.[link_name], 'lnk'))
 			,@link_config_key		= l.[link_key]
 			,@link_qualified_name	= quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([link_name], 'lnk')))
 	from [dbo].[dv_satellite] s
@@ -411,6 +419,7 @@ set @sql2 += cast(isnull(@execution_id, 0) as varchar(50)) + ', @version_date, '
           + cast(isnull(@rows_inserted, 0) as varchar(50)) + ',' + cast(isnull(@rows_updated, 0) as varchar(50)) + ',' + cast(isnull(@rows_deleted, 0) as varchar(50)) + @crlf
 set @sql2 += 'COMMIT;' + @crlf
 select @vault_sql_statement = @sql2
+IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @crlf
 /*--------------------------------------------------------------------------------------------------------------*/
 --SET @_Step = 'Load The ' + case when @sat_link_hub_flag = 'H' then 'Hub' else 'Link' end
 --IF @_JournalOnOff = 'ON'

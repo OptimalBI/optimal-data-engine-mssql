@@ -1,10 +1,16 @@
 ﻿
-CREATE PROCEDURE [dv_scheduler].[dv_populate_manifest]
+CREATE PROCEDURE [dv_config].[dv_populate_satellite]
 (
-	 @schedule_name		varchar(4000)
-	,@run_key			int
-	,@DoGenerateError   bit          = 0
-	,@DoThrowError      bit			 = 1
+	 @vault_satellite_name					varchar(128)	= Null
+    ,@vault_link_hub_flag					char(1)			= null
+	,@vault_hub_link_name					varchar(128)	= Null
+	,@vault_satellite_database				varchar(128)	= Null
+	,@vault_duplicate_removal_threshold		bit				= 0
+	,@vault_is_columnstore					bit				= 0
+	,@vault_rerun_satellite_insert			bit				= 0
+	,@vault_release_number					int				= 0
+	,@DoGenerateError						bit				= 0
+	,@DoThrowError							bit				= 1
 )
 AS
 BEGIN
@@ -12,18 +18,19 @@ SET NOCOUNT ON;
 
 -- Internal use variables
 
-DECLARE
-    @vault_statement		nvarchar(max),
-	@vault_change_count		int,
-	@release_key			int,
-	@release_number			int,
-	@change_count			int = 0,
-	@currtable				SYSNAME,
-	@currschema				SYSNAME,
-	@dv_schema_name			sysname,
-	@dv_table_name			sysname,
-    @parm_definition		nvarchar(500),
-	@rc						int	
+declare @satellite_key						int
+       ,@hub_key							int
+       ,@link_key							int
+	   ,@link_hub_satellite_flag			char(1)
+	   ,@satellite_name						varchar(128)
+	   ,@satellite_abbreviation				varchar(4)
+	   ,@satellite_schema					varchar(128)	
+	   ,@satellite_database					varchar(128)
+	   ,@duplicate_removal_threshold		int
+	   ,@is_columnstore						bit
+	   ,@release_key						bit
+	   ,@source_table_key					int
+
 
 -- Log4TSQL Journal Constants 
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
@@ -59,15 +66,20 @@ SET @_Severity          = @SEVERITY_INFORMATION;
 SET @_SprocStartTime    = sysdatetimeoffset();
 SET @_ProgressText      = '' 
 SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-			
-	
+
+
 --set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @schedule_name	: ' + COALESCE(@schedule_name					, '<NULL>')
-						+ @NEW_LINE + '    @run_key			: ' + COALESCE(CAST(@run_key as varchar(20))	, '<NULL>')
-						+ @NEW_LINE + '    @DoGenerateError : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
-						+ @NEW_LINE + '    @DoThrowError    : ' + COALESCE(CAST(@DoThrowError AS varchar)	, '<NULL>')
+						+ @NEW_LINE + '    @vault_satellite_name               : ' + COALESCE(@vault_satellite_name						, '<NULL>')
+						+ @NEW_LINE + '    @vault_link_hub_flag                : ' + COALESCE(@vault_link_hub_flag						, '<NULL>')
+						+ @NEW_LINE + '    @vault_satellite_database           : ' + COALESCE(@vault_satellite_database					, '<NULL>')
+						+ @NEW_LINE + '    @vault_duplicate_removal_threshold  : ' + COALESCE(cast(@vault_satellite_name as varchar)	, '<NULL>')
+						+ @NEW_LINE + '    @vault_rerun_satellite_insert       : ' + COALESCE(cast(@vault_rerun_satellite_insert as varchar), '<NULL>')
+						+ @NEW_LINE + '    @vault_release_number               : ' + COALESCE(CAST(@vault_release_number AS varchar)	, '<NULL>')
+						+ @NEW_LINE + '    @DoGenerateError : ' + COALESCE(CAST(@DoGenerateError AS varchar)							, '<NULL>')
+						+ @NEW_LINE + '    @DoThrowError    : ' + COALESCE(CAST(@DoThrowError AS varchar)								, '<NULL>')
 						+ @NEW_LINE
+
 BEGIN TRANSACTION
 BEGIN TRY
 SET @_Step = 'Generate any required error';
@@ -77,56 +89,60 @@ SET @_Step = 'Validate Inputs';
 
 SET @_Step = 'Initialise Variables';
 
-SET @_Step = 'Initialise Release';
+SET @_Step = 'Create Config Satellite Columns';
 
+select @satellite_key				= [satellite_key]
+	from [dbo].[dv_satellite] where [satellite_name] = @vault_satellite_name
+ 
+if @satellite_key is not null  -- Satellite Exists - keeping it simple for now - just blow the sat away and redo it.
+	begin
+	if @vault_rerun_satellite_insert = 1
+	    begin
+		delete from [dbo].[dv_satellite_column] where [satellite_key] = @satellite_key
+		delete from [dbo].[dv_satellite] where [satellite_key] = @satellite_key
+		end
+	else
+		begin
+			raiserror('Satellite %s Exists. Either Remove the Satellite or set the @vault_rerun_satellite_column_insert paramater to 1 and try again.',  16, 1, @vault_satellite_name)
+		end
+	end
 
--- insert all tables to be run into the dv_run_manifest table
-INSERT INTO dv_scheduler.dv_run_manifest (
-	 [run_key]
-	,[source_system_name]
-	,[source_timevault]
-	,[source_table_schema]
-	,[source_table_name]
-	,[source_table_key]
-	,[source_table_load_type]
-	,[source_procedure_schema]
-	,[source_procedure_name]
-	,[priority]
-	,[queue]
-	)
-SELECT @run_key AS run_key
-	,[src_system].[source_system_name]
-	,[src_system].[timevault_name]
-	,[src_table].[source_table_schema]
-	,[src_table].[source_table_name]
-	,[src_table].[source_table_key]
-	,case when [schd_src_table].[source_table_load_type] = 'Default' then [src_table].[source_table_load_type] else [schd_src_table].[source_table_load_type] end
-	,[src_table].[source_procedure_schema]
-	,[src_table].[source_procedure_name]
-	,[schd_src_table].[priority]
-	,[schd_src_table].[queue]
-FROM dv_scheduler.vw_dv_schedule_current AS schd
-INNER JOIN dv_scheduler.vw_dv_schedule_source_table_current AS schd_src_table 
-	ON schd.schedule_key = schd_src_table.schedule_key
-INNER JOIN dbo.dv_source_table AS src_table 
-	ON schd_src_table.source_table_key = src_table.[source_table_key]
-INNER JOIN dbo.dv_source_system AS src_system 
-	ON src_table.system_key = src_system.[source_system_key]
-WHERE upper(schedule_name) IN (
-		SELECT replace(Item, ' ', '')
-		FROM dbo.fn_split_strings(upper(@schedule_name), ',')
-		)
---and (schd_src_table.is_deleted | schd.is_deleted <> 1);  -- Bitwise OR to check if one or both bits are set
+if @vault_link_hub_flag = 'H'
+	select @hub_key = [hub_key]
+	      ,@link_key = 0
+	from [dbo].[dv_hub]
+	where [hub_name] = @vault_hub_link_name
+else
+	select @link_key = [link_key]
+	      ,@hub_key = 0
+	from [dbo].[dv_link]
+	where [link_name] = @vault_hub_link_name
+	
+select @satellite_abbreviation	= [dbo].[fn_get_next_abbreviation] ()
+select @satellite_schema		= cast([dbo].[fn_get_default_value]('Schema', 'Sat') as varchar)	
+	
+EXECUTE  [dbo].[dv_satellite_insert] 
+   @hub_key						= @hub_key 
+  ,@link_key					= @link_key
+  ,@link_hub_satellite_flag		= @vault_link_hub_flag
+  ,@satellite_name				= @vault_satellite_name
+  ,@satellite_abbreviation		= @satellite_abbreviation	
+  ,@satellite_schema			= @satellite_schema
+  ,@satellite_database			= @vault_satellite_database
+  ,@duplicate_removal_threshold = @vault_duplicate_removal_threshold
+  ,@is_columnstore				= @vault_is_columnstore
+  ,@release_number				= @vault_release_number
+
 
 
 /*--------------------------------------------------------------------------------------------------------------*/
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Successfully Populated Manifest for Schedule: ' + @schedule_name
+SET @_Message   = 'Successfully Populated Satellite: ' + @vault_satellite_name
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Populate Manifest for Schedule: ' + @schedule_name
+SET @_ErrorContext	= 'Failed to Populate Satellite: ' + @vault_satellite_name
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0) -- AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN

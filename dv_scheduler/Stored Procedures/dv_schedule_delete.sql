@@ -1,5 +1,4 @@
-﻿
-CREATE PROC [dv_scheduler].[dv_schedule_delete] 
+﻿CREATE PROC [dv_scheduler].[dv_schedule_delete] 
     @schedule_key int,
 	@force		  bit = 0
 AS 

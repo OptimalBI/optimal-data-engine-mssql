@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_scheduler].[dv_restart_manifest]
+﻿CREATE PROCEDURE [dv_scheduler].[dv_restart_manifest]
 (
     @vault_run_key			int	= 0
    ,@restart_failed_items	bit	= 0

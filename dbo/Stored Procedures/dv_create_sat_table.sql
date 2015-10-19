@@ -71,6 +71,7 @@ DECLARE
 		,@sat_link_hub_flag					char(1)
 		,@sat_qualified_name				varchar(512)
 		,@sat_tombstone_indicator			varchar(50)
+		,@sat_is_columnstore				bit
 		,@sat_technical_columns				nvarchar(max)
 		,@sat_payload						nvarchar(max)
 
@@ -189,7 +190,8 @@ select 	 @sat_database			= sat.[satellite_database]
 		,@sat_table				= sat.[satellite_name]		
 		,@sat_surrogate_keyname	= [dbo].[fn_get_object_name] (sat.[satellite_name],'SatSurrogate')		
 		,@sat_config_key		= sat.[satellite_key]		
-		,@sat_link_hub_flag		= sat.[link_hub_satellite_flag]		
+		,@sat_link_hub_flag		= sat.[link_hub_satellite_flag]
+		,@sat_is_columnstore	= sat.[is_columnstore]		
 		,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat')))       
 from [dbo].[dv_column] c
 inner join [dbo].[dv_satellite_column] sc
@@ -280,6 +282,7 @@ EXECUTE [dbo].[dv_create_DV_table]
   ,@def_sat_filegroup
   ,'Sat'
   ,@payload_columns
+  ,@sat_is_columnstore
   ,@recreate_flag
   ,@dogenerateerror
   ,@dothrowerror
@@ -287,15 +290,23 @@ EXECUTE [dbo].[dv_create_DV_table]
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Index the Sat on the Surrogate Key Plus Row End Date'
 select @SQL = ''
-select @SQL += 'CREATE UNIQUE NONCLUSTERED INDEX ' + quotename(@sat_table + cast(newid() as varchar(56))) 
+if @sat_is_columnstore = 0
+	begin
+	select @SQL += 'CREATE UNIQUE NONCLUSTERED INDEX ' + quotename('UX__' + @sat_table + cast(newid() as varchar(56))) 
 	select @SQL += ' ON ' + @sat_qualified_name + '(' + @crlf + ' '
-	select @SQL = @SQL + @hub_link_surrogate_key + ',' + @sat_end_date_col +',' + @sat_current_row_col + ',' + @sat_tombstone_indicator	
-	select @SQL = @SQL + ') ON ' + quotename(@def_sat_filegroup) + @crlf
+	--select @SQL = @SQL + @hub_link_surrogate_key + ',' + @sat_end_date_col +',' + @sat_current_row_col + ',' + @sat_tombstone_indicator	
+	select @SQL = @SQL + @hub_link_surrogate_key + ',' + @sat_start_date_col 	
+	select @SQL = @SQL + ') INCLUDE(' + @sat_current_row_col +',' + @sat_tombstone_indicator + ') ON ' + quotename(@def_sat_filegroup) + @crlf
+	end
+else
+	begin
+	select @SQL += 'CREATE CLUSTERED COLUMNSTORE INDEX ' + quotename('CCX__' + @sat_table + cast(newid() as varchar(56)))
+	select @SQL += ' ON ' + @sat_qualified_name + @crlf + ' ' 
+	end
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Index'
-IF @_JournalOnOff = 'ON'
-	SET @_ProgressText += @SQL
-print @SQL
+IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
+--print @SQL
 exec (@SQL)
 
 /*--------------------------------------------------------------------------------------------------------------*/

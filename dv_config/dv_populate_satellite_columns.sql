@@ -1,14 +1,25 @@
-﻿CREATE PROCEDURE [dv_scheduler].[dv_populate_manifest_hierarchy]
+﻿
+CREATE PROCEDURE [dv_config].[dv_populate_satellite_columns]
 (
-	@run_key			int
-   ,@DoGenerateError   bit          = 0
-   ,@DoThrowError      bit			= 1
+	 @vault_source_system					varchar(50)
+    ,@vault_source_schema					varchar(128)
+	,@vault_source_table					varchar(128)	
+	,@vault_satellite_name					varchar(128)	= Null
+	,@vault_release_number					int				= 0
+	,@vault_rerun_satellite_column_insert	bit				= 0
+	,@DoGenerateError						bit				= 0
+	,@DoThrowError							bit				= 1
 )
 AS
 BEGIN
 SET NOCOUNT ON;
 
 -- Internal use variables
+
+declare @table_fully_qualified				nvarchar(512)
+	   ,@satellite_key						int
+	   ,@source_table_key					int
+
 
 -- Log4TSQL Journal Constants 
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
@@ -44,65 +55,85 @@ SET @_Severity          = @SEVERITY_INFORMATION;
 SET @_SprocStartTime    = sysdatetimeoffset();
 SET @_ProgressText      = '' 
 SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-			
-	
+
 --set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @run_key		         : ' + COALESCE(cast(@run_key as varchar(20)), '<NULL>')
-						+ @NEW_LINE + '    @DoGenerateError      : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
-						+ @NEW_LINE + '    @DoThrowError         : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
+						+ @NEW_LINE + '    @vault_source_system                : ' + COALESCE(@vault_source_system						, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_schema                : ' + COALESCE(@vault_source_schema						, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_table                 : ' + COALESCE(@vault_source_table						, '<NULL>')
+						+ @NEW_LINE + '    @vault_satellite_name               : ' + COALESCE(@vault_satellite_name						, '<NULL>')
+						+ @NEW_LINE + '    @vault_rerun_satellite_column_insert: ' + COALESCE(cast(@vault_rerun_satellite_column_insert as varchar)	, '<NULL>')
+						+ @NEW_LINE + '    @DoGenerateError : ' + COALESCE(CAST(@DoGenerateError AS varchar)							, '<NULL>')
+						+ @NEW_LINE + '    @DoThrowError    : ' + COALESCE(CAST(@DoThrowError AS varchar)								, '<NULL>')
 						+ @NEW_LINE
+
 BEGIN TRANSACTION
 BEGIN TRY
 SET @_Step = 'Generate any required error';
 IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate Inputs';
-IF (select count(*) from [dv_scheduler].[dv_run] where [run_key] = @run_key) <> 1
-			RAISERROR('@run_key: %i Does Not Exist', 16, 1, @run_key);
+
+select @table_fully_qualified = quotename(@vault_source_system) + '.' + quotename(@vault_source_schema) + '.' + quotename(@vault_source_table)
 
 SET @_Step = 'Initialise Variables';
 
-SET @_Step = 'Build the Hierarchy';
-;with cte_manifest_current as
-(select src_table_hierarchy.source_table_hierarchy_key,run_mani.run_manifest_key 
-from dv_scheduler.vw_dv_source_table_hierarchy_current src_table_hierarchy
-inner join dv_scheduler.dv_run_manifest run_mani
-on src_table_hierarchy.source_table_key = run_mani.source_table_key
-where run_mani.run_key = @run_key 
---and src_table_hierarchy.is_deleted <> 1
-),
-cte_manifest_prior as (
-select src_table_hierarchy_prior.source_table_hierarchy_key, run_mani_prior.run_manifest_key as prior_manifest_key
-from dv_scheduler.vw_dv_source_table_hierarchy_current src_table_hierarchy_prior
-inner join dv_scheduler.dv_run_manifest run_mani_prior
-on src_table_hierarchy_prior.prior_table_key = run_mani_prior.source_table_key
-where run_mani_prior.run_key = @run_key 
---and src_table_hierarchy_prior.is_deleted <> 1
-) 
-insert into dv_scheduler.dv_run_manifest_hierarchy (run_manifest_key, run_manifest_prior_key)
-select mani_cur.run_manifest_key, mani_prev.prior_manifest_key  
-from cte_manifest_current mani_cur
-inner join cte_manifest_prior mani_prev
-on mani_cur.source_table_hierarchy_key = mani_prev.source_table_hierarchy_key;
+SET @_Step = 'Create Config Satellite Columns';
 
-if (SELECT count(*) from [dv_scheduler].[fn_check_manifest_for_circular_reference] (@run_key)) <> 0
-    BEGIN 
-	SET @_ProgressText  = @_ProgressText + @NEW_LINE
-						+ 'the Manifest created for @run_key: ' + cast(@run_key as varchar(20)) + ' Has Created a Circular Reference. Please Investigate'
-						+ @NEW_LINE
-	print @_ProgressText
-	END
+select @satellite_key = [satellite_key]
+	from [dbo].[dv_satellite] where [satellite_name] = @vault_satellite_name
+
+select @source_table_key = st.[source_table_key] 
+	from [dbo].[dv_source_table] st
+	inner join [dbo].[dv_source_system] ss
+	on ss.source_system_key = st.system_key
+	where ss.[source_system_name]	= @vault_source_system
+	  and st.[source_table_schema]	= @vault_source_schema 
+	  and st.[source_table_name]	= @vault_source_table
+select 1 from [dbo].[dv_satellite_column] where [satellite_key] = @satellite_key
+if @@ROWCOUNT > 0  -- Satellite already has Columns attached
+	begin
+	if @vault_rerun_satellite_column_insert = 1
+	    begin
+		delete from [dbo].[dv_satellite_column] where [satellite_key] = @satellite_key
+		end
+	else
+		begin
+			raiserror('Satellite %s has columns linked to it. Either Remove them from the Satellite or set the @vault_rerun_satellite_column_insert paramater to 1 and try again.',  16, 1, @vault_satellite_name)
+		end
+	end
+		
+declare @column_key int
+declare Col_Cursor cursor forward_only for 
+SELECT  column_key from [dbo].[dv_column]	
+ where [table_key] = @source_table_key
+open Col_Cursor
+fetch next from Col_Cursor into  @column_key				
+
+while @@FETCH_STATUS = 0
+begin								
+select @satellite_key, @column_key,@vault_release_number 
+EXECUTE [dbo].[dv_satellite_column_insert] 
+   @satellite_key
+  ,@column_key
+  ,@vault_release_number
+
+fetch next from Col_Cursor into  @column_key
+end
+close Col_Cursor
+deallocate Col_Cursor
+
 
 /*--------------------------------------------------------------------------------------------------------------*/
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Successfully Populated Manifest Hierarchy for Run: ' + cast(@run_key as varchar(20))
+SET @_Message   = 'Successfully Populated Columns for Satellite: ' + @vault_satellite_name
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Populate Manifest Hierarchy for Run: ' + cast(@run_key as varchar(20)) 
-IF (XACT_STATE() = -1)  OR (@@TRANCOUNT > 0)
+SET @_ErrorContext	= 'Failed to Populate Columns for Satellite: ' + @vault_satellite_name
+IF (XACT_STATE() = -1) -- uncommitable transaction
+OR (@@TRANCOUNT > 0) -- AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';

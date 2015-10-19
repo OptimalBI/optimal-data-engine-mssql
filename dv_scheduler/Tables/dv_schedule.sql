@@ -11,8 +11,6 @@
     CONSTRAINT [PK__dv_sched__DC037B951DDF7647] PRIMARY KEY CLUSTERED ([schedule_key] ASC),
     CONSTRAINT [FK_dv_schedule_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key])
 );
-
-
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [UX_dv_schedule_schedule_name]
     ON [dv_scheduler].[dv_schedule]([schedule_name] ASC);

@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROCEDURE [dv_scheduler].[dv_process_schedule]
+﻿CREATE PROCEDURE [dv_scheduler].[dv_process_schedule]
 (
 	@schedule_list		varchar(4000)
    ,@DoGenerateError	bit				= 0
