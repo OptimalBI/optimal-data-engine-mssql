@@ -14842,7 +14842,8 @@ print @_Message
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed Load of: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
+SET @_ErrorContext	= 'Failed Load of: ' + isnull(quotename(@vault_source_system_name), 'N/A') + '.' + isnull(quotename(@vault_source_table_schema), 'N/A') + '.' + isnull(quotename(@vault_source_table_name), 'N/A') + @NEW_LINE
+SET @_ErrorContext += 'For Message Type: ' + isnull(@message_type_name, '') + @NEW_LINE + 'For Message: ' + isnull(@msgChar, '')
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
@@ -15062,7 +15063,8 @@ print @_Message
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed Load of: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
+SET @_ErrorContext	= 'Failed Load of: ' + isnull(quotename(@vault_source_system_name), 'N/A') + '.' + isnull(quotename(@vault_source_table_schema), 'N/A') + '.' + isnull(quotename(@vault_source_table_name), 'N/A') + @NEW_LINE
+SET @_ErrorContext += 'For Message Type: ' + isnull(@message_type_name, '') + @NEW_LINE + 'For Message: ' + isnull(@msgChar, '')
 IF (XACT_STATE() = -1) OR (@@TRANCOUNT > 0)
 	BEGIN
 		ROLLBACK TRAN;
