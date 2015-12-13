@@ -14779,8 +14779,8 @@ FROM [dv_scheduler_q002]), TIMEOUT 1000   -- Change for each Reveiver Procedure
 select @rowcount = @@ROWCOUNT
 
 IF (@rowcount > 0)
-	END CONVERSATION @dialog_handle;
 	BEGIN
+	END CONVERSATION @dialog_handle;
 	SET @_Step = 'Process the Message';	
 	SET @msgChar = cast(@msg as varchar(500))
 	IF @message_type_name = @queue_name
@@ -14999,8 +14999,8 @@ FROM [dv_scheduler_q001]), TIMEOUT 1000   -- Change for each Reveiver Procedure
 select @rowcount = @@ROWCOUNT
 
 IF (@rowcount > 0)
-	END CONVERSATION @dialog_handle;
 	BEGIN
+	END CONVERSATION @dialog_handle;
 	SET @_Step = 'Process the Message';	
 	SET @msgChar = cast(@msg as varchar(500))
 	IF @message_type_name = @queue_name
