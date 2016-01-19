@@ -1,5 +1,5 @@
 ﻿CREATE TABLE [dbo].[dv_source_system] (
-    [source_system_key]         INT                IDENTITY (1, 1) NOT NULL,
+    [source_system_key]  INT                IDENTITY (1, 1) NOT NULL,
     [source_system_name] VARCHAR (50)       NOT NULL,
     [timevault_name]     VARCHAR (50)       NULL,
     [release_key]        INT                CONSTRAINT [DF_dv_source_system_release_key] DEFAULT ((0)) NOT NULL,
@@ -10,3 +10,4 @@
     CONSTRAINT [FK_dv_source_system_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),
     CONSTRAINT [source_system_unique] UNIQUE NONCLUSTERED ([source_system_name] ASC)
 );
+

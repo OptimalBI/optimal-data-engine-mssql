@@ -13,3 +13,4 @@
     CONSTRAINT [dv_hub_abr_unique] UNIQUE NONCLUSTERED ([hub_abbreviation] ASC),
     CONSTRAINT [dv_hub_unique] UNIQUE NONCLUSTERED ([hub_database] ASC, [hub_schema] ASC, [hub_name] ASC)
 );
+

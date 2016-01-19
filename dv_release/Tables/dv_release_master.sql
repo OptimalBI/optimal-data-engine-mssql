@@ -16,6 +16,9 @@
     [updated_datetime]          DATETIMEOFFSET (7) CONSTRAINT [DF_release.dv_release_master_updated_datetime] DEFAULT (sysdatetimeoffset()) NOT NULL,
     CONSTRAINT [PK__dv_relea__7B7C0773AC625D81] PRIMARY KEY CLUSTERED ([release_key] ASC)
 );
+
+
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [dv_release_number]
     ON [dv_release].[dv_release_master]([release_number] ASC);
+

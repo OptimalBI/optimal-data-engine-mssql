@@ -257,3 +257,4 @@ OnComplete:
 END
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Deletes all Journal and Exception entries older than the specified days', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'PROCEDURE', @level1name = N'JournalCleanup';
+

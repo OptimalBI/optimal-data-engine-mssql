@@ -7,3 +7,4 @@
     [affected_row_count]         INT           CONSTRAINT [DF_dv_release_build_affected_row_count] DEFAULT ((0)) NOT NULL,
     CONSTRAINT [PK_dv_release_build] PRIMARY KEY CLUSTERED ([release_build_key] ASC, [release_statement_sequence] ASC)
 );
+

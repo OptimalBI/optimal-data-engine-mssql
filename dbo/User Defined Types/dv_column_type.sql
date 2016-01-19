@@ -10,3 +10,4 @@
     [satellite_ordinal_position] INT           NOT NULL,
     [abbreviation]               VARCHAR (50)  NULL,
     [object_type]                VARCHAR (50)  NULL);
+

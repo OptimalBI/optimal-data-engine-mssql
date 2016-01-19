@@ -12,3 +12,4 @@
     [update_date_time] DATETIMEOFFSET (7) DEFAULT (sysdatetimeoffset()) NOT NULL,
     PRIMARY KEY CLUSTERED ([load_state_key] ASC)
 );
+

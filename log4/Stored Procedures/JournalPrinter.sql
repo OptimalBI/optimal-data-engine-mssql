@@ -95,3 +95,4 @@ BEGIN
 END
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Prints the contents of JournalDetail for the specified Journal ID respecting all line feeds and/or carriage returns', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'PROCEDURE', @level1name = N'JournalPrinter';
+

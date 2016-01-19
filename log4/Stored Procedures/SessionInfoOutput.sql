@@ -134,3 +134,4 @@ BEGIN
 END
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Outputs session info from master.sys.dm_exec_sessions for the current @@SPID', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'PROCEDURE', @level1name = N'SessionInfoOutput';
+
