@@ -20,4 +20,3 @@
     [SessionLoginTime]  DATETIME       NULL,
     CONSTRAINT [PK_Journal] PRIMARY KEY NONCLUSTERED ([JournalId] ASC) WITH (FILLFACTOR = 100)
 );
-

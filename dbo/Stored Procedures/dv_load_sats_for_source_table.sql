@@ -286,6 +286,7 @@ INTO @sat_table
 WHILE @@FETCH_STATUS = 0   
 BEGIN   
 EXECUTE [dbo].[dv_load_sat_table] @source_system,@source_schema,@source_table, @sat_table, @temp_table_name, @vault_source_load_type, @sql OUTPUT
+
 set @sql2 += @sql
 FETCH NEXT FROM c_sat_list 
 INTO @sat_table	
@@ -299,7 +300,7 @@ set @sql = @sql1 + @sql2
 --/*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Load The Source into Sat(s)'
 IF @_JournalOnOff = 'ON' SET @_ProgressText += @SQL
---print @SQL
+--select @SQL
 EXECUTE(@SQL);
 /*--------------------------------------------------------------------------------------------------------------*/
 

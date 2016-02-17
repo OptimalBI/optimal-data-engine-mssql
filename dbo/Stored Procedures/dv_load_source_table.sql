@@ -185,6 +185,7 @@ select distinct
        hub_database
 	  ,hub_name
 from @load_details
+where hub_name is not null
 
 OPEN hub_cursor   
 FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name  
@@ -216,6 +217,7 @@ select distinct
        link_database
 	  ,link_name
 from @load_details
+where link_name is not null
 
 OPEN link_cursor   
 FETCH NEXT FROM link_cursor INTO @link_database, @link_name  

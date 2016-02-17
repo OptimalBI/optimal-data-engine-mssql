@@ -28,8 +28,6 @@
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [UX_dv_run_manifest__run_key_source_table]
     ON [dv_scheduler].[dv_run_manifest]([run_key] ASC, [source_system_name] ASC, [source_table_schema] ASC, [source_table_name] ASC);
-
-
 GO
 CREATE Trigger [dv_scheduler].[trg_dv_manifest_status] on [dv_scheduler].[dv_run_manifest]
 AFTER UPDATE AS

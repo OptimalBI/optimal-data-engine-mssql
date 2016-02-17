@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[dv_load_sat_table]
+﻿CREATE PROCEDURE [dbo].[dv_load_sat_table]
 (
   @vault_source_system_name		varchar(128) = NULL
 , @vault_source_table_schema	varchar(128) = NULL
@@ -23,6 +22,8 @@ DECLARE
         ,@def_global_default_load_date_time	varchar(128) 
 		,@def_global_failed_lookup_key		int
 		,@def_sat_hashmatching_type			varchar(10)
+		,@def_sat_hashmatching_delimiter	varchar(128)
+		,@def_sat_hashmatching_delimiterX	varchar(40)
 		,@def_hl_surrogate_col_type			varchar(128)
 
 --Sat Defaults									
@@ -64,6 +65,8 @@ DECLARE
 		,@sat_technical_columns				nvarchar(max)
 		,@sat_payload						nvarchar(max)
 		,@matching_payload					nvarchar(max)
+		,@sat_hash_payload					nvarchar(max)
+		,@sat_hashmatching_char_length      int
 
 --  Working Storage
 DECLARE @execution_id				int
@@ -140,7 +143,9 @@ select
 ,@def_sat_prefix					= cast([dbo].[fn_get_default_value] ('prefix','sat')					as varchar(128))	
 ,@def_sat_schema					= cast([dbo].[fn_get_default_value] ('schema','sat')					as varchar(128))	
 ,@def_sat_hashmatching_type         = cast([dbo].[fn_get_default_value] ('HashMatchingType','sat')		    as varchar) 
+,@def_sat_hashmatching_delimiter	= cast([dbo].[fn_get_default_value] ('HashMatchingDelimiter','sat')	    as varchar)
 
+select @def_sat_hashmatching_delimiterX = convert(varchar(50), convert(varbinary(max), @def_sat_hashmatching_delimiter),1)
 select @sat_start_date_col = quotename(column_name)
 from [dbo].[dv_default_column]
 where 1=1
@@ -212,12 +217,13 @@ and sat.[satellite_name] = @vault_sat_name
 
 
 if coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type, 'None') <> 'None'
-	select @sat_hashmatching_col = [column_name]		   
+	select @sat_hashmatching_char_length = column_length
+		  ,@sat_hashmatching_col = [column_name] 
 	from [dbo].[dv_default_column]
 	where 1=1
 	and [object_type] = 'Sat'
 	and [object_column_type] <> 'Object_Key' 
-	and [object_column_type] = coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type) + '_match'
+    and [object_column_type] = 'Hash_Match'
 
 if @sat_link_hub_flag = 'H'	
 SELECT @def_hl_surrogate_col_type = [dbo].[fn_build_column_definition] ([column_type], [column_length], [column_precision], [column_scale], [collation_Name], 1, 0)
@@ -324,10 +330,42 @@ select @sat_payload = left(@sql, len(@sql) -1)
 if coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type, 'None') = 'None'
 	begin
 	set @sql = ''
-	select @sql += '     OR (CASE WHEN (src.' + quotename([column_name]) + ' IS NULL AND sat.' + quotename([column_name]) + ' IS NULL) OR src.' + quotename([column_name]) + ' = sat.' + quotename([column_name]) + '  THEN 1 ELSE 0 END) = 0' + @crlf 
+	select @sql += '     OR (CASE WHEN (src.' + quotename([column_name]) + ' IS NULL AND sat.' + quotename([column_name]) + ' IS NULL) OR '
+	             + case when [column_type] in('xml', 'geography') 
+				        then 'cast(src.' + quotename([column_name]) + ' as varbinary(max)) = cast(sat.' + quotename([column_name]) + ' as varbinary(max))'
+				        else 'src.' + quotename([column_name]) + ' = sat.' + quotename([column_name])
+						end 
+				 + '  THEN 1 ELSE 0 END) = 0' + @crlf 
 	from @payload_columns s
 	order by s.satellite_ordinal_position
 	select @matching_payload = @sql --right(@sql, len(@sql) - 7)
+	end
+else
+    begin 
+	-- Calculate the Hashes:
+	set @sql = 'update ' + quotename(@vault_temp_table_name) + ' set [vault_hashdiff] = upper(convert(char(' + cast(@sat_hashmatching_char_length as varchar) + '), hashbytes(''' + @sat_hashmatching_type + ''', concat(' + @crlf 
+	--select @sql += 'ltrim(rtrim(isnull(' 
+	--             + case 
+	--			   when [column_type] in('char', 'varchar', 'nchar', 'nvarchar') 
+	--					then quotename([column_name])
+	--			   when [column_type] in('text', 'ntext')
+	--					then 'cast(' + quotename([column_name]) + ' as varchar(max))'
+	--			   when [column_type] in('binary', 'varbinary')
+	--					then 'convert(varchar(max), ' + quotename([column_name]) + ', 2)'
+	--			   else 'convert(varchar(max), cast(' + quotename([column_name]) + ' as varbinary(8000)), 2)' 
+	--			   end 
+	--			 + ', ''''))), ''' + @def_sat_hashmatching_delimiter + ''',' + @crlf 
+	select @sql += 'ISNULL(CONVERT(VARBINARY(MAX),' + quotename([column_name]) + '), 0x) ,' + @def_sat_hashmatching_delimiterX + ',' + @crlf
+	from [dbo].[dv_column] c
+	inner join [dbo].[dv_satellite_column] sc on sc.[column_key] = c.[column_key]
+	inner join [dbo].[dv_satellite] s on s.satellite_key = sc.satellite_key
+	where 1=1
+	and [discard_flag] <> 1
+	and s.[satellite_key]= @sat_config_key
+	order by [satellite_ordinal_position], [column_name]
+	select @sat_hash_payload = left(@sql, len(@sql) -3) + ')),2))'
+	--Matching Statement:
+    select @matching_payload = 'OR isnull(sat.' + @sat_hashmatching_col + ', '''') <> src.[vault_hashdiff]' 
 	end
 
 -- Compile the SQL
@@ -336,15 +374,20 @@ set @sql1 = ''
 
 -- Insert New Rows for Updates
 set @sql1 = 'BEGIN TRANSACTION' + @crlf
-set @sql1 += 'declare @ChangeKeys table(ChangeKey ' + @def_hl_surrogate_col_type + ')' + @crlf
-set @sql1 += 'declare @insertcount bigint , @updatecount bigint , @deletecount bigint'
+if coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type, 'None') <> 'None'
+	set @sql1 += @sat_hash_payload
+
+
+set @sql1 += 'declare @ChangeKeys_' + @sat_table + ' table(ChangeKey ' + @def_hl_surrogate_col_type + ')' + @crlf
+set @sql1 += 'declare @insertcount_' + @sat_table + ' bigint , @updatecount_' + @sat_table + ' bigint , @deletecount_' + @sat_table + ' bigint'
 set @sql1 += '-- Change Rows ' + @crlf
+
 set @sql1 += 'INSERT INTO '	+ @sat_qualified_name + @crlf 
 set @sql1 += ' (' + @sat_hl_surrogate_col + @crlf 
 set @sql1 += ', ' + replace(@sat_technical_columns, 'sat.', '')
 set @sql1 += replace(@sat_payload, 'sat.', '')
 set @sql1 += ')' + @crlf
-set @sql1 += 'output inserted.' + @sat_surrogate_keyname + ' into @ChangeKeys' + @crlf
+set @sql1 += 'output inserted.' + @sat_surrogate_keyname + ' into @ChangeKeys_' + @sat_table + @crlf
 set @sql1 += 'SELECT ' + @crlf + '  src.' + @sat_hl_surrogate_col + @crlf  + ', ' 
 set @sql1 += '[vault_load_time]' + @crlf
 set @sql1 += ', ' + cast(@source_table_config_key as varchar(50)) + @crlf
@@ -356,14 +399,12 @@ set @sql1 += ', ' + @source_payload
 set @sql1 += 'FROM ' + @vault_temp_table_name + ' src' + @crlf
 set @sql1 += 'INNER JOIN ' + @sat_qualified_name + ' sat' + @crlf 
 set @sql1 += 'ON sat.' + @sat_hl_surrogate_col  + ' = ' + 'src.' + @sat_hl_surrogate_col + @crlf
-set @sql1 += 'WHERE ((CASE WHEN sat.' + @sat_tombstone_indicator + ' = 1 THEN 0 ELSE 1 END) = 0' + @crlf                                                   --*************************************************************************
-if coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type, 'None') = 'None'
-	set @sql1 += @matching_payload 
-else
-	set @sql1 += 'OR sat.' + @sat_hashmatching_col + ' <> src.[vault_hashdiff]' + @crlf
+set @sql1 += 'WHERE ((CASE WHEN sat.' + @sat_tombstone_indicator + ' = 1 THEN 0 ELSE 1 END) = 0' + @crlf                                                  
+set @sql1 += @matching_payload 
+
 set @sql1 += ')' + @crlf
 set @sql1 += 'AND sat.' + @sat_end_date_col + ' = ''' +  cast(@def_global_highdate as varchar) + '''' + @crlf
-set @sql1 += 'select @updatecount = @@ROWCOUNT;' + @crlf
+set @sql1 += 'select @updatecount_' + @sat_table + ' = @@ROWCOUNT;' + @crlf
 
 set @sql1 += @crlf + '-- New Rows ' + @crlf
 set @sql1 += 'INSERT INTO '	+ @sat_qualified_name + @crlf 
@@ -384,7 +425,7 @@ set @sql1 += 'LEFT JOIN ' + @sat_qualified_name + ' sat' + @crlf
 set @sql1 += 'ON sat.' + @sat_hl_surrogate_col  + ' = ' + 'src.' + @sat_hl_surrogate_col + @crlf
 set @sql1 += 'AND sat.' + @sat_end_date_col + ' = ''' +  cast(@def_global_highdate as varchar) + '''' + @crlf
 set @sql1 += 'WHERE sat.' + @sat_hl_surrogate_col  + ' is null' + @crlf
-set @sql1 += 'select @insertcount = @@ROWCOUNT;' + @crlf
+set @sql1 += 'select @insertcount_' + @sat_table + ' = @@ROWCOUNT;' + @crlf
 
 set @sql1 += @crlf + '-- Delete Rows ' + @crlf
 if @source_load_type = 'Full'
@@ -393,7 +434,7 @@ if @source_load_type = 'Full'
 	set @sql1 += ' (' + @sat_hl_surrogate_col + @crlf
 	set @sql1 += ', ' + replace(left(@sat_technical_columns, len(@sat_technical_columns) - 3), 'sat.', '')
 	set @sql1 += ')' + @crlf
-	set @sql1 += 'output inserted.' + @sat_surrogate_keyname + ' into @ChangeKeys' + @crlf
+	set @sql1 += 'output inserted.' + @sat_surrogate_keyname + ' into @ChangeKeys_' + @sat_table + @crlf
 	set @sql1 += 'SELECT ' + @crlf + '  sat.' + @sat_hl_surrogate_col + @crlf  + ', ' 
 	set @sql1 += '[vault_load_time]' + @crlf
 	set @sql1 += ', ' + cast(@source_table_config_key as varchar(50)) + @crlf
@@ -409,10 +450,10 @@ if @source_load_type = 'Full'
 	set @sql1 += 'WHERE src.' + @sat_hl_surrogate_col + ' IS NULL' + @crlf
 	set @sql1 += 'AND sat.' + @sat_end_date_col + ' = ''' +  cast(@def_global_highdate as varchar) + '''' + @crlf
 	set @sql1 += 'AND sat.' + @sat_tombstone_indicator + ' = 0' + @crlf
-	set @sql1 += 'select @deletecount = @@ROWCOUNT;' + @crlf
+	set @sql1 += 'select @deletecount_' + @sat_table + ' = @@ROWCOUNT;' + @crlf
 	end
 else
-	set @sql1 += 'select @deletecount = 0;' + @crlf
+	set @sql1 += 'select @deletecount_' + @sat_table + ' = 0;' + @crlf
 
 set @sql1 += @crlf + '-- End Dating Old Rows ' + @crlf
 --set @sql1 += 'select ChangeKey from @ChangeKeys order by 1' + @crlf
@@ -423,14 +464,14 @@ set @sql1 += 'update sat set sat.' + @sat_end_date_col + ' = wBaseSet.' + @sat_s
 set @sql1 += '    ,sat.' + @sat_current_row_col + ' = 0' + @crlf
 set @sql1 += 'from ' + @sat_qualified_name + ' sat' + @crlf
 set @sql1 += 'inner join wBaseset on sat.' + @sat_surrogate_keyname + ' = wBaseSet.ChangeSurrogate' + @crlf
-set @sql1 += 'WHERE wBaseSet.NewSurrogate in(select ChangeKey from @ChangeKeys)' + @crlf
+set @sql1 += 'WHERE wBaseSet.NewSurrogate in(select ChangeKey from @ChangeKeys_' + @sat_table + ')' + @crlf
 
 
 -- Log Completion
 set @sql1 += @crlf + '-- Log Progress ' + @crlf
 set @sql1 += 'EXECUTE [dv_log].[dv_log_progress] ''sat'',''' + @sat_table + ''',''' + @sat_schema + ''',''' +  @sat_database + ''',' --+ @crlf
 set @sql1 += '''' + @source_table + ''',''' +  @source_schema + ''',''' + @source_system + ''',' --+ @crlf 
-set @sql1 += cast(isnull(@execution_id, 0) as varchar(50)) + ', @version_date, @insertcount, @updatecount, @deletecount' + @crlf
+set @sql1 += cast(isnull(@execution_id, 0) as varchar(50)) + ', @version_date, @insertcount_' + @sat_table + ', @updatecount_' + @sat_table + ', @deletecount_' + @sat_table + '' + @crlf
 
 set @sql1 += 'COMMIT;' + @crlf
 select @vault_sql_statement = @sql1
@@ -438,7 +479,7 @@ IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @cr
 /*--------------------------------------------------------------------------------------------------------------*/
 IF @_JournalOnOff = 'ON'
 	SET @_ProgressText += @sql
-select @vault_sql_statement
+--select @vault_sql_statement
 
 /*--------------------------------------------------------------------------------------------------------------*/
 

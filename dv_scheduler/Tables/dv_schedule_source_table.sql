@@ -21,4 +21,3 @@
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [dv_schedule__dv_schedule__dv_source_table]
     ON [dv_scheduler].[dv_schedule_source_table]([schedule_key] ASC, [source_table_key] ASC);
-

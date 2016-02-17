@@ -310,7 +310,7 @@ BEGIN
          from (
         select distinct
             h.hub_name
-           ,hkc.hub_key_ordinal_position
+           --,hkc.hub_key_ordinal_position
         from [dbo].[dv_hub] h
         inner join [dbo].[dv_hub_key_column] hkc
         on h.hub_key = hkc.hub_key
@@ -324,7 +324,7 @@ BEGIN
         and h.hub_key = @c_hub_key
         and st.[source_table_key] = @source_table_config_key
         and c.discard_flag <> 1) hkc
-        ORDER BY hkc.hub_key_ordinal_position
+        --ORDER BY hkc.hub_key_ordinal_position
         set @link_hub_keys = @link_hub_keys + @wrk_link_keys
         FETCH NEXT FROM c_hub_key
         INTO @c_hub_key

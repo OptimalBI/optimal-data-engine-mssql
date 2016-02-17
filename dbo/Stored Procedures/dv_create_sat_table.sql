@@ -200,7 +200,8 @@ else
 	  on s.[link_key] = l.[link_key]
 	  cross apply [dbo].[fn_get_key_definition] (l.link_name, 'lnk') k
 	  where s.[satellite_key] = @sat_config_key
-select @hub_link_surrogate_key = [column_name] from @payload_columns
+--select @hub_link_surrogate_key = [column_name] from @payload_columns
+select @hub_link_surrogate_key = quotename([column_name]) from @payload_columns
 
 --Add the Satellite Payload
 insert @payload_columns
@@ -261,7 +262,7 @@ if coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type, 'None') <> 'None
 	where 1=1
 	and [object_type] = 'Sat'
 	and [object_column_type] <> 'Object_Key' 
-	and [object_column_type] = coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type) + '_match'
+	and [object_column_type] = 'Hash_Match'
 
  /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Sat'

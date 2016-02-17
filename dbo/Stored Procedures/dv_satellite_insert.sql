@@ -6,8 +6,9 @@
     @satellite_abbreviation			varchar(4) = NULL,
     @satellite_schema				varchar(128),
     @satellite_database				varchar(128),
+	@hashmatching_type				varchar(10),
 	@duplicate_removal_threshold	int,
-    @is_columnstore					bit,
+	@is_columnstore					bit,
 	@release_number					int
 AS 
 	SET NOCOUNT ON 
@@ -22,11 +23,11 @@ AS
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 
-	INSERT INTO [dbo].[dv_satellite] ([hub_key], [link_key], [link_hub_satellite_flag], [satellite_name], [satellite_abbreviation], [satellite_schema], [satellite_database], [duplicate_removal_threshold] , [is_columnstore],[release_key])
-	SELECT @hub_key, @link_key, @link_hub_satellite_flag, @satellite_name, @satellite_abbreviation, @satellite_schema, @satellite_database,  @duplicate_removal_threshold, @is_columnstore, @release_number
+	INSERT INTO [dbo].[dv_satellite] ([hub_key], [link_key], [link_hub_satellite_flag], [satellite_name], [satellite_abbreviation], [satellite_schema], [satellite_database], [hashmatching_type], [duplicate_removal_threshold], [is_columnstore], [release_key])
+	SELECT @hub_key, @link_key, @link_hub_satellite_flag, @satellite_name, @satellite_abbreviation, @satellite_schema, @satellite_database, @hashmatching_type, @duplicate_removal_threshold, @is_columnstore, @release_key
 	
 	-- Begin Return Select <- do not remove
-	SELECT [satellite_key], [hub_key], [link_key], [link_hub_satellite_flag], [satellite_name], [satellite_abbreviation], [satellite_schema], [satellite_database], [duplicate_removal_threshold], [is_columnstore],[release_key], [version_number], [updated_by], [updated_datetime]
+	SELECT [satellite_key], [hub_key], [link_key], [link_hub_satellite_flag], [satellite_name], [satellite_abbreviation], [satellite_schema], [satellite_database], [duplicate_removal_threshold], [hashmatching_type], [is_columnstore],[release_key], [version_number], [updated_by], [updated_datetime]
 	FROM   [dbo].[dv_satellite]
 	WHERE  [satellite_key] = SCOPE_IDENTITY()
 	-- End Return Select <- do not remove

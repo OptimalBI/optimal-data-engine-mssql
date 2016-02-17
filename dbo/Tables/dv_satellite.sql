@@ -25,8 +25,6 @@
 );
 
 
-
-
 GO
 CREATE trigger dbo.dv_satellite_audit
 on [dbo].[dv_satellite]

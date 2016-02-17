@@ -38,8 +38,6 @@ DECLARE
                 ,@def_sat_filegroup                     varchar(128)
                 ,@sat_start_date_col                    varchar(128)
                 ,@sat_end_date_col                      varchar(128)
-				,@def_sat_hashmatching_type				varchar(128)
-				,@def_sat_hashmatching_delimiter		varchar(10)
 				,@def_sat_IsColumnStore					int
 
 -- Object Specific Settings
@@ -52,7 +50,6 @@ DECLARE
                 ,@source_qualified_name                 varchar(512)
                 ,@source_load_date_time                 varchar(128)
                 ,@source_payload                        nvarchar(max)
-				,@source_hash_payload					nvarchar(max)
 -- Hub Table
                 ,@hub_database                          varchar(128)
                 ,@hub_schema                            varchar(128)
@@ -78,7 +75,6 @@ DECLARE
                 ,@sat_config_key                        int
                 ,@sat_link_hub_flag                     char(1)
 				,@sat_duplicate_removal_threshold		int
-				,@sat_hashmatching_type					varchar(10)	
 				,@sat_hashmatching_char_length          int
                 ,@sat_qualified_name                    varchar(512)
                 ,@sat_payload                           nvarchar(max)
@@ -175,8 +171,6 @@ select
 -- Link Defaults
 ,@def_link_schema                               = cast([dbo].[fn_get_default_value] ('schema','lnk')                  as varchar(128))
 -- Sat Defaults
-,@def_sat_hashmatching_type						= cast([dbo].[fn_get_default_value] ('HashMatchingType','sat')		  as varchar) 
-,@def_sat_hashmatching_delimiter				= cast([dbo].[fn_get_default_value] ('HashMatchingDelimiter','sat')	  as varchar)
 ,@def_sat_IsColumnStore							= cast([dbo].[fn_get_default_value] ('IsColumnStore','sat')			  as integer)
 
 select @sat_start_date_col = quotename(column_name)
@@ -212,7 +206,6 @@ SET @_Step = 'Get Satellite Details'
 select top 1 @sat_config_key					= sat.[satellite_key]
           ,@sat_link_hub_flag					= sat.[link_hub_satellite_flag]
 		  ,@sat_duplicate_removal_threshold		= sat.[duplicate_removal_threshold]
-		  ,@sat_hashmatching_type			    = coalesce(sat.[hashmatching_type], @def_sat_hashmatching_type, 'None')
 from [dbo].[dv_source_table] t
 inner join [dbo].[dv_column] c
 on c.table_key = t.[source_table_key]
@@ -227,7 +220,7 @@ select @sat_hashmatching_char_length = column_length from [dbo].[dv_default_colu
 where 1=1
 and [object_type] = 'Sat'
 and [object_column_type] <> 'Object_Key' 
-and [object_column_type] = coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type) + '_match'
+and [object_column_type] = 'Hash_Match'
 
 SET @_Step = 'Get Hub Details'
 -- Owner Hub Table
@@ -303,10 +296,10 @@ INTO @c_hub_key
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
-    select @wrk_link_joins = 'LEFT JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + @c_hub_abbreviation + @crlf + ' ON  '
-select  @wrk_link_keys +=  ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + 
-						' = link.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + @crlf + ' AND '
-                   ,@wrk_link_joins += @c_hub_abbreviation + '.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
+    select @wrk_link_joins  = 'LEFT JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + @c_hub_abbreviation + @crlf + ' ON  '
+    select @wrk_link_keys  += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + 
+						      ' = link.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + @crlf + ' AND '
+		  ,@wrk_link_joins += @c_hub_abbreviation + '.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name], 1,0), 'NULL','') + ')' + @crlf + ' AND '
 
         from [dbo].[dv_hub] h
         inner join [dbo].[dv_hub_key_column] hkc
@@ -325,7 +318,7 @@ select  @wrk_link_keys +=  ' tmp.' + (select column_name from [dbo].[fn_get_key_
 
 		select  @wrk_hub_joins += ', ' + @c_hub_abbreviation + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub'))  + @crlf
         from(
-        select distinct hub_name, hub_key_ordinal_position
+        select distinct hub_name--, hub_key_ordinal_position
         from [dbo].[dv_hub] h
         inner join [dbo].[dv_hub_key_column] hkc
         on h.hub_key = hkc.hub_key
@@ -339,8 +332,7 @@ select  @wrk_link_keys +=  ' tmp.' + (select column_name from [dbo].[fn_get_key_
         and h.hub_key = @c_hub_key
         and st.[source_table_key] = @source_table_config_key
         and c.discard_flag <> 1) hkc
-        ORDER BY hkc.hub_key_ordinal_position
-        --select @surrogate_key_match = left(@sql, len(@sql) - 4)
+        --ORDER BY hkc.hub_key_ordinal_position
         set @link_hub_keys = @link_hub_keys + @wrk_link_keys
 		-------------------
 
@@ -382,20 +374,6 @@ and [table_key] = @source_table_config_key
 order by source_ordinal_position
 select @source_payload = left(@sql, len(@sql) -1)
 
--- Build The Hashing Statement
-set @sql = ''
-if isnull(@sat_hashmatching_type, 'None') <> 'None'
-begin
-	set @sql = 'upper(convert(char(' + cast(@sat_hashmatching_char_length as varchar) + '), hashbytes(''' + @sat_hashmatching_type + ''', concat(' + @crlf 
-	select @sql += 'ltrim(rtrim(isnull(cast(src.' + quotename([column_name]) + ' as nvarchar), ''''))), ''' + @def_sat_hashmatching_delimiter + ''',' + @crlf 
-	from [dbo].[dv_column]
-	where 1=1
-	and [discard_flag] <> 1
-	and [table_key] = @source_table_config_key
-	order by [satellite_ordinal_position], [column_name]
-	select @source_hash_payload = left(@sql, len(@sql) -3) + ')),2))'
-end
-
 -- Temp Tables
 SET @_Step = 'Get Temp Table Name Details'
 select @temp_table_name_001 = '##temp_001_' + replace(cast(newid() as varchar(50)), '-', '')
@@ -409,7 +387,8 @@ SET @_Step = 'Get Match Key'
 if @sat_link_hub_flag = 'H'
 begin
         select @sql = ''
-        select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
+        --select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
+		select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name], 1,0), 'NULL','') + ')' + @crlf + ' AND '
         from [dbo].[dv_hub] h
         inner join [dbo].[dv_hub_key_column] hkc
         on h.hub_key = hkc.hub_key
@@ -442,8 +421,7 @@ if @sat_link_hub_flag = 'L'
 if not (@link_load_only = 'Y' and @sat_link_hub_flag = 'L')
         set @sql1 = @sql1 + ', ' + @source_payload
 set @sql1 = @sql1 + ', [vault_load_time] = ' + @source_load_date_time + @crlf
-if isnull(@sat_hashmatching_type, 'None') <> 'None'
-	set @sql1 = @sql1 + ', [vault_hashdiff]	 = ' + @source_hash_payload + @crlf
+set @sql1 = @sql1 + ', [vault_hashdiff]	 = cast('''' as varchar(' + cast(@sat_hashmatching_char_length as varchar) + '))' + @crlf
 set @sql1 = @sql1 + ' INTO ' + @temp_table_name_001 + @crlf
 set @sql1 = @sql1 + 'FROM ' + @source_qualified_name + ' src' + @crlf
 
@@ -504,11 +482,9 @@ set @vault_sql_statement        = @sql1
 select @vault_temp_table_name   = @temp_table_name_001
 IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @crlf
 /*--------------------------------------------------------------------------------------------------------------*/
---SET @_Step = 'Load The ' + case when @sat_link_hub_flag = 'H' then 'Hub' else 'Link' end
---IF @_JournalOnOff = 'ON'
---      SET @_ProgressText += @sql
---print @vault_sql_statement
---EXECUTE sp_executesql @SQL;
+
+select @vault_sql_statement
+
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE

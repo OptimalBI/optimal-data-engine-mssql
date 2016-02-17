@@ -7,9 +7,6 @@
     CONSTRAINT [FK_dv_run_manifest_hierarchy__manifest_key] FOREIGN KEY ([run_manifest_key]) REFERENCES [dv_scheduler].[dv_run_manifest] ([run_manifest_key]),
     CONSTRAINT [FK_dv_run_manifest_hierarchy__manifest_prior_key] FOREIGN KEY ([run_manifest_prior_key]) REFERENCES [dv_scheduler].[dv_run_manifest] ([run_manifest_key])
 );
-
-
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [UX_run_manifest_key__run_manifest_prior_key]
     ON [dv_scheduler].[dv_run_manifest_hierarchy]([run_manifest_key] ASC, [run_manifest_prior_key] ASC);
-

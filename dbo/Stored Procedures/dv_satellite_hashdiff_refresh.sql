@@ -31,6 +31,7 @@ DECLARE
 				,@sat_hashmatching_col					varchar(128)
 				,@def_sat_hashmatching_type				varchar(128)
 				,@def_sat_hashmatching_delimiter		varchar(10)
+				,@def_sat_hashmatching_delimiterX		varchar(40)
 				,@def_sat_IsColumnStore					int
 
 -- Object Specific Settings
@@ -120,6 +121,8 @@ select
 ,@def_sat_hashmatching_delimiter				= cast([dbo].[fn_get_default_value] ('HashMatchingDelimiter','sat')	  as varchar)
 ,@def_sat_IsColumnStore							= cast([dbo].[fn_get_default_value] ('IsColumnStore','sat')			  as integer)
 
+
+select @def_sat_hashmatching_delimiterX = convert(varchar(50), convert(varbinary(max), @def_sat_hashmatching_delimiter),1)
 select @sat_start_date_col = quotename(column_name)
 from [dbo].[dv_default_column]
 where 1=1
@@ -140,7 +143,6 @@ and object_column_type = 'Tombstone_Indicator'
 
 SET @_Step = 'Get Satellite Details'
 -- Satellite
-
 select top 1
 		   @sat_hashmatching_type			    = coalesce(sat.[hashmatching_type], @def_sat_hashmatching_type, 'None')
 		  ,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat'))) 
@@ -149,28 +151,32 @@ where 1=1
 and sat.[satellite_name] = @vault_satellite_name
 
 if coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type, 'None') <> 'None'
-	select @sat_hashmatching_col = [column_name]		   
+	select @sat_hashmatching_char_length = column_length 
+          ,@sat_hashmatching_col = [column_name]
 	from [dbo].[dv_default_column]
 	where 1=1
 	and [object_type] = 'Sat'
 	and [object_column_type] <> 'Object_Key' 
-	and [object_column_type] = coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type) + '_match'
-
-select @sat_hashmatching_char_length = column_length from [dbo].[dv_default_column]
-where 1=1
-and [object_type] = 'Sat'
-and [object_column_type] <> 'Object_Key' 
-and [object_column_type] = coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type) + '_match'
-
-
+	and [object_column_type] = 'Hash_Match'
 
 -- Build The Hashing Statement
 SET @_Step = 'Compile the SQL'
 set @sql = ''
 if isnull(@sat_hashmatching_type, 'None') <> 'None'
 begin
-	set @sql = 'upper(convert(char(' + cast(@sat_hashmatching_char_length as varchar) + '), hashbytes(''' + @sat_hashmatching_type + ''', concat(' + @crlf 
-	select @sql += 'ltrim(rtrim(isnull(cast(' + quotename(c.[column_name]) + ' as nvarchar), ''''))), ''' + @def_sat_hashmatching_delimiter + ''',' + @crlf 
+	set @sql    += 'upper(convert(char(' + cast(@sat_hashmatching_char_length as varchar) + '), hashbytes(''' + @sat_hashmatching_type + ''', concat(' + @crlf 
+	--select @sql += 'ltrim(rtrim(isnull(' 
+	--            + case 
+	--			  when [column_type] in('char', 'varchar', 'nchar', 'nvarchar') 
+	--					then quotename([column_name])
+	--			  when [column_type] in('text', 'ntext')
+	--					then 'cast(' + quotename([column_name]) + ' as varchar(max))'
+	--			  when [column_type] in('binary', 'varbinary')
+	--					then 'convert(varchar(max), ' + quotename([column_name]) + ', 2)'
+	--			  else 'convert(varchar(max), cast(' + quotename([column_name]) + ' as varbinary(8000)), 2)' 
+	--			  end 
+	--			 + ', ''''))), ''' + @def_sat_hashmatching_delimiter + ''',' + @crlf 
+	select @sql += 'ISNULL(CONVERT(VARBINARY(MAX),' + quotename([column_name]) + '), 0x) ,' + @def_sat_hashmatching_delimiterX + ',' + @crlf
 	from [dbo].[dv_column] c
 	inner join [dbo].[dv_satellite_column] sc on sc.[column_key] = c.[column_key]
 	inner join [dbo].[dv_satellite] s on s.satellite_key = sc.satellite_key
@@ -179,9 +185,7 @@ begin
 	and s.[satellite_name] = @vault_satellite_name
 	order by c.[satellite_ordinal_position], c.[column_name]
 	select @source_hash_payload = left(@sql, len(@sql) -3) + ')),2))'
-
-	set @sql = ''
-	set @sql += 'UPDATE ' + @sat_qualified_name + @crlf
+	set @sql  = 'UPDATE ' + @sat_qualified_name + @crlf
 	set @sql += 'SET ' + @sat_hashmatching_col + ' = ' + @crlf + 'CASE WHEN ' + @sat_tombstone_indicator + ' = 1  THEN ''<Tombstone>'' ' + @crlf + 'ELSE ' + @source_hash_payload + ' END' + @crlf
 	if isnull(@vault_current_rows_only, 0) = 1
 		set @sql += 'WHERE ' + @sat_end_date_col + ' = ''' + cast(@def_global_highdate as varchar) + '''' + @crlf
@@ -191,7 +195,7 @@ end
 SET @_Step = 'Updating HashDiffs For: ' + @sat_qualified_name
 IF @_JournalOnOff = 'ON'
       SET @_ProgressText += @sql
---print @sql
+print @sql
 EXECUTE sp_executesql @sql;
 /*--------------------------------------------------------------------------------------------------------------*/
 

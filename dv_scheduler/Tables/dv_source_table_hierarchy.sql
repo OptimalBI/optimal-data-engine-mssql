@@ -12,9 +12,6 @@
     CONSTRAINT [FK_dv_source_table_hierarchy__source_table] FOREIGN KEY ([source_table_key]) REFERENCES [dbo].[dv_source_table] ([source_table_key]),
     CONSTRAINT [FK_dv_source_table_hierarchy_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key])
 );
-
-
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [UX_Source_table_key_prior_table_key]
     ON [dv_scheduler].[dv_source_table_hierarchy]([source_table_key] ASC, [prior_table_key] ASC);
-
