@@ -1,6 +1,7 @@
 *.dbmdl
 *.user
-bin/Debug/*.dacpac
-bin/Debug/*.dll
-bin/Debug/*.pdb
+bin/
+*.dacpac
+*.dll
+*.pdb
 obj/
