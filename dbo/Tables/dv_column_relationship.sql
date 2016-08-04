@@ -4,7 +4,7 @@
     [foreign_column_key]      INT                NOT NULL,
     [release_key]             INT                CONSTRAINT [DF_dv_column_relationship_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]          INT                CONSTRAINT [DF__dv_column__versi__13F1F5EB] DEFAULT ((1)) NOT NULL,
-    [updated_by]              VARCHAR (30)       CONSTRAINT [DF__dv_column__updat__14E61A24] DEFAULT (user_name()) NOT NULL,
+    [updated_by]              VARCHAR (30)       CONSTRAINT [DF__dv_column__updat__14E61A24] DEFAULT (suser_name()) NOT NULL,
     [updated_datetime]        DATETIMEOFFSET (7) CONSTRAINT [DF__dv_column__updat__15DA3E5D] DEFAULT (sysdatetimeoffset()) NOT NULL,
     CONSTRAINT [PK__dv_colum__DD6110B057F324E6] PRIMARY KEY CLUSTERED ([column_relationship_key] ASC),
     CONSTRAINT [FK__dv_column__dv_column_relationship] FOREIGN KEY ([foreign_column_key]) REFERENCES [dbo].[dv_column] ([column_key]),
@@ -12,3 +12,16 @@
     CONSTRAINT [dv_column_relationship_unique] UNIQUE NONCLUSTERED ([primary_column_key] ASC, [foreign_column_key] ASC)
 );
 
+
+GO
+CREATE TRIGGER [dbo].[dv_column_relationship_audit] ON [dbo].[dv_column_relationship]
+AFTER INSERT, UPDATE
+AS
+	BEGIN
+	    UPDATE [a]
+		 SET
+			[updated_datetime] = SYSDATETIMEOFFSET()
+		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_column_relationship] AS [a]
+									   JOIN [inserted] AS [b]
+									   ON [a].[column_relationship_key] = [b].[column_relationship_key];
+	END;

@@ -10,7 +10,7 @@
     [hub_key_ordinal_position] INT                CONSTRAINT [DF__dv_hub_ke__hub_k__308E3499] DEFAULT ((0)) NOT NULL,
     [release_key]              INT                CONSTRAINT [DF_dv_hub_key_column_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]           INT                CONSTRAINT [DF__dv_hub_ke__versi__318258D2] DEFAULT ((1)) NOT NULL,
-    [updated_by]               VARCHAR (30)       CONSTRAINT [DF__dv_hub_ke__updat__32767D0B] DEFAULT (user_name()) NULL,
+    [updated_by]               VARCHAR (30)       CONSTRAINT [DF__dv_hub_ke__updat__32767D0B] DEFAULT (suser_name()) NULL,
     [updated_datetime]         DATETIMEOFFSET (7) CONSTRAINT [DF__dv_hub_ke__updat__336AA144] DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_hub_k__E124E9D92355792F] PRIMARY KEY CLUSTERED ([hub_key_column_key] ASC),
     CONSTRAINT [FK__dv_hub_key_column__dv_hub] FOREIGN KEY ([hub_key]) REFERENCES [dbo].[dv_hub] ([hub_key]),
@@ -18,3 +18,16 @@
     CONSTRAINT [dv_hub_column_key_unique] UNIQUE NONCLUSTERED ([hub_key] ASC, [hub_key_column_name] ASC)
 );
 
+
+GO
+CREATE TRIGGER [dbo].[dv_hub_key_column_audit] ON [dbo].[dv_hub_key_column]
+AFTER INSERT, UPDATE
+AS
+	BEGIN
+	    UPDATE [a]
+		 SET
+			[updated_datetime] = SYSDATETIMEOFFSET()
+		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_hub_key_column] AS [a]
+									   JOIN [inserted] AS [b]
+									   ON [a].[hub_key_column_key] = [b].[hub_key_column_key];
+	END;

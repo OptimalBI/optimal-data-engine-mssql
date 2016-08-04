@@ -235,7 +235,6 @@ and t.[source_table_key] = @source_table_config_key
 -- Note that split satellites can only be of 1 type - Link or Hub
 select @sat_link_hub_flag = [sat_link_hub_flag] from @satellite_list 
 
-
 -- Owner Hub Table
 
 if @sat_link_hub_flag = 'H' 
@@ -299,7 +298,7 @@ set @sql = @sql1 + @sql2
 --/*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Load The Source into Sat(s)'
 IF @_JournalOnOff = 'ON' SET @_ProgressText += @SQL
---print @SQL
+--select @SQL2
 EXECUTE(@SQL);
 /*--------------------------------------------------------------------------------------------------------------*/
 

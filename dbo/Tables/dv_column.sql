@@ -12,10 +12,10 @@
     [satellite_ordinal_position] INT                NOT NULL,
     [is_source_date]             BIT                CONSTRAINT [DF__dv_column__is_so__32E0915F] DEFAULT ((0)) NOT NULL,
     [discard_flag]               BIT                CONSTRAINT [DF__dv_column__disca__33D4B598] DEFAULT ((0)) NOT NULL,
-    [deleted_column_flag]        BIT                CONSTRAINT [DF__dv_column__delet__34C8D9D1] DEFAULT ((0)) NOT NULL,
+    [is_retired]                 BIT                CONSTRAINT [DF__dv_column__delet__34C8D9D1] DEFAULT ((0)) NOT NULL,
     [release_key]                INT                CONSTRAINT [DF_dv_column_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]             INT                CONSTRAINT [DF__dv_column__versi__35BCFE0A] DEFAULT ((1)) NOT NULL,
-    [updated_by]                 VARCHAR (30)       CONSTRAINT [DF__dv_column__updat__36B12243] DEFAULT (user_name()) NULL,
+    [updated_by]                 VARCHAR (30)       CONSTRAINT [DF__dv_column__updat__36B12243] DEFAULT (suser_name()) NULL,
     [update_date_time]           DATETIMEOFFSET (7) CONSTRAINT [DF__dv_column__updat__37A5467C] DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_colum__448C9D1E0C33CF7F] PRIMARY KEY CLUSTERED ([column_key] ASC),
     CONSTRAINT [FK__dv_column__dv_source_table] FOREIGN KEY ([table_key]) REFERENCES [dbo].[dv_source_table] ([source_table_key]),
@@ -23,3 +23,24 @@
     CONSTRAINT [dv_column_unique] UNIQUE NONCLUSTERED ([table_key] ASC, [column_name] ASC)
 );
 
+
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [dv_satellite_ordinal_position_unique]
+    ON [dbo].[dv_column]([table_key] ASC, [satellite_ordinal_position] ASC);
+
+
+GO
+
+
+CREATE TRIGGER [dbo].[dv_column_audit]
+on [dbo].[dv_column]
+after insert, update
+as
+begin
+update a
+set [update_date_time] = sysdatetimeoffset(),
+    [updated_by]	   = suser_name()
+from [dbo].[dv_column] as a
+join inserted as b 
+on a.[column_key] = b.[column_key]; 
+end

@@ -5,6 +5,7 @@
     @source_table_load_type		varchar(50),
 	@source_procedure_schema	varchar(128),
 	@source_procedure_name		varchar(128),
+	@is_retired					bit,
 	@release_number				int
 AS 
 	SET NOCOUNT ON 
@@ -19,11 +20,11 @@ AS
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 
-	INSERT INTO [dbo].[dv_source_table] ([system_key], [source_table_schema], [source_table_name], [source_table_load_type],[source_procedure_schema],[source_procedure_name],[release_key])
-	SELECT @system_key, @source_table_schema, @source_table_name, @source_table_load_type, @source_procedure_schema, @source_procedure_name, @release_key 
+	INSERT INTO [dbo].[dv_source_table] ([system_key], [source_table_schema], [source_table_name], [source_table_load_type],[source_procedure_schema],[source_procedure_name], [is_retired], [release_key])
+	SELECT @system_key, @source_table_schema, @source_table_name, @source_table_load_type, @source_procedure_schema, @source_procedure_name, @is_retired, @release_key 
 	
 	-- Begin Return Select <- do not remove
-	SELECT [source_table_key], [system_key], [source_table_schema], [source_table_name], [source_table_load_type],[source_procedure_schema],[source_procedure_name],[release_key]
+	SELECT [source_table_key], [system_key], [source_table_schema], [source_table_name], [source_table_load_type],[source_procedure_schema],[source_procedure_name],[is_retired],[release_key]
 	FROM   [dbo].[dv_source_table]
 	WHERE  [source_table_key] = SCOPE_IDENTITY()
 	-- End Return Select <- do not remove

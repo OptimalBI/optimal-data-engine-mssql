@@ -5,7 +5,8 @@
     @source_table_name			varchar(128),
     @source_table_load_type		varchar(50),
 	@source_procedure_schema	varchar(128),
-	@source_procedure_name		varchar(128)
+	@source_procedure_name		varchar(128),
+	@is_retired					bit
 AS 
 	SET NOCOUNT ON 
 	SET XACT_ABORT ON  
@@ -13,11 +14,11 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_source_table]
-	SET    [system_key] = @system_key, [source_table_schema] = @source_table_schema, [source_table_name] = @source_table_name, [source_table_load_type] = @source_table_load_type, [source_procedure_schema] = @source_procedure_schema, [source_procedure_name] = @source_procedure_name
+	SET    [system_key] = @system_key, [source_table_schema] = @source_table_schema, [source_table_name] = @source_table_name, [source_table_load_type] = @source_table_load_type, [source_procedure_schema] = @source_procedure_schema, [source_procedure_name] = @source_procedure_name, [is_retired] = @is_retired
 	WHERE  [source_table_key] = @table_key
 	
 	-- Begin Return Select <- do not remove
-	SELECT [source_table_key], [system_key], [source_table_schema], [source_table_name], [source_table_load_type], [source_procedure_schema],[source_procedure_name],[version_number], [updated_by], [update_date_time]
+	SELECT [source_table_key], [system_key], [source_table_schema], [source_table_name], [source_table_load_type], [source_procedure_schema],[source_procedure_name],[is_retired],[version_number], [updated_by], [update_date_time]
 	FROM   [dbo].[dv_source_table]
 	WHERE  [source_table_key] = @table_key	
 	-- End Return Select <- do not remove

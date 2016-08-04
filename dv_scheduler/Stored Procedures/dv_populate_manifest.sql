@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_scheduler].[dv_populate_manifest]
+﻿CREATE PROCEDURE [dv_scheduler].[dv_populate_manifest]
 (
 	 @schedule_name		varchar(4000)
 	,@run_key			int

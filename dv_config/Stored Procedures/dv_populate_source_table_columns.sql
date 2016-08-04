@@ -110,6 +110,7 @@ if @@ROWCOUNT = 0  -- Table doesn't exist in Config.
 		   ,@source_table_load_type		= @vault_source_table_load_type
 		   ,@source_procedure_schema	= @vault_source_procedure_schema
 		   ,@source_procedure_name		= @vault_source_procedure_name
+		   ,@is_retired					= 0
 		   ,@release_number				= @vault_release_number
 	end
 	else  -- Table Does Exist in Config
@@ -125,6 +126,7 @@ if @@ROWCOUNT = 0  -- Table doesn't exist in Config.
 		   ,@source_table_load_type		= @vault_source_table_load_type
 		   ,@source_procedure_schema	= @vault_source_procedure_schema
 		   ,@source_procedure_name		= @vault_source_procedure_name
+		   ,@is_retired = 0
 		end
 	else
 		begin
@@ -186,7 +188,7 @@ declare
 @satellite_ordinal_position	int,
 @is_source_date				bit,
 @discard_flag				bit,
-@deleted_column_flag		bit
+@is_retired					bit
 
 --print @sql
 if @_JournalOnOff = 'ON'
@@ -206,7 +208,7 @@ SELECT
 	   Tbl.Col.value('@satellite_ordinal_position', 'int')	satellite_ordinal_position,
 	   cast(0 as bit)										is_source_date,
 	   cast(0 as bit)										discard_flag,
-	   cast(0 as bit)										deleted_column_flag
+	   cast(0 as bit)										is_retired
 FROM @column_list_xml.nodes('//row') Tbl(Col)
 order by satellite_ordinal_position
 open Col_Cursor
@@ -221,7 +223,7 @@ fetch next from Col_Cursor into  @column_name
 								,@satellite_ordinal_position	
 								,@is_source_date				
 								,@discard_flag				
-								,@deleted_column_flag	
+								,@is_retired	
 
 while @@FETCH_STATUS = 0
 begin								
@@ -236,7 +238,7 @@ select  @column_name
 	   ,@satellite_ordinal_position	
 	   ,@is_source_date				
 	   ,@discard_flag				
-	   ,@deleted_column_flag
+	   ,@is_retired
 
 EXECUTE [dbo].[dv_column_insert] 
 	    @table_key					= @source_table_key
@@ -252,7 +254,7 @@ EXECUTE [dbo].[dv_column_insert]
 	   ,@satellite_ordinal_position	= @satellite_ordinal_position	
 	   ,@is_source_date				= @is_source_date				
 	   ,@discard_flag				= @discard_flag				
-	   ,@deleted_column_flag		= @deleted_column_flag
+	   ,@is_retired			        = @is_retired
 
 fetch next from Col_Cursor into  @column_name				
 								,@column_type				
@@ -265,7 +267,7 @@ fetch next from Col_Cursor into  @column_name
 								,@satellite_ordinal_position	
 								,@is_source_date				
 								,@discard_flag				
-								,@deleted_column_flag
+								,@is_retired
 end
 close Col_Cursor
 deallocate Col_Cursor

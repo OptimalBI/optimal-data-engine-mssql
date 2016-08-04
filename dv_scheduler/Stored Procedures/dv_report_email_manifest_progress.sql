@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_scheduler].[dv_report_email_manifest_progress] (
+﻿CREATE PROCEDURE [dv_scheduler].[dv_report_email_manifest_progress] (
 	 @vault_offset_in_days	INT = 1
 	,@vault_recipients		VARCHAR(max)
 	,@vault_profile_name	VARCHAR(128)

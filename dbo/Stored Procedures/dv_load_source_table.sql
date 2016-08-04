@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[dv_load_source_table]
+﻿CREATE PROCEDURE [dbo].[dv_load_source_table]
 (
   @vault_source_system_name		varchar(128) = NULL
 , @vault_source_table_schema	varchar(128) = NULL
@@ -185,6 +184,7 @@ select distinct
        hub_database
 	  ,hub_name
 from @load_details
+where hub_name is not null
 
 OPEN hub_cursor   
 FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name  
@@ -216,6 +216,7 @@ select distinct
        link_database
 	  ,link_name
 from @load_details
+where link_name is not null
 
 OPEN link_cursor   
 FETCH NEXT FROM link_cursor INTO @link_database, @link_name  

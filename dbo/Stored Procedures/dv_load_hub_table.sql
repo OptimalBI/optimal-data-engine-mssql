@@ -155,6 +155,7 @@ and st.source_table_schema	= @vault_source_schema
 and st.source_table_name	= @vault_source_table
 and isnull(c.discard_flag, 0) <> 1
 ORDER BY hkc.hub_key_ordinal_position 
+
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Combine the SQL Components'
 
@@ -177,6 +178,8 @@ select @SQL = replace(
 SET @_Step = 'Load The Hub'
 IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
 SET @ParmDefinition = N'@insertcount int OUTPUT';
+
+ --print 'hub'
  --print @sql 
 
 EXECUTE sp_executesql @SQL, @ParmDefinition, @insertcount = @hub_insert_count OUTPUT;

@@ -1,4 +1,5 @@
-﻿CREATE FUNCTION [dv_scheduler].[fn_get_waiting_scheduler_tasks]
+﻿
+CREATE FUNCTION [dv_scheduler].[fn_get_waiting_scheduler_tasks]
 (@run_key int
 ,@runnable varchar(10) = 'Runnable' 
 )

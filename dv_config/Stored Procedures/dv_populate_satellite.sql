@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dv_config].[dv_populate_satellite]
+﻿CREATE PROCEDURE [dv_config].[dv_populate_satellite]
 (
 	 @vault_satellite_name					varchar(128)	= Null
     ,@vault_link_hub_flag					char(1)			= null
@@ -131,6 +130,7 @@ EXECUTE  [dbo].[dv_satellite_insert]
   ,@satellite_database			= @vault_satellite_database
   ,@duplicate_removal_threshold = @vault_duplicate_removal_threshold
   ,@is_columnstore				= @vault_is_columnstore
+  ,@is_retired					= 0
   ,@release_number				= @vault_release_number
 
 

@@ -1,4 +1,4 @@
-﻿CREATE FUNCTION [dbo].[fn_get_next_abbreviation] 
+﻿CREATE FUNCTION [dbo].[fn_Get_Next_Abbreviation] 
 (
 )	
 RETURNS char(4)

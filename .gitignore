@@ -1,6 +1,6 @@
-*.sqlproj
 *.dbmdl
-*.sln
 *.user
-bin/
+bin/Debug/*.dacpac
+bin/Debug/*.dll
+bin/Debug/*.pdb
 obj/

@@ -13,3 +13,17 @@
     PRIMARY KEY CLUSTERED ([load_state_key] ASC)
 );
 
+
+GO
+
+CREATE TRIGGER [dv_log].[dv_load_state_audit] ON [dv_log].[dv_load_state]
+AFTER INSERT, UPDATE
+AS
+	BEGIN
+	    UPDATE [a]
+		 SET
+			[update_date_time] = SYSDATETIMEOFFSET()
+		   , [updated_by] = SUSER_NAME() FROM [dv_log].[dv_load_state] AS [a]
+									   JOIN [inserted] AS [b]
+									   ON [a].[load_state_key] = [b].[load_state_key];
+	END;

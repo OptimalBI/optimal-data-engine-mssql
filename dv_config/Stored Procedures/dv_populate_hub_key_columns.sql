@@ -1,5 +1,4 @@
-﻿
-Create PROCEDURE [dv_config].[dv_populate_hub_key_columns]
+﻿Create PROCEDURE [dv_config].[dv_populate_hub_key_columns]
 (
 	 @vault_source_system					varchar(50)
     ,@vault_source_schema					varchar(128)

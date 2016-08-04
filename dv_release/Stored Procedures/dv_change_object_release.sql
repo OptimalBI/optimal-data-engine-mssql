@@ -20,7 +20,7 @@ SET NOCOUNT ON
 declare @SQL							nvarchar(max) = ''
 declare @new_release_key				int
 declare @old_release_key				int
-declare @vault_config_table_schema_name	varchar(128)
+declare @vault_config_table_schema_name varchar(128)
 declare @vault_config_table_key_name	varchar(128)
 
 -- Log4TSQL Journal Constants 
@@ -92,8 +92,7 @@ if @@rowcount <> 1 RAISERROR('Invalid New Release Number Selected: %i', 16, 1, @
 SET @_Step = 'Get Required Parameters'
 
 select @vault_config_table_key_name = dv_key_name
-      ,@vault_config_table_schema_name = dv_schema_name
-
+      ,@vault_config_table_schema_name = dv_schema_name 
 from @IncludeTables where dv_table_name = @vault_config_table
 set @SQL = 'UPDATE #config_table_schema#.#config_table# SET [release_key] = #new_release_key# WHERE [release_key] = #old_release_key# and #vault_config_table_key_name# = #vault_config_table_key#'
 set @SQL = replace(@SQL, '#config_table_schema#', quotename(@vault_config_table_schema_name))

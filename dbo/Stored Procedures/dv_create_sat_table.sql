@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[dv_create_sat_table]
 (
---  @vault_database                varchar(128)   = NULL
-  @vault_sat_name                varchar(128)   = NULL
+  @vault_database                varchar(128)   = NULL
+, @vault_sat_name                varchar(128)   = NULL
 , @recreate_flag                 char(1)		= 'N'
 , @DoGenerateError               bit            = 0
 , @DoThrowError                  bit			= 1
@@ -11,42 +11,74 @@ BEGIN
 SET NOCOUNT ON
 
 DECLARE @crlf								char(2)			= CHAR(13) + CHAR(10)
-
+-- Global Defaults
+DECLARE  
+		 @def_global_lowdate				datetime
+        ,@def_global_highdate				datetime
+        ,@def_global_default_load_date_time	varchar(128)
+		,@def_global_failed_lookup_key		int
+-- Hub Defaults									
+        ,@def_hub_prefix					varchar(128)
+		,@def_hub_schema					varchar(128)
+		,@def_hub_filegroup					varchar(128)
+--Link Defaults									
+		,@def_link_prefix					varchar(128)
+		,@def_link_schema					varchar(128)
+		,@def_link_filegroup				varchar(128)
 --Sat Defaults									
-		--,@def_sat_prefix					varchar(128)
+		,@def_sat_prefix					varchar(128)
 		,@def_sat_schema					varchar(128)
 		,@def_sat_filegroup					varchar(128)
 		,@sat_start_date_col				varchar(128)
-		--,@sat_end_date_col					varchar(128)
-		,@sat_current_row_col				varchar(128)
-		,@def_sat_hashmatching_type			varchar(128)
-		,@def_sat_IsColumnStore				int
-		,@default_columns					[dbo].[dv_column_type]				
+		,@sat_end_date_col					varchar(128)
+		,@sat_current_row_col				varchar(128)				
 
 -- Object Specific Settings
+-- Source Table
+		,@source_system						varchar(128)
+		,@source_database					varchar(128)
+		,@source_schema						varchar(128)
+		,@source_table						varchar(128)
+		,@source_table_config_key			int
+		,@source_qualified_name				varchar(512)
+		,@source_load_date_time				varchar(128)
+		,@source_payload					nvarchar(max)
+-- Hub Table
+		,@hub_database						varchar(128)
+		,@hub_schema						varchar(128)
+		,@hub_table							varchar(128)
+		,@hub_surrogate_keyname				varchar(128)
+		,@hub_config_key					int
+		,@hub_qualified_name				varchar(512)
+		,@hubt_technical_columns			nvarchar(max)
+-- Link Table
+		,@link_database						varchar(128)
+		,@link_schema						varchar(128)
+		,@link_table						varchar(128)
+		,@link_surrogate_keyname			varchar(128)
+		,@link_config_key					int
+		,@link_qualified_name				varchar(512)
+		,@link_technical_columns			nvarchar(max)
+		,@link_lookup_joins					nvarchar(max)
+		,@link_hub_keys						nvarchar(max)
 -- Sat Table
 		,@sat_database						varchar(128)
 		,@sat_schema						varchar(128)
 		,@sat_table							varchar(128)
-		,@sat_filegroup						varchar(128)
 		,@sat_surrogate_keyname				varchar(128)
 		,@hub_link_surrogate_key			varchar(128)
 		,@sat_config_key					int
 		,@sat_link_hub_flag					char(1)
 		,@sat_qualified_name				varchar(512)
 		,@sat_tombstone_indicator			varchar(50)
-		,@sat_hashmatching_type				varchar(10)
 		,@sat_is_columnstore				bit
 		,@sat_technical_columns				nvarchar(max)
 		,@sat_payload						nvarchar(max)
 
 -- Working Storage
-DECLARE  @sql								nvarchar(max)
-        ,@payload_columns					[dbo].[dv_column_type]
-		,@varobject_name					varchar(128)
-		,@table_name						varchar(128)
-		,@pk_name							varchar(128)
-		
+
+DECLARE  @sql						nvarchar(max)
+        ,@payload_columns           [dbo].[dv_column_type]
 
 -- Log4TSQL Journal Constants 
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
@@ -86,7 +118,7 @@ SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- l
 
 -- set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						--+ @NEW_LINE + '    @vault_database               : ' + COALESCE(@vault_database, '<NULL>')
+						+ @NEW_LINE + '    @vault_database               : ' + COALESCE(@vault_database, '<NULL>')
 						+ @NEW_LINE + '    @vault_sat_name               : ' + COALESCE(@vault_sat_name, '<NULL>')
 						+ @NEW_LINE + '    @recreate_flag                : ' + COALESCE(@recreate_flag, '<NULL>')
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
@@ -99,7 +131,7 @@ IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate inputs';
 
-IF (select count(*) from [dbo].[dv_satellite] where [satellite_name] = @vault_sat_name) <> 1
+IF (select count(*) from [dbo].[dv_satellite] where [satellite_database] = @vault_database and [satellite_name] = @vault_sat_name) <> 1
 			RAISERROR('Invalid Sat Name: %s', 16, 1, @vault_sat_name);
 IF isnull(@recreate_flag, '') not in ('Y', 'N') 
 			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
@@ -109,13 +141,24 @@ SET @_Step = 'Get required Parameters'
 SET @_Step = 'Get Defaults'
 -- System Wide Defaults
 select
+-- Global Defaults
+ @def_global_lowdate				= cast([dbo].[fn_get_default_value] ('LowDate','Global')				as datetime)			
+,@def_global_highdate				= cast([dbo].[fn_get_default_value] ('HighDate','Global')				as datetime)	
+,@def_global_default_load_date_time	= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')	as varchar(128))
+,@def_global_failed_lookup_key		= cast([dbo].[fn_get_default_value] ('FailedLookupKey', 'Global')     as integer)
 
+-- Hub Defaults								
+,@def_hub_prefix					= cast([dbo].[fn_get_default_value] ('prefix','hub')					as varchar(128))	
+,@def_hub_schema					= cast([dbo].[fn_get_default_value] ('schema','hub')					as varchar(128))	
+,@def_hub_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','hub')				as varchar(128))	
+-- Link Defaults																						
+,@def_link_prefix					= cast([dbo].[fn_get_default_value] ('prefix','lnk')					as varchar(128))	
+,@def_link_schema					= cast([dbo].[fn_get_default_value] ('schema','lnk')					as varchar(128))	
+,@def_link_filegroup				= cast([dbo].[fn_get_default_value] ('filegroup','lnk')				as varchar(128))	
 -- Sat Defaults																							
- @def_sat_schema					= cast([dbo].[fn_get_default_value] ('schema','sat')					as varchar)	
-,@def_sat_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','sat')				    as varchar)
-,@def_sat_hashmatching_type         = cast([dbo].[fn_get_default_value] ('HashMatchingType','sat')		    as varchar) 
-,@def_sat_IsColumnStore				= cast([dbo].[fn_get_default_value] ('IsColumnStore','sat')				as integer)
-
+,@def_sat_prefix					= cast([dbo].[fn_get_default_value] ('prefix','sat')					as varchar(128))	
+,@def_sat_schema					= cast([dbo].[fn_get_default_value] ('schema','sat')					as varchar(128))	
+,@def_sat_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','sat')				as varchar(128))
 
 --Satellite Details
 select @sat_start_date_col = quotename(column_name)
@@ -123,6 +166,11 @@ from [dbo].[dv_default_column]
 where 1=1
 and object_type	= 'sat'
 and object_column_type = 'Version_Start_Date'
+select @sat_end_date_col = quotename(column_name)
+from [dbo].[dv_default_column]
+where 1=1
+and object_type	= 'sat'
+and object_column_type = 'Version_End_Date'
 select @sat_current_row_col = quotename(column_name)
 from [dbo].[dv_default_column]
 where 1=1
@@ -139,70 +187,70 @@ and object_column_type = 'Tombstone_Indicator'
 -- Get Satellite Specifics
 select 	 @sat_database			= sat.[satellite_database]						
 		,@sat_schema			= coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')		
-		,@sat_table				= sat.[satellite_name]	
-		,@sat_filegroup			= coalesce(sat.[satellite_filegroup], @def_sat_filegroup, 'Primary')	
+		,@sat_table				= sat.[satellite_name]		
 		,@sat_surrogate_keyname	= [dbo].[fn_get_object_name] (sat.[satellite_name],'SatSurrogate')		
 		,@sat_config_key		= sat.[satellite_key]		
 		,@sat_link_hub_flag		= sat.[link_hub_satellite_flag]
-		,@sat_hashmatching_type = sat.hashmatching_type
-		,@sat_is_columnstore	= coalesce(sat.[is_columnstore], @def_sat_IsColumnStore, 0)		
+		,@sat_is_columnstore	= sat.[is_columnstore]		
 		,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat')))       
-from [dbo].[dv_satellite] sat
+from [dbo].[dv_column] c
+inner join [dbo].[dv_satellite_column] sc
+on sc.column_key = c.column_key
+inner join [dbo].[dv_satellite] sat
+on sat.satellite_key = sc.satellite_key
 where 1=1
---and sat.[satellite_database] = @vault_database
+and sat.[satellite_database] = @vault_database
 and sat.[satellite_name]	 = @vault_sat_name
+and isnull(c.discard_flag, 0) <> 1 
 
-select @varobject_name = [dbo].[fn_get_object_name](@vault_sat_name, 'Sat')
-select @table_name = quotename(@sat_database) + '.' + quotename (@sat_schema) + '.' + quotename(@varobject_name)
 
---Get the surrogate key - Hub or Link as appropriate.
 if @sat_link_hub_flag = 'H'
-	insert @payload_columns
-	select top 1 replace(replace(k.[column_name], '[', ''), ']', '')
-		   ,k.[column_type]
-		   ,k.[column_length]
-		   ,k.[column_precision]
-		   ,k.[column_scale]
-		   ,k.[collation_Name]
-		   ,k.[bk_ordinal_position]
-		   ,k.[ordinal_position]
-		   ,0 
-		   ,''
-		   ,''
-	  FROM [dbo].[dv_satellite] s
-	  inner join [dbo].[dv_satellite_column] hc
-	  on s.satellite_key = hc.satellite_key
-	  inner join [dbo].[dv_column] c
-	  on hc.column_key = c.column_key
-	  inner join [dbo].[dv_hub] h
-	  on s.[hub_key] = h.[hub_key]
-	  cross apply [dbo].[fn_get_key_definition] (h.hub_name, 'hub') k
-	  where s.[satellite_key] = @sat_config_key
+insert @payload_columns
+select top 1 k.[column_name]
+       ,k.[column_type]
+       ,k.[column_length]
+	   ,k.[column_precision]
+	   ,k.[column_scale]
+	   ,k.[collation_Name]
+	   ,k.[bk_ordinal_position]
+       ,k.[ordinal_position]
+	   ,0 --k.[satellite_ordinal_position]
+	   ,''
+	   ,''
+  FROM [dbo].[dv_satellite] s
+  inner join [dbo].[dv_satellite_column] hc
+  on s.satellite_key = hc.satellite_key
+  inner join [dbo].[dv_column] c
+  on hc.column_key = c.column_key
+  inner join [dbo].[dv_hub] h
+  on s.[hub_key] = h.[hub_key]
+  cross apply [dbo].[fn_get_key_definition] (h.hub_name, 'hub') k
+  where s.[satellite_key] = @sat_config_key
 else 
-	insert @payload_columns
-	select top 1 replace(replace(k.[column_name], '[', ''), ']', '')
-		   ,k.[column_type]
-		   ,k.[column_length]
-		   ,k.[column_precision]
-		   ,k.[column_scale]
-		   ,k.[collation_Name]
-		   ,k.[bk_ordinal_position]
-		   ,k.[ordinal_position]
-		   ,0 
-		   ,''
-		   ,''
-	  FROM [dbo].[dv_satellite] s
-	  inner join [dbo].[dv_satellite_column] hc
-	  on s.satellite_key = hc.satellite_key
-	  inner join [dbo].[dv_column] c
-	  on hc.column_key = c.column_key
-	  inner join [dbo].[dv_link] l
-	  on s.[link_key] = l.[link_key]
-	  cross apply [dbo].[fn_get_key_definition] (l.link_name, 'lnk') k
-	  where s.[satellite_key] = @sat_config_key
+insert @payload_columns
+select top 1 k.[column_name]
+       ,k.[column_type]
+       ,k.[column_length]
+	   ,k.[column_precision]
+	   ,k.[column_scale]
+	   ,k.[collation_Name]
+	   ,k.[bk_ordinal_position]
+       ,k.[ordinal_position]
+	   ,0 --k.[satellite_ordinal_position]
+	   ,''
+	   ,''
+  FROM [dbo].[dv_satellite] s
+  inner join [dbo].[dv_satellite_column] hc
+  on s.satellite_key = hc.satellite_key
+  inner join [dbo].[dv_column] c
+  on hc.column_key = c.column_key
+  inner join [dbo].[dv_link] l
+  on s.[link_key] = l.[link_key]
+  cross apply [dbo].[fn_get_key_definition] (l.link_name, 'lnk') k
+  where s.[satellite_key] = @sat_config_key
+
 select @hub_link_surrogate_key = [column_name] from @payload_columns
 
---Add the Satellite Payload
 insert @payload_columns
 select  c.[column_name]
        ,c.[column_type]
@@ -224,93 +272,20 @@ select  c.[column_name]
   and s.[satellite_key] = @sat_config_key
   and isnull(c.discard_flag, 0) <> 1 
 
---Get the Technical Columns for the Satellite
-insert @default_columns	
-select  [column_name]
-       ,[column_type]
-       ,[column_length]
-	   ,[column_precision]
-	   ,[column_scale]
-	   ,[collation_Name]
-	   ,-1
-       ,[ordinal_position]
-	   ,-1
-	   ,''
-	   ,''
-from [dbo].[dv_default_column]
-where 1=1
-and [object_type] = 'Sat'
-and [object_column_type] <> 'Object_Key' 
-and [object_column_type] not like '%_match'
-
--- Add The Hash Matching Column when necessary
-if coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type, 'None') <> 'None'
-	insert @default_columns	
-	select  [column_name]
-		   ,[column_type]
-		   ,[column_length]
-		   ,[column_precision]
-		   ,[column_scale]
-		   ,[collation_Name]
-		   ,-1
-		   ,[ordinal_position]
-		   ,-1
-		   ,''
-		   ,''
-	from [dbo].[dv_default_column]
-	where 1=1
-	and [object_type] = 'Sat'
-	and [object_column_type] <> 'Object_Key' 
-	and [object_column_type] = coalesce(@sat_hashmatching_type, @def_sat_hashmatching_type) + '_match'
-
  /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Sat'
-SET @SQL = ''
-SET @_Step = 'If Recreate then Drop Existing Table'
 
-IF @recreate_flag = 'Y'
-BEGIN
-	select @SQL += 'IF EXISTS (select 1 from ' + quotename(@sat_database) + '.INFORMATION_SCHEMA.TABLES where TABLE_TYPE = ''BASE TABLE'' and TABLE_SCHEMA = ''' + @sat_schema + ''' and TABLE_NAME = ''' + @varobject_name + ''')' + @crlf + ' '
-	select @SQL += 'DROP TABLE ' + @table_name + ' ' + @crlf 
-END
-/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Create Table Statement'
-select @SQL += 'CREATE TABLE ' + @table_name + '(' + @crlf + ' '
-
-/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Add the Columns'
---1. Primary Key
---if @sat_is_columnstore = 0
-	select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 0, 1) + @crlf + ',' 
-	from [fn_get_key_definition](@sat_table, 'sat')
---Technical Columns
-select @SQL += quotename(column_name) + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
-from
-(select *
-from @default_columns) a
-order by source_ordinal_position
---Payload
-select @SQL += quotename(column_name) + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
-from
-(select *
-from @payload_columns) a
-order by satellite_ordinal_position, column_name
-
-/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Add the Primary Key'
-if @sat_is_columnstore = 0
-	begin
-	select @pk_name = column_name from [fn_get_key_definition](@sat_table, 'sat')
-	select @SQL += 'PRIMARY KEY CLUSTERED (' + @pk_name + ') ON ' + quotename(@sat_filegroup) + @crlf
-	end
-	
-select @SQL += ') ON ' + quotename(@sat_filegroup) + ';' + @crlf
-/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Create The Table'
-IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
-
---print @SQL
-exec (@SQL)
+EXECUTE [dbo].[dv_create_DV_table] 
+   @sat_table
+  ,@sat_schema
+  ,@sat_database
+  ,@def_sat_filegroup
+  ,'Sat'
+  ,@payload_columns
+  ,@sat_is_columnstore
+  ,@recreate_flag
+  ,@dogenerateerror
+  ,@dothrowerror
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Index the Sat on the Surrogate Key Plus Row End Date'
@@ -319,8 +294,9 @@ if @sat_is_columnstore = 0
 	begin
 	select @SQL += 'CREATE UNIQUE NONCLUSTERED INDEX ' + quotename('UX__' + @sat_table + cast(newid() as varchar(56))) 
 	select @SQL += ' ON ' + @sat_qualified_name + '(' + @crlf + ' '
+	--select @SQL = @SQL + @hub_link_surrogate_key + ',' + @sat_end_date_col +',' + @sat_current_row_col + ',' + @sat_tombstone_indicator	
 	select @SQL = @SQL + @hub_link_surrogate_key + ',' + @sat_start_date_col 	
-	select @SQL = @SQL + ') INCLUDE(' + @sat_current_row_col +',' + @sat_tombstone_indicator + ') ON ' + quotename(@sat_filegroup) + @crlf
+	select @SQL = @SQL + ') INCLUDE(' + @sat_current_row_col +',' + @sat_tombstone_indicator + ') ON ' + quotename(@def_sat_filegroup) + @crlf
 	end
 else
 	begin
@@ -330,7 +306,7 @@ else
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Index'
 IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
---print @SQL
+--select @SQL
 exec (@SQL)
 
 /*--------------------------------------------------------------------------------------------------------------*/

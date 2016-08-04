@@ -1,0 +1,317 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Name>ode_to_mssql</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>4.1</ProjectVersion>
+    <ProjectGuid>{02a3a59b-e9ff-4363-aa4a-7653031363c9}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql120DatabaseSchemaProvider</DSP>
+    <OutputType>Database</OutputType>
+    <RootPath>
+    </RootPath>
+    <RootNamespace>ode_to_mssql</RootNamespace>
+    <AssemblyName>ode_to_mssql</AssemblyName>
+    <ModelCollation>1033, CI</ModelCollation>
+    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
+    <DeployToDatabase>True</DeployToDatabase>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetLanguage>CS</TargetLanguage>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <SqlServerVerification>False</SqlServerVerification>
+    <IncludeCompositeObjects>True</IncludeCompositeObjects>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+    <Recovery>SIMPLE</Recovery>
+    <ServiceBrokerOption>EnableBroker</ServiceBrokerOption>
+    <Trustworthy>True</Trustworthy>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+    <!-- Default to the v11.0 targets path if the targets file for the current VS version is not found -->
+    <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
+    <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Condition="'$(SQLDBExtensionsRefPath)' != ''" Project="$(SQLDBExtensionsRefPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <ItemGroup>
+    <Folder Include="Properties" />
+    <Folder Include="dbo\" />
+    <Folder Include="dbo\Tables\" />
+    <Folder Include="ODE_Release\" />
+    <Folder Include="ODE_Release\Tables\" />
+    <Folder Include="log4\" />
+    <Folder Include="log4\Tables\" />
+    <Folder Include="dv_scheduler\" />
+    <Folder Include="dv_scheduler\Tables\" />
+    <Folder Include="dv_release\" />
+    <Folder Include="dv_release\Tables\" />
+    <Folder Include="dv_log\" />
+    <Folder Include="dv_log\Tables\" />
+    <Folder Include="dbo\Views\" />
+    <Folder Include="dv_scheduler\Views\" />
+    <Folder Include="Security\" />
+    <Folder Include="dbo\Functions\" />
+    <Folder Include="log4\Functions\" />
+    <Folder Include="dv_scheduler\Functions\" />
+    <Folder Include="dv_release\Functions\" />
+    <Folder Include="dbo\Stored Procedures\" />
+    <Folder Include="log4\Stored Procedures\" />
+    <Folder Include="dv_scheduler\Stored Procedures\" />
+    <Folder Include="dv_release\Stored Procedures\" />
+    <Folder Include="dv_log\Stored Procedures\" />
+    <Folder Include="dv_integrity\" />
+    <Folder Include="dv_integrity\Stored Procedures\" />
+    <Folder Include="dv_config\" />
+    <Folder Include="dv_config\Stored Procedures\" />
+    <Folder Include="dbo\User Defined Types\" />
+    <Folder Include="Service Broker\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="dbo\Tables\dv_source_table.sql" />
+    <Build Include="dbo\Tables\dv_source_system.sql" />
+    <Build Include="dbo\Tables\dv_satellite_column.sql" />
+    <Build Include="dbo\Tables\dv_satellite.sql" />
+    <Build Include="dbo\Tables\dv_link.sql" />
+    <Build Include="dbo\Tables\dv_hub_link.sql" />
+    <Build Include="dbo\Tables\dv_hub_key_column.sql" />
+    <Build Include="dbo\Tables\dv_hub_column.sql" />
+    <Build Include="dbo\Tables\dv_hub.sql" />
+    <Build Include="dbo\Tables\dv_defaults.sql" />
+    <Build Include="dbo\Tables\dv_default_column.sql" />
+    <Build Include="dbo\Tables\dv_column_relationship.sql" />
+    <Build Include="dbo\Tables\dv_column.sql" />
+    <Build Include="ODE_Release\Tables\dv_release_001_001_001.sql" />
+    <Build Include="log4\Tables\Exception.sql" />
+    <Build Include="log4\Tables\Journal.sql" />
+    <Build Include="log4\Tables\JournalControl.sql" />
+    <Build Include="log4\Tables\JournalDetail.sql" />
+    <Build Include="log4\Tables\Severity.sql" />
+    <Build Include="dv_scheduler\Tables\dv_schedule_source_table.sql" />
+    <Build Include="dv_scheduler\Tables\dv_source_table_hierarchy.sql" />
+    <Build Include="dv_scheduler\Tables\dv_run.sql" />
+    <Build Include="dv_scheduler\Tables\dv_run_manifest.sql" />
+    <Build Include="dv_scheduler\Tables\dv_run_manifest_hierarchy.sql" />
+    <Build Include="dv_scheduler\Tables\dv_schedule.sql" />
+    <Build Include="dv_release\Tables\dv_release_master.sql" />
+    <Build Include="dv_release\Tables\dv_release_build.sql" />
+    <Build Include="dv_log\Tables\dv_execution.sql" />
+    <Build Include="dv_log\Tables\dv_load_state.sql" />
+    <Build Include="dv_log\Tables\dv_load_state_history.sql" />
+    <Build Include="dbo\Views\vw_running_processes.sql" />
+    <Build Include="dv_scheduler\Views\vw_dv_schedule_current.sql" />
+    <Build Include="dv_scheduler\Views\vw_dv_schedule_source_table_current.sql" />
+    <Build Include="dv_scheduler\Views\vw_dv_source_table_hierarchy_current.sql" />
+    <Build Include="dv_scheduler\Views\vw_manifest_status.sql" />
+    <Build Include="dv_scheduler\Views\vw_queue_status.sql" />
+    <Build Include="dv_scheduler\Views\vw_running_processes.sql" />
+    <Build Include="Security\SBLogin.sql" />
+    <Build Include="Security\RoleMemberships.sql" />
+    <Build Include="dbo\Functions\fn_proper_case.sql" />
+    <Build Include="dbo\Functions\fn_get_object_name.sql" />
+    <Build Include="dbo\Functions\fn_Get_Next_Abbreviation.sql" />
+    <Build Include="dbo\Functions\fn_get_default_value.sql" />
+    <Build Include="dbo\Functions\fn_build_column_definition.sql" />
+    <Build Include="log4\Functions\GetJournalControl.sql" />
+    <Build Include="log4\Functions\FormatElapsedTime.sql" />
+    <Build Include="dbo\Functions\fn_split_strings.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Functions\fn_get_list_of_days.sql" />
+    <Build Include="dbo\Functions\fn_get_key_definition.sql" />
+    <Build Include="dv_scheduler\Functions\fn_check_schedule_for_circular_reference.sql" />
+    <Build Include="dv_scheduler\Functions\fn_get_waiting_scheduler_tasks.sql" />
+    <Build Include="dv_scheduler\Functions\fn_check_manifest_for_circular_reference.sql" />
+    <Build Include="dv_release\Functions\fn_config_table_list.sql" />
+    <Build Include="dbo\Stored Procedures\dv_source_table_update.sql" />
+    <Build Include="dbo\Stored Procedures\dv_source_table_insert.sql" />
+    <Build Include="dbo\Stored Procedures\dv_source_table_delete.sql" />
+    <Build Include="dbo\Stored Procedures\dv_source_system_update.sql" />
+    <Build Include="dbo\Stored Procedures\dv_source_system_insert.sql" />
+    <Build Include="dbo\Stored Procedures\dv_source_system_delete.sql" />
+    <Build Include="dbo\Stored Procedures\dv_satellite_update.sql" />
+    <Build Include="dbo\Stored Procedures\dv_satellite_insert.sql" />
+    <Build Include="dbo\Stored Procedures\dv_satellite_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_satellite_column_update.sql" />
+    <Build Include="dbo\Stored Procedures\dv_satellite_column_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_satellite_column_delete.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_source_table_key_lookup.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_source_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_sats_for_source_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_sat_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_link_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_hub_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_link_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_link_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_link_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_hub_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_hub_link_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_hub_link_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_hub_key_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_hub_key_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_hub_key_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_hub_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_hub_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_hub_column_update.sql" />
+    <Build Include="dbo\Stored Procedures\dv_hub_column_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_hub_column_delete.sql" />
+    <Build Include="dbo\Stored Procedures\dv_defaults_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_defaults_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_defaults_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_default_column_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_default_column_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_default_column_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_create_sat_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_create_link_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_create_hub_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_create_DV_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_column_update.sql" />
+    <Build Include="dbo\Stored Procedures\dv_column_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_column_delete.sql" />
+    <Build Include="log4\Stored Procedures\JournalCleanup.sql" />
+    <Build Include="log4\Stored Procedures\JournalWriter.sql" />
+    <Build Include="log4\Stored Procedures\ExceptionHandler.sql" />
+    <Build Include="log4\Stored Procedures\ExceptionReader.sql" />
+    <Build Include="log4\Stored Procedures\JournalPrinter.sql" />
+    <Build Include="log4\Stored Procedures\JournalReader.sql" />
+    <Build Include="log4\Stored Procedures\PrintString.sql" />
+    <Build Include="log4\Stored Procedures\SessionInfoOutput.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_manifest_delete.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_populate_manifest.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_populate_manifest_hierarchy.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_schedule_insert.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_schedule_source_table_delete.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_schedule_source_table_insert.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_list_manifest_hierarchy.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_list_schedule_hierarchy.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_manifest_status_update.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_report_email_manifest_progress.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_schedule_source_table_update.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_schedule_update.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_source_table_hiearchy_delete.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_source_table_hierarchy_insert.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_source_table_hierarchy_update.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_run_insert.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_schedule_delete.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_process_manifest.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_process_queued_001.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_process_queued_002.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_process_schedule.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_restart_manifest.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_populate_run_manifest.sql" />
+    <Build Include="dv_release\Stored Procedures\dv_build_release_config.sql" />
+    <Build Include="dv_release\Stored Procedures\dv_export_release_file.sql" />
+    <Build Include="dv_release\Stored Procedures\dv_change_object_release.sql" />
+    <Build Include="dv_release\Stored Procedures\dv_import_release_file.sql" />
+    <Build Include="dv_release\Stored Procedures\dv_build_release_config_table.sql" />
+    <Build Include="dv_release\Stored Procedures\dv_apply_release_config.sql" />
+    <Build Include="dv_release\Stored Procedures\dv_release_master_insert.sql" />
+    <Build Include="dv_release\Stored Procedures\dv_release_master_delete.sql" />
+    <Build Include="dv_release\Stored Procedures\dv_release_master_update.sql" />
+    <Build Include="dv_log\Stored Procedures\dv_log_progress.sql" />
+    <Build Include="dv_integrity\Stored Procedures\dv_check_sats_for_duplicate_keys.sql" />
+    <Build Include="dv_integrity\Stored Procedures\dv_sat_metrics.sql" />
+    <Build Include="dv_integrity\Stored Procedures\dv_link_metrics.sql" />
+    <Build Include="dv_integrity\Stored Procedures\dv_hub_metrics.sql" />
+    <Build Include="dv_integrity\Stored Procedures\dv_col_metrics.sql" />
+    <Build Include="dv_config\Stored Procedures\dv_populate_hub_key_columns.sql" />
+    <Build Include="dv_config\Stored Procedures\dv_populate_satellite.sql" />
+    <Build Include="dv_config\Stored Procedures\dv_populate_satellite_columns.sql" />
+    <Build Include="dv_config\Stored Procedures\dv_populate_source_table_columns.sql" />
+    <Build Include="dv_config\Stored Procedures\dv_global_config_update.sql" />
+    <Build Include="dbo\User Defined Types\dv_column_type.sql" />
+    <Build Include="Service Broker\dv_scheduler_c002.sql" />
+    <Build Include="Service Broker\dv_scheduler_c001.sql" />
+    <Build Include="Service Broker\dv_scheduler_m002.sql" />
+    <Build Include="Service Broker\dv_scheduler_m001.sql" />
+    <Build Include="Service Broker\dv_scheduler_q002.sql" />
+    <Build Include="Service Broker\dv_scheduler_q001.sql" />
+    <Build Include="Security\ODE_Release.sql" />
+    <Build Include="Security\log4.sql" />
+    <Build Include="Security\dv_scheduler.sql" />
+    <Build Include="Security\dv_release.sql" />
+    <Build Include="Security\dv_log.sql" />
+    <Build Include="Security\dv_integrity.sql" />
+    <Build Include="Security\dv_config.sql" />
+    <Build Include="Service Broker\dv_scheduler_s002.sql" />
+    <Build Include="Service Broker\dv_scheduler_s001.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac">
+      <HintPath>$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac</HintPath>
+      <SuppressMissingDependenciesErrors>False</SuppressMissingDependenciesErrors>
+      <DatabaseVariableLiteralValue>master</DatabaseVariableLiteralValue>
+    </ArtifactReference>
+    <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\msdb.dacpac">
+      <HintPath>$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\msdb.dacpac</HintPath>
+      <SuppressMissingDependenciesErrors>False</SuppressMissingDependenciesErrors>
+      <DatabaseVariableLiteralValue>msdb</DatabaseVariableLiteralValue>
+    </ArtifactReference>
+  </ItemGroup>
+</Project>

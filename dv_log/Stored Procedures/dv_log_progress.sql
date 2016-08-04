@@ -45,15 +45,15 @@ begin
 	and [satellite_schema]		= @vault_object_schema
 	and [satellite_name]		= @vault_object_name
 end
-if @vault_object_type = 'pit'
-begin
-   select @object_key = pit_key
-   from [dbo].[dv_pit]
-   where 1=1
-    and [pit_database]		    = @vault_object_database
-	and [pit_schema]			= @vault_object_schema
-	and [pit_name]				= @vault_object_name
-end
+--if @vault_object_type = 'pit'
+--begin
+--   select @object_key = pit_key
+--   from [dbo].[dv_pit]
+--   where 1=1
+--    and [pit_database]		    = @vault_object_database
+--	and [pit_schema]			= @vault_object_schema
+--	and [pit_name]				= @vault_object_name
+--end
 
 INSERT INTO [dv_log].[dv_load_state_history]
 SELECT [load_state_key],left([Action], 1),[source_table_key],[object_key],[object_type],[execution_key],[load_high_water]--,[load_finish_datetime],[load_duration]

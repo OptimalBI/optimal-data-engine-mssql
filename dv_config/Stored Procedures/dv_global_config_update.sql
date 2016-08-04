@@ -1,4 +1,5 @@
 ﻿
+
 CREATE PROCEDURE [dv_config].[dv_global_config_update]
 (
      @vault_config_update_type				varchar(50)		= 'Set_Release'
@@ -80,7 +81,7 @@ begin
 declare Config_Cursor cursor forward_only for 
 select  dv_schema_name, dv_table_name
 from [dv_release].[fn_config_table_list] ()
-order by dv_load_order desc
+order by dv_load_order desc   --bb20151113
 
 open Config_Cursor
 fetch next from Config_Cursor into  @schema_name, @table_name				

@@ -8,3 +8,18 @@
     PRIMARY KEY CLUSTERED ([execution_key] ASC)
 );
 
+
+GO
+
+
+CREATE TRIGGER [dv_log].[dv_execution_audit] ON [dv_log].[dv_execution]
+AFTER INSERT, UPDATE
+AS
+	BEGIN
+	    UPDATE [a]
+		 SET
+			[update_date_time] = SYSDATETIMEOFFSET()
+		   , [updated_by] = SUSER_NAME() FROM [dv_log].[dv_execution] AS [a]
+									   JOIN [inserted] AS [b]
+									   ON [a].[execution_key] = [b].[execution_key];
+	END;

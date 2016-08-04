@@ -1,23 +1,33 @@
-﻿CREATE procedure [dv_integrity].[dv_check_sats_for_duplicate_keys]
+﻿
+CREATE procedure [dv_integrity].[dv_hub_metrics]
 (
-  @dogenerateerror				bit				= 0
-, @dothrowerror					bit				= 1
+   @hub_key						int				= 0
+  ,@stage_database				varchar(128)	= 'ODV_Metrics_Stage'
+  ,@stage_schema				varchar(128)	= 'Stage'
+  ,@stage_table					varchar(128)	= 'Integrity_Hub_Counts'
+  ,@dogenerateerror				bit				= 0
+  ,@dothrowerror				bit				= 1
 )
 as
 begin
 set nocount on
-declare 
-	 @def_sat_schema		varchar(128)
-	,@def_dv_rowstartdate		varchar(128)
-	,@def_dv_row_is_current	varchar(128)
-	,@def_dv_is_tombstone	varchar(128)
-	,@sat_surrogate_keyname	varchar(128)
-	,@sat_database			varchar(128)
-	,@sat_qualified_name	varchar(512)
-
-	,@sql					nvarchar(max)
-
-declare @crlf				char(2) = CHAR(13) + CHAR(10)
+-- Local Defaults Values
+declare @crlf char(2) = char(13) + char(10)
+-- Global Defaults
+DECLARE  
+		 @def_global_default_load_date_time	varchar(128)
+-- hub Table
+declare  @hub_qualified_name				varchar(512)
+        ,@hub_data_source_col               varchar(50)
+		,@hub_load_date_time				varchar(50)
+		
+-- Stage Table
+declare  @stage_qualified_name				varchar(512)
+--  Working Storage
+declare @SQL								nvarchar(max) = ''
+declare @hub_loop_key						bigint
+declare @hub_loop_stop_key					bigint
+declare @run_time							varchar(50)
 
 -- Log4TSQL Journal Constants 										
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
@@ -53,10 +63,14 @@ SET @_Severity          = @SEVERITY_INFORMATION;
 SET @_SprocStartTime    = sysdatetimeoffset();
 SET @_ProgressText      = '' 
 SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'IntegrityChecks');  -- left Group Name as HOWTO for now.
-
+select @_FunctionName   = isnull(OBJECT_NAME(@@PROCID), 'Test');
 
 -- set Log4TSQL Parameters for Logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
+						+ @NEW_LINE + '    @hub_key                     : ' + COALESCE(CAST(@hub_key AS varchar), 'NULL') 
+						+ @NEW_LINE + '    @stage_database               : ' + @stage_database					
+						+ @NEW_LINE + '    @stage_schema                 : ' + @stage_schema				
+						+ @NEW_LINE + '    @stage_table                  : ' + @stage_table					    
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
 						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
 						+ @NEW_LINE
@@ -67,81 +81,72 @@ IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate inputs';
 
---IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
---			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
---IF isnull(@recreate_flag, '') not in ('Y', 'N') 
---			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults'
+select
+-- Global Defaults
+	@def_global_default_load_date_time	= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')	as varchar(128))
 
-select @_FunctionName      = isnull(OBJECT_NAME(@@PROCID), 'Test');
-select @def_sat_schema	= cast([dbo].[fn_get_default_value]('schema','sat') as varchar)
-
-select  @def_dv_rowstartdate	   	= [column_name] from [dbo].[dv_default_column] where object_type = 'sat' and object_column_type = 'Version_Start_Date'
-select  @def_dv_row_is_current	= [column_name] from [dbo].[dv_default_column] where object_type = 'sat' and object_column_type = 'Current_Row'
-select  @def_dv_is_tombstone	= [column_name] from [dbo].[dv_default_column] where object_type = 'sat' and object_column_type = 'Tombstone_Indicator'
-
-
-SET @_Step = 'Build Cursor for all Satellites' 
-declare cur_checks cursor for 
-select 	 sat_surrogate_keyname	= case when link_hub_satellite_flag = 'H' then (select column_name from [dbo].[fn_get_key_definition](h.[hub_name],'Hub'))	
-                                       when link_hub_satellite_flag = 'L' then (select column_name from [dbo].[fn_get_key_definition](l.[link_name],'Lnk'))
-									   else '<Unknown>'
-									   end		
-		,sat_qualified_name		= quotename(s.[satellite_database]) + '.' + quotename(coalesce(s.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (s.[satellite_name], 'sat')))       
-		,sat_database = s.[satellite_database]
-from [dbo].[dv_satellite] s
-left join [dbo].[dv_hub] h
-on h.hub_key = s.hub_key
-and s.link_hub_satellite_flag = 'H' 
-left join [dbo].[dv_link] l
-on l.link_key = s.link_key
-and s.link_hub_satellite_flag = 'L'
+-- hub Defaults
+select @hub_data_source_col = quotename(column_name)
+from [dbo].[dv_default_column]
 where 1=1
-order by sat_qualified_name
-				
-open cur_checks
-fetch next from cur_checks 
-into 	 @sat_surrogate_keyname	
-	 	,@sat_qualified_name
-		,@sat_database
+and object_type = 'hub'
+and object_column_type = 'Data_Source'
 
-while @@FETCH_STATUS = 0
+select @hub_load_date_time = quotename(column_name)
+from [dbo].[dv_default_column]
+where 1=1
+and object_type = 'hub'
+and object_column_type = 'Load_Date_Time'
+
+ --Stage Values
+set @stage_qualified_name = quotename(@stage_database) + '.' + quotename(@stage_schema) + '.' + quotename(@stage_table) 
+select @run_time = cast(sysdatetimeoffset() as varchar(50))
+
+-- Truncate the Stage Table
+set @SQL = 'truncate table ' + @stage_qualified_name
+exec(@SQL)
+
+set @_Step = 'Build the test SQL'
+select @hub_loop_key = case when isnull(@hub_key, 0) = 0 then max(hub_key) else @hub_key end from [dbo].[dv_hub]
+set @hub_loop_stop_key = isnull(@hub_key, 0)
+while @hub_loop_key >= @hub_loop_stop_key
+/**********************************************************************************************************************/
 begin
-SET @_Step = 'Checks on: ' + @sat_qualified_name
+if @hub_loop_key > 0
+begin
+	select @SQL =
+	'if exists (select 1 from ' + quotename(l.[hub_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[hub_schema] + ''' and [table_name] = ''' + [ODV_Config].[dbo].[fn_get_object_name] (l.hub_name, 'hub') + ''')' + @crlf +
+	'begin' + @crlf +
+	'insert ' + @stage_qualified_name + @crlf +
+	'select ''' + @run_time + '''' + @crlf +
+		+',' + cast(l.hub_key as varchar(50)) + ' as [object_key]' + @crlf
+		+ ',''' + l.hub_name + ''' as [object_name]' + @crlf
+		+ ',l.' + @hub_data_source_col + ' as [record_source]' + @crlf
+		+ ',ss.[source_system_name]' + @crlf
+		+ ',cfg.[source_table_name]' + @crlf
 
-set @sql     = 'declare @xml1 varchar(max);'					+ @crlf +
-               'select  @xml1 = ('								+ @crlf
-select @sql += 'select s.'  + @sat_surrogate_keyname + ''		+ @crlf +
-			   '      ,s.[' + @def_dv_rowstartdate	   + ']'	+ @crlf +
-			   'from ' + @sat_qualified_name + ' s'				+ @crlf + 
-			   'group by s.'  + @sat_surrogate_keyname + ''		+ @crlf +
-			   '        ,s.[' + @def_dv_rowstartdate    + '] having count(*) > 1' + @crlf +
-			   'order by s.'  + @sat_surrogate_keyname + ''		+ @crlf +
-			   '        ,s.[' + @def_dv_rowstartdate    + ']'		+ @crlf +
-			   'for xml auto)'									+ @crlf
-set @sql = @sql
-			+ 'if @xml1 is not null '							+ @crlf
-            + 'EXECUTE [log4].[JournalWriter] @FunctionName = ''' + @_FunctionName + ''''
-			+ ', @MessageText = ''Duplicate Keys Detected In - ' + @sat_qualified_name + ' - See [log4].[JournalDetail] for details''' 
-			+ ', @ExtraInfo = @xml1' 
-			+ ', @DatabaseName = ''' + @sat_database + ''''
-			+ ', @Task = ''Duplicate Satellite Key Check'''
-			+ ', @StepInFunction = ''' + @_Step + ''''
-			+ ', @Severity = 256'
-			+ ', @ExceptionId = 3601;' + @crlf
-set @_ProgressText = @_ProgressText + 'Checked ' + @sat_qualified_name + ' for Duplicate Keys' + @crlf
---print @sql
-EXECUTE sp_executesql @sql;
-
-fetch next from cur_checks 
-into 	 @sat_surrogate_keyname	
-	 	,@sat_qualified_name
-		,@sat_database
+	+ ',count_big(*) as [RowCount]' + @crlf
+	+'from ' + quotename(l.[hub_database]) + '.' + quotename(l.[hub_schema]) + '.' + quotename([ODV_Config].[dbo].[fn_get_object_name] (l.hub_name, 'hub')) +' l' + @crlf
+	+'left join [dbo].[dv_source_table] cfg on cfg.source_table_key = l.' + @hub_data_source_col + @crlf
+	+'left join [dbo].[dv_source_system] ss on ss.[source_system_key] = cfg.[system_key]' + @crlf
+	+'where ' + @hub_load_date_time + ' <= ''' + @run_time + '''' + @crlf + 
+	+ 'group by l.' + @hub_data_source_col + ', ss.[source_system_name],cfg.[source_table_name]' + @crlf 
+	+ 'end' + @crlf
+	+ @crlf + @crlf
+	from [dbo].[dv_hub] l
+	where hub_key = @hub_loop_key
+	--select @SQL
+	execute sp_executesql @SQL
 end
+select @hub_loop_key = max(hub_key) from [dbo].[dv_hub]
+		where hub_key < @hub_loop_key
+end
+/**********************************************************************************************************************/
 
-close cur_checks
-deallocate cur_checks
+SET @_Step = 'Extract the Stats'
+IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
 
 set @_Step = 'Completed'
 
@@ -152,11 +157,11 @@ SET @_ProgressText  = @_ProgressText + @NEW_LINE
 
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Successfully Ran Satellite Duplicate Key Checker' 
+SET @_Message   = 'Successfully Ran Hub Integrity Checker' 
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Run Satellite Duplicate Key Checker' + @sat_qualified_name
+SET @_ErrorContext	= 'Failed to Run Hub Integrity Checker' + @hub_qualified_name
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN

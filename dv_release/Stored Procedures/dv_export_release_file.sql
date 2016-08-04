@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [dv_release].[dv_export_release_file] 
+﻿
+CREATE PROCEDURE [dv_release].[dv_export_release_file] 
 (
   @vault_release_number			int				null
 , @vault_file_location			varchar(256)	=''
@@ -77,8 +78,8 @@ select @sql = replace(@sql, '#release_number#', format(@vault_release_number, '0
 select @sql = replace(@sql, '#file_location#',@vault_file_location) 
 select @sql = replace(@sql, '#filename#', @filename)
 select @sql = replace(@sql, '#servername#', @@servername)
-select @sql
-exec master..xp_cmdshell @sql
+--select @sql
+exec master.dbo.xp_cmdshell @sql
 
 /*--------------------------------------------------------------------------------------------------------------*/
 IF @@TRANCOUNT > 0 COMMIT TRAN;

@@ -143,6 +143,7 @@ from
 (select *
 from @default_columns) a
 order by source_ordinal_position
+
 select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
 from
 (select *
@@ -162,7 +163,7 @@ select @SQL += ') ON ' + quotename(@object_filegroup) + ';' + @crlf
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Table'
 IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
---print @SQL
+--select @SQL --**************
 exec (@SQL)
 
 /*--------------------------------------------------------------------------------------------------------------*/

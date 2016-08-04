@@ -86,6 +86,7 @@ FROM [dv_scheduler_q002]), TIMEOUT 1000   -- Change for each Reveiver Procedure
 select @rowcount = @@ROWCOUNT
 
 IF (@rowcount > 0)
+	--END CONVERSATION @dialog_handle;
 	BEGIN
 	END CONVERSATION @dialog_handle;
 	SET @_Step = 'Process the Message';	
@@ -149,7 +150,7 @@ print @_Message
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed Load of: ' + isnull(quotename(@vault_source_system_name), 'N/A') + '.' + isnull(quotename(@vault_source_table_schema), 'N/A') + '.' + isnull(quotename(@vault_source_table_name), 'N/A') + @NEW_LINE
+SET @_ErrorContext	= 'Failed Load of: ' + isnull(quotename(@vault_source_system_name), '') + '.' + isnull(quotename(@vault_source_table_schema), '') + '.' + isnull(quotename(@vault_source_table_name), '') + @NEW_LINE
 SET @_ErrorContext += 'For Message Type: ' + isnull(@message_type_name, '') + @NEW_LINE + 'For Message: ' + isnull(@msgChar, '')
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
