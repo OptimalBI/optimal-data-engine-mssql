@@ -5,7 +5,3 @@
 );
 
 
-GO
-CREATE NONCLUSTERED INDEX [PK_dv_release_001_001_001_Column]
-    ON [ODE_Release].[dv_release_001_001_001]([release_key] ASC);
-
