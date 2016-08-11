@@ -12,7 +12,7 @@
     [updated_datetime]          DATETIMEOFFSET (7) CONSTRAINT [DF__dv_schedule_source_table__updated___5535A963] DEFAULT (sysdatetimeoffset()) NOT NULL,
     CONSTRAINT [PK__dv_sched__5FF3626055109B18] PRIMARY KEY CLUSTERED ([schedule_source_table_key] ASC),
     CONSTRAINT [CK_dv_schedule_source_table__priority] CHECK ([priority]='Low' OR [priority]='High'),
-    CONSTRAINT [CK_dv_schedule_source_table__queue] CHECK ([queue]='001' OR [queue]='001'),
+    CONSTRAINT [CK_dv_schedule_source_table__queue] CHECK ([queue]='001' OR [queue]='002'),
     CONSTRAINT [CK_dv_schedule_source_table__run_type] CHECK ([source_table_load_type]='Full' OR [source_table_load_type]='Delta' OR [source_table_load_type]='Default'),
     CONSTRAINT [FK_dv_schedule_source_table_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),
     CONSTRAINT [FK_dv_schedule_source_table_dv_schedule] FOREIGN KEY ([schedule_key]) REFERENCES [dv_scheduler].[dv_schedule] ([schedule_key]),
