@@ -193,6 +193,7 @@ SET @_Step = 'Queue as Set of Tasks'
 		  <SourceTable>'		+ isnull(@source_table_name, '')				+ N'</SourceTable>
 		  <ProcSchema>'			+ isnull(@source_procedure_schema, '')			+ N'</ProcSchema>
 		  <ProcName>'			+ isnull(@source_procedure_name, '')			+ N'</ProcName>
+		  <RunType>'			+ isnull(@source_table_load_type, '')			+ N'</RunType>
 	</Request>'
 	SET @_Step = 'Queue a Single Task: ' + cast(@msg as varchar(4000))
 	BEGIN TRANSACTION
