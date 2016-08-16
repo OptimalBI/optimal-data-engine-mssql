@@ -974,11 +974,11 @@ CREATE TABLE [log4].[Exception] (
 
 
 GO
-PRINT N'Creating [ODE_Release].[dv_release_002_001_001]...';
+PRINT N'Creating [ODE_Release].[dv_release_002_002_001]...';
 
 
 GO
-CREATE TABLE [ODE_Release].[dv_release_002_001_001] (
+CREATE TABLE [ODE_Release].[dv_release_002_002_001] (
     [release_key]          INT                IDENTITY (1, 1) NOT NULL,
     [release_applied_date] DATETIMEOFFSET (7) NULL,
     PRIMARY KEY CLUSTERED ([release_key] ASC)
@@ -16566,6 +16566,7 @@ DECLARE @task							nvarchar(512)
 	   ,@vault_runkey					varchar(20)
 	   ,@vault_run_key					int
 	   ,@rowcount						int
+	   ,@stage_delta_switch				varchar(100) = 'N'
 
 -- Set Constant Values
 
@@ -16621,6 +16622,12 @@ IF @DoGenerateError = 1
 SET @_Step = 'Validate inputs';
 
 SET @dialog_handle = NULL
+/*--------------------------------------------------------------------------------------------------------------*/
+SET @_Step = 'Get Defaults'
+
+select @stage_delta_switch		= [default_varchar] from [dbo].[dv_defaults]		where default_type = 'Global'	and default_subtype = 'StageDeltaSwitch'
+
+/*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Pull From the Queue';
 WAITFOR ( RECEIVE TOP (1) @dialog_handle		= conversation_handle
                         , @message_type_name	= message_type_name
@@ -16670,6 +16677,8 @@ IF (@rowcount > 0)
 					SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
 					print @_Step	
 					set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name)
+					if @stage_delta_switch = 'Y' 
+					set @sql = @sql + ' ''' + @vault_source_table_run_type + ''''
 					exec (@SQL)
 					END
 				SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
@@ -16787,6 +16796,7 @@ DECLARE @task							nvarchar(512)
 	   ,@vault_runkey					varchar(20)
 	   ,@vault_run_key					int
 	   ,@rowcount						int
+	   ,@stage_delta_switch				varchar(100) = 'N'
 
 -- Set Constant Values
 
@@ -16842,6 +16852,12 @@ IF @DoGenerateError = 1
 SET @_Step = 'Validate inputs';
 
 SET @dialog_handle = NULL
+/*--------------------------------------------------------------------------------------------------------------*/
+SET @_Step = 'Get Defaults'
+
+select @stage_delta_switch		= [default_varchar] from [dbo].[dv_defaults]		where default_type = 'Global'	and default_subtype = 'StageDeltaSwitch'
+
+/*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Pull From the Queue';
 WAITFOR ( RECEIVE TOP (1) @dialog_handle		= conversation_handle
                         , @message_type_name	= message_type_name
@@ -16892,6 +16908,8 @@ IF (@rowcount > 0)
 					SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
 					print @_Step	
 					set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name)
+					if @stage_delta_switch = 'Y' 
+					set @sql = @sql + ' ''' + @vault_source_table_run_type + ''''
 					exec (@SQL)
 					END
 				SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
@@ -17179,6 +17197,7 @@ SET @_Step = 'Queue as Set of Tasks'
 		  <SourceTable>'		+ isnull(@source_table_name, '')				+ N'</SourceTable>
 		  <ProcSchema>'			+ isnull(@source_procedure_schema, '')			+ N'</ProcSchema>
 		  <ProcName>'			+ isnull(@source_procedure_name, '')			+ N'</ProcName>
+		  <RunType>'			+ isnull(@source_table_load_type, '')			+ N'</RunType>
 	</Request>'
 	SET @_Step = 'Queue a Single Task: ' + cast(@msg as varchar(4000))
 	BEGIN TRANSACTION
