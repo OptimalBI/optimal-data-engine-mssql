@@ -135,12 +135,9 @@ IF (@rowcount > 0)
 					BEGIN
 					SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
 					print @_Step	
-/*----------------------------------------------------------------------------------------------*/
-					if @stage_delta_switch = 'Y' 
-					set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name) + ' ' + quotename(@vault_source_table_run_type)
-					ELSE
 					set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name)
-/*----------------------------------------------------------------------------------------------*/
+					if @stage_delta_switch = 'Y' 
+					set @sql = @sql + ' ''' + @vault_source_table_run_type + ''''
 					exec (@SQL)
 					END
 				SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
