@@ -18,6 +18,9 @@ To Install ODE, you need to have:
 If you wish to develop ODE further, we recommend:
 * Visual Studio 2015 Community Edition installed on a computer which you can access. This can be downloaded from https://www.visualstudio.com/en-us/mt171547.aspx
 
+## Additional Code ##
+The related project "optimal-data-engine-mssql-scripts" in the OptimalBI repository contains a set of scripts, which can be downloaded and used to assist in making use of ODE.
+
 ## Branches: ##
 Currently, ODE has two Branches available:
 * master and
@@ -66,6 +69,8 @@ Visit http://www.ode.ninja/ - this is where we keep our guides and share our kno
 
 ## Change log: ##
 ```
+Build 002.001.001 on 20160805
+        * Added the ability to pass a parameter from the scheduler, to a Staging Procedure, telling the Procedure what type of run to perform (Full or DELTA).
 Build 002.001.001 on 20160805
         * Added the "is_retired" switch on dv_hub, dv_link, dv_sat, dv_source_table, dv_source_system and dv_column tables. This column is currently documentary only.
 Build 001.001.001 on 20151020
