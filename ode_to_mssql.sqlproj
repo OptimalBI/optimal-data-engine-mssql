@@ -108,7 +108,6 @@
     <Build Include="dbo\Tables\dv_default_column.sql" />
     <Build Include="dbo\Tables\dv_column_relationship.sql" />
     <Build Include="dbo\Tables\dv_column.sql" />
-    <Build Include="ODE_Release\Tables\dv_release_002_001_001.sql" />
     <Build Include="log4\Tables\Exception.sql" />
     <Build Include="log4\Tables\Journal.sql" />
     <Build Include="log4\Tables\JournalControl.sql" />
@@ -305,6 +304,7 @@
     <Build Include="Service Broker\dv_scheduler_s002.sql" />
     <Build Include="Service Broker\dv_scheduler_s001.sql" />
     <Build Include="Security\SBLogin_Login.sql" />
+    <Build Include="ODE_Release\Tables\dv_release_002_002_001.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac">

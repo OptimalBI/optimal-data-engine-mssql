@@ -16626,8 +16626,8 @@ SET @dialog_handle = NULL
 SET @_Step = 'Get Defaults'
 
 select @stage_delta_switch		= [default_varchar] from [dbo].[dv_defaults]		where default_type = 'Global'	and default_subtype = 'StageDeltaSwitch'
-
 /*--------------------------------------------------------------------------------------------------------------*/
+
 SET @_Step = 'Pull From the Queue';
 WAITFOR ( RECEIVE TOP (1) @dialog_handle		= conversation_handle
                         , @message_type_name	= message_type_name
@@ -16676,7 +16676,7 @@ IF (@rowcount > 0)
 					BEGIN
 					SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
 					print @_Step	
-					set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name)
+					set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name) 
 					if @stage_delta_switch = 'Y' 
 					set @sql = @sql + ' ''' + @vault_source_table_run_type + ''''
 					exec (@SQL)
@@ -16852,12 +16852,14 @@ IF @DoGenerateError = 1
 SET @_Step = 'Validate inputs';
 
 SET @dialog_handle = NULL
+
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults'
 
 select @stage_delta_switch		= [default_varchar] from [dbo].[dv_defaults]		where default_type = 'Global'	and default_subtype = 'StageDeltaSwitch'
 
 /*--------------------------------------------------------------------------------------------------------------*/
+
 SET @_Step = 'Pull From the Queue';
 WAITFOR ( RECEIVE TOP (1) @dialog_handle		= conversation_handle
                         , @message_type_name	= message_type_name
@@ -16887,7 +16889,7 @@ IF (@rowcount > 0)
 	
 		
 			set @vault_run_key = cast(ltrim(rtrim(@vault_runkey)) as int)
-			select @vault_source_table_run_type = case when @vault_source_table_run_type = 'Default' then null else @vault_source_table_run_type end
+			select @vault_source_table_run_type = case when @vault_source_table_run_type = 'Default' then NULL else @vault_source_table_run_type end
 
 			SELECT 1
 			  FROM [dv_scheduler].[dv_run] r
@@ -16915,7 +16917,7 @@ IF (@rowcount > 0)
 				SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
 				exec [dbo].[dv_load_source_table] @vault_source_system_name, @vault_source_table_schema, @vault_source_table_name, @vault_source_table_run_type
 				SET @_Step = 'Load Completed'
-				EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Completed'
+				EXECUTE [dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Completed'
 			END
 		END		
 	ELSE 
@@ -17545,8 +17547,7 @@ USING (VALUES	('Global','LowDate',1,'datetime',NULL,NULL,'Jan  1 1900 12:00:00:0
 				('Sat','Filegroup',1,'varchar',NULL,'PRIMARY',NULL,0),
 				('SatSurrogate','Suffix',1,'varchar',NULL,'_key',NULL,0),
 				('dv_col_metrics','RunType',1,'varchar',NULL,'Weekly', NULL, 0),
-				('Scheduler','PollDelayInSeconds',1,'int',30,NULL,NULL,0),
-				('Global','StageDeltaSwitch',1,'varchar',NULL,'N',NULL,0)
+				('Scheduler','PollDelayInSeconds',1,'int',30,NULL,NULL,0)
 			) AS src([default_type],[default_subtype],[default_sequence],[data_type],[default_integer],[default_varchar],[default_dateTime],[release_key])
 	ON
 		trgt.[default_type]     = src.[default_type] and 
