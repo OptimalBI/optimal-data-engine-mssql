@@ -1,4 +1,4 @@
-﻿# Optimal Data Engine (ODE) Build 002.001.001 #
+﻿# Optimal Data Engine (ODE) Build 002.002.001 #
 Copyright 2015 OptimalBI - Licensed under the GNU GENERAL PUBLIC LICENSE Version 3.0 (GPL-3.0)
 
 ## The Approach: ##
@@ -69,7 +69,7 @@ Visit http://www.ode.ninja/ - this is where we keep our guides and share our kno
 
 ## Change log: ##
 ```
-Build 002.001.001 on 20160805
+Build 002.002.001 on 20160819
         * Added the ability to pass a parameter from the scheduler, to a Staging Procedure, telling the Procedure what type of run to perform (Full or DELTA).
 Build 002.001.001 on 20160805
         * Added the "is_retired" switch on dv_hub, dv_link, dv_sat, dv_source_table, dv_source_system and dv_column tables. This column is currently documentary only.
