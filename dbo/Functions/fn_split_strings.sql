@@ -1,6 +1,6 @@
 ﻿CREATE FUNCTION dbo.fn_split_strings
 (
-   @List NVARCHAR(MAX),
+   @List VARCHAR(8000),
    @Delimiter NVARCHAR(255)
 )
 -- Courtesy of Jeff Moden.
