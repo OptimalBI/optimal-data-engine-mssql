@@ -10,7 +10,8 @@
     CONSTRAINT [FK__dv_satellite_column__dv_column] FOREIGN KEY ([column_key]) REFERENCES [dbo].[dv_column] ([column_key]),
     CONSTRAINT [FK__dv_satellite_column__dv_satellite] FOREIGN KEY ([satellite_key]) REFERENCES [dbo].[dv_satellite] ([satellite_key]),
     CONSTRAINT [FK_dv_satellite_column_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),
-    CONSTRAINT [dv_satellite_column_unique] UNIQUE NONCLUSTERED ([satellite_key] ASC, [column_key] ASC)
+    CONSTRAINT [dv_satellite_column_unique] UNIQUE NONCLUSTERED ([satellite_key] ASC, [column_key] ASC),
+	CONSTRAINT [dv_satellite_source_column_unique] UNIQUE NONCLUSTERED ([column_key] ASC)
 );
 
 
