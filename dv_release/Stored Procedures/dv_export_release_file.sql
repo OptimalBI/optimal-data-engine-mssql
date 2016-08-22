@@ -1,7 +1,7 @@
 ﻿
 CREATE PROCEDURE [dv_release].[dv_export_release_file] 
 (
-  @vault_release_number			int				null
+  @vault_release_number			int
 , @vault_file_location			varchar(256)	=''
 , @DoGenerateError              bit				= 0
 , @DoThrowError                 bit				= 1
