@@ -117,7 +117,7 @@ begin
 if @hub_loop_key > 0
 begin
 	select @SQL =
-	'if exists (select 1 from ' + quotename(l.[hub_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[hub_schema] + ''' and [table_name] = ''' + [ODV_Config].[dbo].[fn_get_object_name] (l.hub_name, 'hub') + ''')' + @crlf +
+	'if exists (select 1 from ' + quotename(l.[hub_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[hub_schema] + ''' and [table_name] = ''' + [dbo].[fn_get_object_name] (l.hub_name, 'hub') + ''')' + @crlf +
 	'begin' + @crlf +
 	'insert ' + @stage_qualified_name + @crlf +
 	'select ''' + @run_time + '''' + @crlf +
@@ -128,7 +128,7 @@ begin
 		+ ',cfg.[source_table_name]' + @crlf
 
 	+ ',count_big(*) as [RowCount]' + @crlf
-	+'from ' + quotename(l.[hub_database]) + '.' + quotename(l.[hub_schema]) + '.' + quotename([ODV_Config].[dbo].[fn_get_object_name] (l.hub_name, 'hub')) +' l' + @crlf
+	+'from ' + quotename(l.[hub_database]) + '.' + quotename(l.[hub_schema]) + '.' + quotename([dbo].[fn_get_object_name] (l.hub_name, 'hub')) +' l' + @crlf
 	+'left join [dbo].[dv_source_table] cfg on cfg.source_table_key = l.' + @hub_data_source_col + @crlf
 	+'left join [dbo].[dv_source_system] ss on ss.[source_system_key] = cfg.[system_key]' + @crlf
 	+'where ' + @hub_load_date_time + ' <= ''' + @run_time + '''' + @crlf + 

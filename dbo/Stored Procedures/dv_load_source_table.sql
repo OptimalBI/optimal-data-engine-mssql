@@ -149,10 +149,10 @@ inner join [dbo].[dv_satellite] s
 on s.satellite_key = sc.satellite_key
 left join [dbo].[dv_link] l
 on s.link_key = l.link_key
-and l.link_key > 0
+and (l.link_key > 0 OR l.link_key < -100)
 left join [dbo].[dv_hub] h 
 on h.hub_key = s.hub_key
-and h.hub_key > 0
+and (h.hub_key > 0 OR h.hub_key < -100)
 left join [dbo].[dv_hub_link] hl
 on hl.link_key = l.link_key
 left join [dbo].[dv_hub] linkhub

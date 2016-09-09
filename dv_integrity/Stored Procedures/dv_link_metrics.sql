@@ -116,7 +116,7 @@ begin
 if @link_loop_key > 0
 begin
 	select @SQL =
-	'if exists (select 1 from ' + quotename(l.[link_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[link_schema] + ''' and [table_name] = ''' + [ODV_Config].[dbo].[fn_get_object_name] (l.link_name, 'lnk') + ''')' + @crlf +
+	'if exists (select 1 from ' + quotename(l.[link_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[link_schema] + ''' and [table_name] = ''' + [dbo].[fn_get_object_name] (l.link_name, 'lnk') + ''')' + @crlf +
 	'begin' + @crlf +
 	'insert ' + @stage_qualified_name + @crlf +
 	'select ''' + @run_time + '''' + @crlf +
@@ -126,7 +126,7 @@ begin
 	+ ',ss.[source_system_name]' + @crlf
 	+ ',cfg.[source_table_name]' + @crlf
 	+ ',count_big(*) as [Runkey]' + @crlf
-	+'from ' + quotename(l.[link_database]) + '.' + quotename(l.[link_schema]) + '.' + quotename([ODV_Config].[dbo].[fn_get_object_name] (l.link_name, 'lnk')) +' l' + @crlf
+	+'from ' + quotename(l.[link_database]) + '.' + quotename(l.[link_schema]) + '.' + quotename([dbo].[fn_get_object_name] (l.link_name, 'lnk')) +' l' + @crlf
 	+'left join [dbo].[dv_source_table] cfg on cfg.source_table_key = l.' + @link_data_source_col + @crlf
 	+'left join [dbo].[dv_source_system] ss on ss.[source_system_key] = cfg.[system_key]' + @crlf
 	+'where ' + @link_load_date_time + ' <= ''' + @run_time + '''' + @crlf + 

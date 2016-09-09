@@ -128,7 +128,7 @@ while @sat_loop_key >= @sat_loop_stop_key
 /**********************************************************************************************************************/
 begin
 select @SQL =
-'if exists (select 1 from ' + quotename(s.[satellite_database]) + '.[information_schema].[tables] where [table_schema] = ''' + s.[satellite_schema] + ''' and [table_name] = ''' + [ODV_Config].[dbo].[fn_get_object_name] (s.satellite_name, 'sat') + ''')' + @crlf +
+'if exists (select 1 from ' + quotename(s.[satellite_database]) + '.[information_schema].[tables] where [table_schema] = ''' + s.[satellite_schema] + ''' and [table_name] = ''' + [dbo].[fn_get_object_name] (s.satellite_name, 'sat') + ''')' + @crlf +
 'begin' + @crlf +
 'insert ' + @stage_qualified_name + @crlf +
 'select ''' + @run_time + '''' + @crlf +
@@ -138,7 +138,7 @@ select @SQL =
 + ',sum(cast(case when ' + @sat_tombstone_col + ' = 0 and ' + @sat_current_row_col + ' = 1 then 1 else 0 end as bigint)) as [current_rows]' + @crlf
 + ',sum(cast(case when ' + @sat_tombstone_col + ' = 0 and ' + @sat_current_row_col + ' = 0 then 1 else 0 end as bigint)) as [versioned_rows]' + @crlf
 + ',sum(cast(' + @sat_tombstone_col + ' as bigint)) as [tombstones]'  + @crlf
-+ 'from ' + quotename(s.[satellite_database]) + '.' + quotename(s.[satellite_schema]) + '.' + quotename([ODV_Config].[dbo].[fn_get_object_name] (s.satellite_name, 'sat')) + @crlf
++ 'from ' + quotename(s.[satellite_database]) + '.' + quotename(s.[satellite_schema]) + '.' + quotename([dbo].[fn_get_object_name] (s.satellite_name, 'sat')) + @crlf
 + 'end' + @crlf
 + @crlf + @crlf
 from [dbo].[dv_satellite] s
