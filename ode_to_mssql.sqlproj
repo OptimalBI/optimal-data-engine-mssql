@@ -183,12 +183,6 @@
     <Build Include="dbo\Stored Procedures\dv_hub_update.sql">
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
-    <Build Include="dbo\Stored Procedures\dv_hub_link_insert.sql">
-      <QuotedIdentifier>Off</QuotedIdentifier>
-    </Build>
-    <Build Include="dbo\Stored Procedures\dv_hub_link_delete.sql">
-      <QuotedIdentifier>Off</QuotedIdentifier>
-    </Build>
     <Build Include="dbo\Stored Procedures\dv_hub_key_update.sql">
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
@@ -307,6 +301,15 @@
     <Build Include="ODE_Release\Tables\dv_release_002_002_001.sql" />
     <Build Include="dbo\Tables\dv_link_key_column.sql" />
     <Build Include="dbo\Tables\dv_hub_link_to_be_removed.sql" />
+    <Build Include="dbo\Stored Procedures\dv_link_key_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_link_key_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_link_key_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac">
