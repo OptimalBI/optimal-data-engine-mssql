@@ -65,6 +65,7 @@ GO
 SET IDENTITY_INSERT [dbo].[dv_link] ON;
 GO
 
+
 MERGE INTO [dbo].[dv_link] AS trgt USING (VALUES (0,'Default_Link',NULL,'Default','Default',0)) 
 		AS src([link_key],[link_name],[link_abbreviation],[link_schema],[link_database],[release_key])
 	ON
@@ -83,6 +84,28 @@ MERGE INTO [dbo].[dv_link] AS trgt USING (VALUES (0,'Default_Link',NULL,'Default
 GO
 
 SET IDENTITY_INSERT [dbo].[dv_link] OFF;
+GO
+
+/*  Default Link_Key_Column  */
+SET IDENTITY_INSERT [dbo].[dv_link_key_column] ON;
+GO
+
+MERGE INTO [dbo].[dv_link_key_column] AS trgt 
+USING	(VALUES (0,0,'Default_Link_Key_Column',0)) AS src([link_key_column_key],[link_key],[link_key_column_name],[release_key])
+	ON
+		trgt.[link_key_column_key] = src.[link_key_column_key]
+	WHEN MATCHED THEN
+		UPDATE SET
+		  [link_key]				= src.[link_key]
+		, [link_key_column_name]	= src.[link_key_column_name]
+		, [release_key]				= src.[release_key]
+	WHEN NOT MATCHED BY TARGET THEN
+		INSERT ([link_key_column_key],[link_key],[link_key_column_name],[release_key])
+		VALUES ([link_key_column_key],[link_key],[link_key_column_name],[release_key])
+;
+GO
+
+SET IDENTITY_INSERT [dbo].[dv_link_key_column] OFF;
 GO
 
 
