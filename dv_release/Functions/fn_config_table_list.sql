@@ -18,7 +18,7 @@ union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_hub_key_column'			as sysname), dv_key_name = cast('hub_key_column_key'		as sysname), dv_load_order = cast(110 as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_hub_column'				as sysname), dv_key_name = cast('hub_col_key'				as sysname), dv_load_order = cast(120 as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_link'						as sysname), dv_key_name = cast('link_key'					as sysname), dv_load_order = cast(130 as int)
-union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_hub_link'					as sysname), dv_key_name = cast('hub_link_key'				as sysname), dv_load_order = cast(140 as int)
+union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_link_key_column'			as sysname), dv_key_name = cast('link_key_column_key'		as sysname), dv_load_order = cast(140 as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_satellite'				as sysname), dv_key_name = cast('satellite_key'				as sysname), dv_load_order = cast(150 as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_satellite_column'			as sysname), dv_key_name = cast('satellite_col_key'			as sysname), dv_load_order = cast(160 as int)
 )
