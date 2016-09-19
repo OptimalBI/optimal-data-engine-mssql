@@ -87,7 +87,8 @@ where 1=1
   and [link_name]	  = @vault_link_name
 
 insert @payload_columns
-select hd.[column_name]
+select  DISTINCT 
+        column_name = case when lkc.link_key_column_name = 'Default' then hd.[column_name] else hd1.[column_name] end
        ,hd.[column_type]
        ,hd.[column_length]
 	   ,hd.[column_precision]
@@ -98,12 +99,14 @@ select hd.[column_name]
 	   ,1 
 	   ,''
 	   ,''
+
 FROM [dbo].[dv_link] l
-inner join [dbo].[dv_hub_link] hl
-on l.link_key = hl.link_key
-inner join [dbo].[dv_hub] h
-on h.hub_key = hl.hub_key
+inner join [dbo].[dv_link_key_column] lkc on lkc.link_key = l.link_key
+inner join [dbo].[dv_hub_column] hc on hc.[link_key_column_key] = lkc.[link_key_column_key]
+inner join [dbo].[dv_hub_key_column] hkc on hkc.hub_key_column_key = hc.hub_key_column_key
+inner join [dbo].[dv_hub] h on h.hub_key = hkc.hub_key
 cross apply [fn_get_key_definition](h.hub_name, 'hub') hd
+cross apply [fn_get_key_definition](lkc.link_key_column_name, 'hub') hd1
 where l.[link_name] = @vault_link_name
 
 select @varobject_name = [dbo].[fn_get_object_name](@vault_link_name, 'lnk')
