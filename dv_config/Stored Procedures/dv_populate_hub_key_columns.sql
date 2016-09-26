@@ -1,4 +1,4 @@
-﻿Create PROCEDURE [dv_config].[dv_populate_hub_key_columns]
+﻿CREATE PROCEDURE [dv_config].[dv_populate_hub_key_columns]
 (
 	 @vault_source_system					varchar(50)
     ,@vault_source_schema					varchar(128)
@@ -106,7 +106,8 @@ select @column_key
   	  ,@hub_key_column_key	
 
 EXECUTE[dbo].[dv_hub_column_insert] 
-   @hub_key_column_key 
+   @hub_key_column_key
+  ,0  --link_key_column--
   ,@column_key
   ,@vault_release_number
 		
