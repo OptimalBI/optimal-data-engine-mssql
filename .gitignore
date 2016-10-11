@@ -6,3 +6,4 @@ bin/
 *.pdb
 obj/
 *.suo
+*.jfm
