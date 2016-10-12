@@ -369,12 +369,19 @@ select @source_load_date_time = isnull(@source_load_date_time, @def_global_defau
 
 -- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
 set @sql = ''
-select @sql += 'src.' +quotename([column_name]) + @crlf +', '
-from [dbo].[dv_column]
+select @sql += quotename(sc.column_name) + ' = ' + 
+           case when  replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
+		            = replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '')
+				then 'src.' + quotename(c.[column_name])
+				else 'cast(src.' + quotename(c.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '')
+				    + ')'
+				end 
+			+ @crlf +', '
+from [dbo].[dv_column] c
+inner join [dbo].[dv_satellite_column] sc on sc.column_key = c.column_key
 where 1=1
-and [discard_flag] <> 1
-and [table_key] = @source_table_config_key
-order by source_ordinal_position
+   and c.[table_key] = @source_table_config_key
+order by c.source_ordinal_position
 select @source_payload = left(@sql, len(@sql) -1)
 
 ---- Build the Sat Payload
@@ -398,7 +405,14 @@ select @temp_table_name_001 = '##temp_001_' + replace(cast(newid() as varchar(50
 if @sat_link_hub_flag = 'H'
 begin
         select @sql = ''
-        select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
+        select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = ' +
+		       case when  replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
+		            = replace([dbo].[fn_build_column_definition] ([hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0), ' NOT NULL', '')
+				then 'src.' + quotename(c.[column_name])
+				else 'cast(src.' + quotename(c.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] ([hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0), ' NOT NULL', '')
+				    + ')'
+				end  
+		        + @crlf + ' AND '
         from [dbo].[dv_hub] h
         inner join [dbo].[dv_hub_key_column] hkc
         on h.hub_key = hkc.hub_key
@@ -415,7 +429,7 @@ begin
         ORDER BY hkc.hub_key_ordinal_position
         select @surrogate_key_match =  left(@sql, len(@sql) - 4)
 end
-
+--print @SQL
 -- Compile the SQL
 -- If it is a link, create the temp table with all Hub keys plus a dummy for the Link Keys.
 

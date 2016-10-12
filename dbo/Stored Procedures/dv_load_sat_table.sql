@@ -285,7 +285,7 @@ select @source_load_date_time = 'vault_load_time'
 
 -- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
 set @sql = ''
-select @sql += 'src.' +quotename([column_name]) + @crlf +', '      
+select @sql += 'src.' +quotename(sc.[column_name]) + @crlf +', '      
 from [dbo].[dv_column] c
 inner join dv_Satellite_Column sc
 on c.column_key = sc.column_key
@@ -293,7 +293,7 @@ where 1=1
 and [discard_flag] <> 1
 and [table_key] = @source_table_config_key
 and sc.[satellite_key] = @sat_config_key
-order by c.satellite_ordinal_position
+order by sc.satellite_ordinal_position
 
 select @source_payload = left(@sql, len(@sql) -1)
 
@@ -308,7 +308,7 @@ order by [ordinal_position]
 set @sat_technical_columns = @sql
 
 set @sql = ''
-select @sql += 'sat.' +quotename([column_name]) + @crlf +', '
+select @sql += 'sat.' +quotename(sc.[column_name]) + @crlf +', '
 from [dbo].[dv_satellite] s
 inner join [dbo].[dv_satellite_column] sc
 on s.[satellite_key] = sc.[satellite_key]
@@ -317,7 +317,7 @@ on c.column_key = sc.column_key
 where 1=1
 and [discard_flag] <> 1
 and s.[satellite_key] = @sat_config_key
-order by c.satellite_ordinal_position
+order by sc.satellite_ordinal_position
 select @sat_payload = left(@sql, len(@sql) -1)	
 
 

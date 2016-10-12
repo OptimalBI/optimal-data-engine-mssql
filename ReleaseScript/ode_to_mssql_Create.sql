@@ -441,6 +441,25 @@ CREATE TABLE [dbo].[dv_hub] (
 
 
 GO
+PRINT N'Creating [dbo].[dv_hub_column]...';
+
+
+GO
+CREATE TABLE [dbo].[dv_hub_column] (
+    [hub_col_key]        INT                IDENTITY (1, 1) NOT NULL,
+    [hub_key_column_key] INT                NOT NULL,
+    [column_key]         INT                NOT NULL,
+    [release_key]        INT                NOT NULL,
+    [version_number]     INT                NOT NULL,
+    [updated_by]         VARCHAR (30)       NULL,
+    [updated_datetime]   DATETIMEOFFSET (7) NULL,
+    CONSTRAINT [PK__dv_hub_c__1990F0D2AC6D4CF1] PRIMARY KEY CLUSTERED ([hub_col_key] ASC),
+    CONSTRAINT [dv_hub_column_unique] UNIQUE NONCLUSTERED ([hub_key_column_key] ASC, [column_key] ASC),
+    CONSTRAINT [dv_hub_source_column_unique] UNIQUE NONCLUSTERED ([column_key] ASC)
+);
+
+
+GO
 PRINT N'Creating [dbo].[dv_hub_key_column]...';
 
 
@@ -505,6 +524,52 @@ CREATE TABLE [dbo].[dv_link] (
 
 
 GO
+PRINT N'Creating [dbo].[dv_satellite]...';
+
+
+GO
+CREATE TABLE [dbo].[dv_satellite] (
+    [satellite_key]               INT                IDENTITY (1, 1) NOT NULL,
+    [hub_key]                     INT                NOT NULL,
+    [link_key]                    INT                NOT NULL,
+    [link_hub_satellite_flag]     CHAR (1)           NOT NULL,
+    [satellite_name]              VARCHAR (128)      NOT NULL,
+    [satellite_abbreviation]      VARCHAR (4)        NULL,
+    [satellite_schema]            VARCHAR (128)      NOT NULL,
+    [satellite_database]          VARCHAR (128)      NOT NULL,
+    [duplicate_removal_threshold] INT                NOT NULL,
+    [is_columnstore]              BIT                NOT NULL,
+    [is_retired]                  BIT                NOT NULL,
+    [release_key]                 INT                NOT NULL,
+    [version_number]              INT                NOT NULL,
+    [updated_by]                  VARCHAR (30)       NULL,
+    [updated_datetime]            DATETIMEOFFSET (7) NULL,
+    CONSTRAINT [PK__dv_satel__591F7B98AC67FA20] PRIMARY KEY CLUSTERED ([satellite_key] ASC),
+    CONSTRAINT [dv_sat_abr_unique] UNIQUE NONCLUSTERED ([satellite_abbreviation] ASC),
+    CONSTRAINT [dv_satellite_unique] UNIQUE NONCLUSTERED ([satellite_name] ASC)
+);
+
+
+GO
+PRINT N'Creating [dbo].[dv_satellite_column]...';
+
+
+GO
+CREATE TABLE [dbo].[dv_satellite_column] (
+    [satellite_col_key] INT                IDENTITY (1, 1) NOT NULL,
+    [satellite_key]     INT                NOT NULL,
+    [column_key]        INT                NOT NULL,
+    [release_key]       INT                NOT NULL,
+    [version_number]    INT                NOT NULL,
+    [updated_by]        VARCHAR (30)       NULL,
+    [updated_datetime]  DATETIMEOFFSET (7) NULL,
+    CONSTRAINT [PK__dv_satel__FCBA778F866D59FE] PRIMARY KEY CLUSTERED ([satellite_col_key] ASC),
+    CONSTRAINT [dv_satellite_column_unique] UNIQUE NONCLUSTERED ([satellite_key] ASC, [column_key] ASC),
+    CONSTRAINT [dv_satellite_source_column_unique] UNIQUE NONCLUSTERED ([column_key] ASC)
+);
+
+
+GO
 PRINT N'Creating [dbo].[dv_source_system]...';
 
 
@@ -543,71 +608,6 @@ CREATE TABLE [dbo].[dv_source_table] (
     [update_date_time]        DATETIMEOFFSET (7) NULL,
     CONSTRAINT [PK__dv_sourc__D64CD3B7E8292317] PRIMARY KEY CLUSTERED ([source_table_key] ASC),
     CONSTRAINT [dv_source_system_unique] UNIQUE NONCLUSTERED ([system_key] ASC, [source_table_schema] ASC, [source_table_name] ASC)
-);
-
-
-GO
-PRINT N'Creating [dbo].[dv_satellite]...';
-
-
-GO
-CREATE TABLE [dbo].[dv_satellite] (
-    [satellite_key]               INT                IDENTITY (1, 1) NOT NULL,
-    [hub_key]                     INT                NOT NULL,
-    [link_key]                    INT                NOT NULL,
-    [link_hub_satellite_flag]     CHAR (1)           NOT NULL,
-    [satellite_name]              VARCHAR (128)      NOT NULL,
-    [satellite_abbreviation]      VARCHAR (4)        NULL,
-    [satellite_schema]            VARCHAR (128)      NOT NULL,
-    [satellite_database]          VARCHAR (128)      NOT NULL,
-    [duplicate_removal_threshold] INT                NOT NULL,
-    [is_columnstore]              BIT                NOT NULL,
-    [is_retired]                  BIT                NOT NULL,
-    [release_key]                 INT                NOT NULL,
-    [version_number]              INT                NOT NULL,
-    [updated_by]                  VARCHAR (30)       NULL,
-    [updated_datetime]            DATETIMEOFFSET (7) NULL,
-    CONSTRAINT [PK__dv_satel__591F7B98AC67FA20] PRIMARY KEY CLUSTERED ([satellite_key] ASC),
-    CONSTRAINT [dv_sat_abr_unique] UNIQUE NONCLUSTERED ([satellite_abbreviation] ASC),
-    CONSTRAINT [dv_satellite_unique] UNIQUE NONCLUSTERED ([satellite_name] ASC)
-);
-
-
-GO
-PRINT N'Creating [dbo].[dv_hub_column]...';
-
-
-GO
-CREATE TABLE [dbo].[dv_hub_column] (
-    [hub_col_key]        INT                IDENTITY (1, 1) NOT NULL,
-    [hub_key_column_key] INT                NOT NULL,
-    [column_key]         INT                NOT NULL,
-    [release_key]        INT                NOT NULL,
-    [version_number]     INT                NOT NULL,
-    [updated_by]         VARCHAR (30)       NULL,
-    [updated_datetime]   DATETIMEOFFSET (7) NULL,
-    CONSTRAINT [PK__dv_hub_c__1990F0D2AC6D4CF1] PRIMARY KEY CLUSTERED ([hub_col_key] ASC),
-    CONSTRAINT [dv_hub_column_unique] UNIQUE NONCLUSTERED ([hub_key_column_key] ASC, [column_key] ASC),
-    CONSTRAINT [dv_hub_source_column_unique] UNIQUE NONCLUSTERED ([column_key] ASC)
-);
-
-
-GO
-PRINT N'Creating [dbo].[dv_satellite_column]...';
-
-
-GO
-CREATE TABLE [dbo].[dv_satellite_column] (
-    [satellite_col_key] INT                IDENTITY (1, 1) NOT NULL,
-    [satellite_key]     INT                NOT NULL,
-    [column_key]        INT                NOT NULL,
-    [release_key]       INT                NOT NULL,
-    [version_number]    INT                NOT NULL,
-    [updated_by]        VARCHAR (30)       NULL,
-    [updated_datetime]  DATETIMEOFFSET (7) NULL,
-    CONSTRAINT [PK__dv_satel__FCBA778F866D59FE] PRIMARY KEY CLUSTERED ([satellite_col_key] ASC),
-    CONSTRAINT [dv_satellite_column_unique] UNIQUE NONCLUSTERED ([satellite_key] ASC, [column_key] ASC),
-    CONSTRAINT [dv_satellite_source_column_unique] UNIQUE NONCLUSTERED ([column_key] ASC)
 );
 
 
@@ -717,6 +717,42 @@ PRINT N'Creating [dv_release].[dv_release_master].[dv_release_number]...';
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [dv_release_number]
     ON [dv_release].[dv_release_master]([release_number] ASC);
+
+
+GO
+PRINT N'Creating [dv_scheduler].[dv_run_manifest]...';
+
+
+GO
+CREATE TABLE [dv_scheduler].[dv_run_manifest] (
+    [run_manifest_key]        INT                IDENTITY (1, 1) NOT NULL,
+    [run_key]                 INT                NOT NULL,
+    [source_system_name]      VARCHAR (50)       NOT NULL,
+    [source_timevault]        VARCHAR (50)       NULL,
+    [source_table_schema]     [sysname]          NOT NULL,
+    [source_table_name]       [sysname]          NOT NULL,
+    [source_table_load_type]  VARCHAR (50)       NOT NULL,
+    [source_table_key]        INT                NOT NULL,
+    [source_procedure_schema] VARCHAR (128)      NULL,
+    [source_procedure_name]   VARCHAR (128)      NULL,
+    [priority]                VARCHAR (10)       NOT NULL,
+    [queue]                   VARCHAR (10)       NOT NULL,
+    [start_datetime]          DATETIMEOFFSET (7) NULL,
+    [completed_datetime]      DATETIMEOFFSET (7) NULL,
+    [run_status]              VARCHAR (128)      NOT NULL,
+    [row_count]               INT                NOT NULL,
+    [session_id]              INT                NULL,
+    CONSTRAINT [PK__dv_run_m__C9D207B6B86E4AF4] PRIMARY KEY CLUSTERED ([run_manifest_key] ASC)
+);
+
+
+GO
+PRINT N'Creating [dv_scheduler].[dv_run_manifest].[UX_dv_run_manifest__run_key_source_table]...';
+
+
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [UX_dv_run_manifest__run_key_source_table]
+    ON [dv_scheduler].[dv_run_manifest]([run_key] ASC, [source_system_name] ASC, [source_table_schema] ASC, [source_table_name] ASC);
 
 
 GO
@@ -841,42 +877,6 @@ PRINT N'Creating [dv_scheduler].[dv_run_manifest_hierarchy].[UX_run_manifest_key
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [UX_run_manifest_key__run_manifest_prior_key]
     ON [dv_scheduler].[dv_run_manifest_hierarchy]([run_manifest_key] ASC, [run_manifest_prior_key] ASC);
-
-
-GO
-PRINT N'Creating [dv_scheduler].[dv_run_manifest]...';
-
-
-GO
-CREATE TABLE [dv_scheduler].[dv_run_manifest] (
-    [run_manifest_key]        INT                IDENTITY (1, 1) NOT NULL,
-    [run_key]                 INT                NOT NULL,
-    [source_system_name]      VARCHAR (50)       NOT NULL,
-    [source_timevault]        VARCHAR (50)       NULL,
-    [source_table_schema]     [sysname]          NOT NULL,
-    [source_table_name]       [sysname]          NOT NULL,
-    [source_table_load_type]  VARCHAR (50)       NOT NULL,
-    [source_table_key]        INT                NOT NULL,
-    [source_procedure_schema] VARCHAR (128)      NULL,
-    [source_procedure_name]   VARCHAR (128)      NULL,
-    [priority]                VARCHAR (10)       NOT NULL,
-    [queue]                   VARCHAR (10)       NOT NULL,
-    [start_datetime]          DATETIMEOFFSET (7) NULL,
-    [completed_datetime]      DATETIMEOFFSET (7) NULL,
-    [run_status]              VARCHAR (128)      NOT NULL,
-    [row_count]               INT                NOT NULL,
-    [session_id]              INT                NULL,
-    CONSTRAINT [PK__dv_run_m__C9D207B6B86E4AF4] PRIMARY KEY CLUSTERED ([run_manifest_key] ASC)
-);
-
-
-GO
-PRINT N'Creating [dv_scheduler].[dv_run_manifest].[UX_dv_run_manifest__run_key_source_table]...';
-
-
-GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_dv_run_manifest__run_key_source_table]
-    ON [dv_scheduler].[dv_run_manifest]([run_key] ASC, [source_system_name] ASC, [source_table_schema] ASC, [source_table_name] ASC);
 
 
 GO
@@ -1267,6 +1267,42 @@ ALTER TABLE [dbo].[dv_hub]
 
 
 GO
+PRINT N'Creating [dbo].[DF_dv_hub_column_release_key]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_hub_column]
+    ADD CONSTRAINT [DF_dv_hub_column_release_key] DEFAULT ((0)) FOR [release_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_hub_co__versi__2AD55B43]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_hub_column]
+    ADD CONSTRAINT [DF__dv_hub_co__versi__2AD55B43] DEFAULT ((1)) FOR [version_number];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_hub_co__updat__2BC97F7C]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_hub_column]
+    ADD CONSTRAINT [DF__dv_hub_co__updat__2BC97F7C] DEFAULT (suser_name()) FOR [updated_by];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_hub_co__updat__2CBDA3B5]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_hub_column]
+    ADD CONSTRAINT [DF__dv_hub_co__updat__2CBDA3B5] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
+
+
+GO
 PRINT N'Creating [dbo].[DF__dv_hub_ke__hub_k__308E3499]...';
 
 
@@ -1393,6 +1429,132 @@ ALTER TABLE [dbo].[dv_link]
 
 
 GO
+PRINT N'Creating [dbo].[DF__dv_satell__hub_k__72C60C4A]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__hub_k__72C60C4A] DEFAULT ((0)) FOR [hub_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__link___73BA3083]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__link___73BA3083] DEFAULT ((0)) FOR [link_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__link___74AE54BC]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__link___74AE54BC] DEFAULT ('H') FOR [link_hub_satellite_flag];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_duplicate_removal_threshold]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF_dv_satellite_duplicate_removal_threshold] DEFAULT ((0)) FOR [duplicate_removal_threshold];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__is_co__75A278F5]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__is_co__75A278F5] DEFAULT ((0)) FOR [is_columnstore];
+
+
+GO
+PRINT N'Creating unnamed constraint on [dbo].[dv_satellite]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD DEFAULT ((0)) FOR [is_retired];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_release_key]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF_dv_satellite_release_key] DEFAULT ((0)) FOR [release_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__versi__76969D2E]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__versi__76969D2E] DEFAULT ((1)) FOR [version_number];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__updat__778AC167]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__updat__778AC167] DEFAULT (suser_name()) FOR [updated_by];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__updat__787EE5A0]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__updat__787EE5A0] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_column_release_key]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF_dv_satellite_column_release_key] DEFAULT ((0)) FOR [release_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__versi__3CF40B7E]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF__dv_satell__versi__3CF40B7E] DEFAULT ((1)) FOR [version_number];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__updat__3DE82FB7]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF__dv_satell__updat__3DE82FB7] DEFAULT (suser_name()) FOR [updated_by];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__updat__3EDC53F0]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF__dv_satell__updat__3EDC53F0] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
+
+
+GO
 PRINT N'Creating unnamed constraint on [dbo].[dv_source_system]...';
 
 
@@ -1489,168 +1651,6 @@ PRINT N'Creating [dbo].[DF__dv_source__updat__0A9D95DB]...';
 GO
 ALTER TABLE [dbo].[dv_source_table]
     ADD CONSTRAINT [DF__dv_source__updat__0A9D95DB] DEFAULT (sysdatetimeoffset()) FOR [update_date_time];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__hub_k__72C60C4A]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__hub_k__72C60C4A] DEFAULT ((0)) FOR [hub_key];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__link___73BA3083]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__link___73BA3083] DEFAULT ((0)) FOR [link_key];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__link___74AE54BC]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__link___74AE54BC] DEFAULT ('H') FOR [link_hub_satellite_flag];
-
-
-GO
-PRINT N'Creating [dbo].[DF_dv_satellite_duplicate_removal_threshold]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF_dv_satellite_duplicate_removal_threshold] DEFAULT ((0)) FOR [duplicate_removal_threshold];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__is_co__75A278F5]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__is_co__75A278F5] DEFAULT ((0)) FOR [is_columnstore];
-
-
-GO
-PRINT N'Creating unnamed constraint on [dbo].[dv_satellite]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD DEFAULT ((0)) FOR [is_retired];
-
-
-GO
-PRINT N'Creating [dbo].[DF_dv_satellite_release_key]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF_dv_satellite_release_key] DEFAULT ((0)) FOR [release_key];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__versi__76969D2E]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__versi__76969D2E] DEFAULT ((1)) FOR [version_number];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__updat__778AC167]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__updat__778AC167] DEFAULT (suser_name()) FOR [updated_by];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__updat__787EE5A0]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__updat__787EE5A0] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
-
-
-GO
-PRINT N'Creating [dbo].[DF_dv_hub_column_release_key]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_hub_column]
-    ADD CONSTRAINT [DF_dv_hub_column_release_key] DEFAULT ((0)) FOR [release_key];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_hub_co__versi__2AD55B43]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_hub_column]
-    ADD CONSTRAINT [DF__dv_hub_co__versi__2AD55B43] DEFAULT ((1)) FOR [version_number];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_hub_co__updat__2BC97F7C]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_hub_column]
-    ADD CONSTRAINT [DF__dv_hub_co__updat__2BC97F7C] DEFAULT (suser_name()) FOR [updated_by];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_hub_co__updat__2CBDA3B5]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_hub_column]
-    ADD CONSTRAINT [DF__dv_hub_co__updat__2CBDA3B5] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
-
-
-GO
-PRINT N'Creating [dbo].[DF_dv_satellite_column_release_key]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [DF_dv_satellite_column_release_key] DEFAULT ((0)) FOR [release_key];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__versi__3CF40B7E]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [DF__dv_satell__versi__3CF40B7E] DEFAULT ((1)) FOR [version_number];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__updat__3DE82FB7]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [DF__dv_satell__updat__3DE82FB7] DEFAULT (suser_name()) FOR [updated_by];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__updat__3EDC53F0]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [DF__dv_satell__updat__3EDC53F0] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
 
 
 GO
@@ -1843,6 +1843,33 @@ ALTER TABLE [dv_release].[dv_release_master]
 
 
 GO
+PRINT N'Creating [dv_scheduler].[DF_dv_run_manifest_queue]...';
+
+
+GO
+ALTER TABLE [dv_scheduler].[dv_run_manifest]
+    ADD CONSTRAINT [DF_dv_run_manifest_queue] DEFAULT ('002') FOR [queue];
+
+
+GO
+PRINT N'Creating [dv_scheduler].[DF_dv_run_manifest_run_status]...';
+
+
+GO
+ALTER TABLE [dv_scheduler].[dv_run_manifest]
+    ADD CONSTRAINT [DF_dv_run_manifest_run_status] DEFAULT ('Scheduled') FOR [run_status];
+
+
+GO
+PRINT N'Creating [dv_scheduler].[DF_dv_run_manifest_row_count]...';
+
+
+GO
+ALTER TABLE [dv_scheduler].[dv_run_manifest]
+    ADD CONSTRAINT [DF_dv_run_manifest_row_count] DEFAULT ((0)) FOR [row_count];
+
+
+GO
 PRINT N'Creating [dv_scheduler].[DF__dv_run__run_status]...';
 
 
@@ -2014,33 +2041,6 @@ ALTER TABLE [dv_scheduler].[dv_run_manifest_hierarchy]
 
 
 GO
-PRINT N'Creating [dv_scheduler].[DF_dv_run_manifest_queue]...';
-
-
-GO
-ALTER TABLE [dv_scheduler].[dv_run_manifest]
-    ADD CONSTRAINT [DF_dv_run_manifest_queue] DEFAULT ('002') FOR [queue];
-
-
-GO
-PRINT N'Creating [dv_scheduler].[DF_dv_run_manifest_run_status]...';
-
-
-GO
-ALTER TABLE [dv_scheduler].[dv_run_manifest]
-    ADD CONSTRAINT [DF_dv_run_manifest_run_status] DEFAULT ('Scheduled') FOR [run_status];
-
-
-GO
-PRINT N'Creating [dv_scheduler].[DF_dv_run_manifest_row_count]...';
-
-
-GO
-ALTER TABLE [dv_scheduler].[dv_run_manifest]
-    ADD CONSTRAINT [DF_dv_run_manifest_row_count] DEFAULT ((0)) FOR [row_count];
-
-
-GO
 PRINT N'Creating [log4].[DF_Journal_UtcDate]...';
 
 
@@ -2149,6 +2149,33 @@ ALTER TABLE [dbo].[dv_hub]
 
 
 GO
+PRINT N'Creating [dbo].[FK__dv_hub_column__dv_column]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_hub_column]
+    ADD CONSTRAINT [FK__dv_hub_column__dv_column] FOREIGN KEY ([column_key]) REFERENCES [dbo].[dv_column] ([column_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK__dv_hub_column__dv_hub_key_column]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_hub_column]
+    ADD CONSTRAINT [FK__dv_hub_column__dv_hub_key_column] FOREIGN KEY ([hub_key_column_key]) REFERENCES [dbo].[dv_hub_key_column] ([hub_key_column_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK_dv_hub_column_dv_release_master]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_hub_column]
+    ADD CONSTRAINT [FK_dv_hub_column_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
+
+
+GO
 PRINT N'Creating [dbo].[FK__dv_hub_key_column__dv_hub]...';
 
 
@@ -2203,33 +2230,6 @@ ALTER TABLE [dbo].[dv_link]
 
 
 GO
-PRINT N'Creating [dbo].[FK_dv_source_system_dv_release_master]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_source_system]
-    ADD CONSTRAINT [FK_dv_source_system_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
-
-
-GO
-PRINT N'Creating [dbo].[FK__dv_source_table__dv_source_system]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_source_table]
-    ADD CONSTRAINT [FK__dv_source_table__dv_source_system] FOREIGN KEY ([system_key]) REFERENCES [dbo].[dv_source_system] ([source_system_key]);
-
-
-GO
-PRINT N'Creating [dbo].[FK_dv_source_table_dv_release_master]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_source_table]
-    ADD CONSTRAINT [FK_dv_source_table_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
-
-
-GO
 PRINT N'Creating [dbo].[FK__dv_satellite__dv_hub]...';
 
 
@@ -2257,33 +2257,6 @@ ALTER TABLE [dbo].[dv_satellite]
 
 
 GO
-PRINT N'Creating [dbo].[FK__dv_hub_column__dv_column]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_hub_column]
-    ADD CONSTRAINT [FK__dv_hub_column__dv_column] FOREIGN KEY ([column_key]) REFERENCES [dbo].[dv_column] ([column_key]);
-
-
-GO
-PRINT N'Creating [dbo].[FK__dv_hub_column__dv_hub_key_column]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_hub_column]
-    ADD CONSTRAINT [FK__dv_hub_column__dv_hub_key_column] FOREIGN KEY ([hub_key_column_key]) REFERENCES [dbo].[dv_hub_key_column] ([hub_key_column_key]);
-
-
-GO
-PRINT N'Creating [dbo].[FK_dv_hub_column_dv_release_master]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_hub_column]
-    ADD CONSTRAINT [FK_dv_hub_column_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
-
-
-GO
 PRINT N'Creating [dbo].[FK__dv_satellite_column__dv_column]...';
 
 
@@ -2308,6 +2281,42 @@ PRINT N'Creating [dbo].[FK_dv_satellite_column_dv_release_master]...';
 GO
 ALTER TABLE [dbo].[dv_satellite_column]
     ADD CONSTRAINT [FK_dv_satellite_column_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK_dv_source_system_dv_release_master]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_source_system]
+    ADD CONSTRAINT [FK_dv_source_system_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK__dv_source_table__dv_source_system]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_source_table]
+    ADD CONSTRAINT [FK__dv_source_table__dv_source_system] FOREIGN KEY ([system_key]) REFERENCES [dbo].[dv_source_system] ([source_system_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK_dv_source_table_dv_release_master]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_source_table]
+    ADD CONSTRAINT [FK_dv_source_table_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
+
+
+GO
+PRINT N'Creating [dv_scheduler].[FK_dv_run_manifest__dv_run]...';
+
+
+GO
+ALTER TABLE [dv_scheduler].[dv_run_manifest]
+    ADD CONSTRAINT [FK_dv_run_manifest__dv_run] FOREIGN KEY ([run_key]) REFERENCES [dv_scheduler].[dv_run] ([run_key]);
 
 
 GO
@@ -2392,15 +2401,6 @@ ALTER TABLE [dv_scheduler].[dv_run_manifest_hierarchy]
 
 
 GO
-PRINT N'Creating [dv_scheduler].[FK_dv_run_manifest__dv_run]...';
-
-
-GO
-ALTER TABLE [dv_scheduler].[dv_run_manifest]
-    ADD CONSTRAINT [FK_dv_run_manifest__dv_run] FOREIGN KEY ([run_key]) REFERENCES [dv_scheduler].[dv_run] ([run_key]);
-
-
-GO
 PRINT N'Creating [log4].[FK_JournalDetail_Journal]...';
 
 
@@ -2416,42 +2416,6 @@ PRINT N'Creating [dbo].[CK_dv_satellite__link_hub_flag]...';
 GO
 ALTER TABLE [dbo].[dv_satellite]
     ADD CONSTRAINT [CK_dv_satellite__link_hub_flag] CHECK ([link_hub_satellite_flag]='H' OR [link_hub_satellite_flag]='L');
-
-
-GO
-PRINT N'Creating [dv_scheduler].[CK_dv_run_status]...';
-
-
-GO
-ALTER TABLE [dv_scheduler].[dv_run]
-    ADD CONSTRAINT [CK_dv_run_status] CHECK ([run_status]='Scheduled' OR [run_status]='Started' OR [run_status]='Completed' OR [run_status]='Disabled' OR [run_status]='Cancelled' OR [run_status]='Failed');
-
-
-GO
-PRINT N'Creating [dv_scheduler].[CK_dv_schedule_source_table__priority]...';
-
-
-GO
-ALTER TABLE [dv_scheduler].[dv_schedule_source_table]
-    ADD CONSTRAINT [CK_dv_schedule_source_table__priority] CHECK ([priority]='Low' OR [priority]='High');
-
-
-GO
-PRINT N'Creating [dv_scheduler].[CK_dv_schedule_source_table__queue]...';
-
-
-GO
-ALTER TABLE [dv_scheduler].[dv_schedule_source_table]
-    ADD CONSTRAINT [CK_dv_schedule_source_table__queue] CHECK ([queue]='001' OR [queue]='002');
-
-
-GO
-PRINT N'Creating [dv_scheduler].[CK_dv_schedule_source_table__run_type]...';
-
-
-GO
-ALTER TABLE [dv_scheduler].[dv_schedule_source_table]
-    ADD CONSTRAINT [CK_dv_schedule_source_table__run_type] CHECK ([source_table_load_type]='Full' OR [source_table_load_type]='Delta' OR [source_table_load_type]='Default');
 
 
 GO
@@ -2488,6 +2452,42 @@ PRINT N'Creating [dv_scheduler].[CK_dv_run_manifest__run_type]...';
 GO
 ALTER TABLE [dv_scheduler].[dv_run_manifest]
     ADD CONSTRAINT [CK_dv_run_manifest__run_type] CHECK ([source_table_load_type]='Full' OR [source_table_load_type]='Delta');
+
+
+GO
+PRINT N'Creating [dv_scheduler].[CK_dv_run_status]...';
+
+
+GO
+ALTER TABLE [dv_scheduler].[dv_run]
+    ADD CONSTRAINT [CK_dv_run_status] CHECK ([run_status]='Scheduled' OR [run_status]='Started' OR [run_status]='Completed' OR [run_status]='Disabled' OR [run_status]='Cancelled' OR [run_status]='Failed');
+
+
+GO
+PRINT N'Creating [dv_scheduler].[CK_dv_schedule_source_table__priority]...';
+
+
+GO
+ALTER TABLE [dv_scheduler].[dv_schedule_source_table]
+    ADD CONSTRAINT [CK_dv_schedule_source_table__priority] CHECK ([priority]='Low' OR [priority]='High');
+
+
+GO
+PRINT N'Creating [dv_scheduler].[CK_dv_schedule_source_table__queue]...';
+
+
+GO
+ALTER TABLE [dv_scheduler].[dv_schedule_source_table]
+    ADD CONSTRAINT [CK_dv_schedule_source_table__queue] CHECK ([queue]='001' OR [queue]='002');
+
+
+GO
+PRINT N'Creating [dv_scheduler].[CK_dv_schedule_source_table__run_type]...';
+
+
+GO
+ALTER TABLE [dv_scheduler].[dv_schedule_source_table]
+    ADD CONSTRAINT [CK_dv_schedule_source_table__run_type] CHECK ([source_table_load_type]='Full' OR [source_table_load_type]='Delta' OR [source_table_load_type]='Default');
 
 
 GO
@@ -2585,6 +2585,22 @@ AS
 									   ON [a].[hub_key] = [b].[hub_key];
 	END;
 GO
+PRINT N'Creating [dbo].[dv_hub_column_audit]...';
+
+
+GO
+CREATE TRIGGER [dbo].[dv_hub_column_audit] ON [dbo].[dv_hub_column]
+AFTER INSERT, UPDATE
+AS
+	BEGIN
+	    UPDATE [a]
+		 SET
+			[updated_datetime] = SYSDATETIMEOFFSET()
+		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_hub_column] AS [a]
+									   JOIN [inserted] AS [b]
+									   ON [a].[hub_col_key] = [b].[hub_col_key];
+	END;
+GO
 PRINT N'Creating [dbo].[dv_hub_key_column_audit]...';
 
 
@@ -2635,6 +2651,39 @@ AS
 									   ON [a].[link_key] = [b].[link_key];
 	END;
 GO
+PRINT N'Creating [dbo].[dv_satellite_audit]...';
+
+
+GO
+
+CREATE TRIGGER [dbo].[dv_satellite_audit] ON [dbo].[dv_satellite]
+AFTER INSERT, UPDATE
+AS
+	BEGIN
+	    UPDATE [a]
+		 SET
+			[updated_datetime] = SYSDATETIMEOFFSET()
+		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_satellite] AS [a]
+									   JOIN [inserted] AS [b]
+									   ON [a].[satellite_key] = [b].[satellite_key];
+	END;
+GO
+PRINT N'Creating [dbo].[dv_satellite_column_audit]...';
+
+
+GO
+CREATE TRIGGER [dbo].[dv_satellite_column_audit] ON [dbo].[dv_satellite_column]
+AFTER INSERT, UPDATE
+AS
+	BEGIN
+	    UPDATE [a]
+		 SET
+			[updated_datetime] = SYSDATETIMEOFFSET()
+		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_satellite_column] AS [a]
+									   JOIN [inserted] AS [b]
+									   ON [a].[satellite_col_key] = [b].[satellite_col_key];
+	END;
+GO
 PRINT N'Creating [dbo].[dv_source_system_audit]...';
 
 
@@ -2666,55 +2715,6 @@ AS
 		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_source_table] AS [a]
 									   JOIN [inserted] AS [b]
 									   ON [a].[source_table_key] = [b].[source_table_key];
-	END;
-GO
-PRINT N'Creating [dbo].[dv_satellite_audit]...';
-
-
-GO
-
-CREATE TRIGGER [dbo].[dv_satellite_audit] ON [dbo].[dv_satellite]
-AFTER INSERT, UPDATE
-AS
-	BEGIN
-	    UPDATE [a]
-		 SET
-			[updated_datetime] = SYSDATETIMEOFFSET()
-		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_satellite] AS [a]
-									   JOIN [inserted] AS [b]
-									   ON [a].[satellite_key] = [b].[satellite_key];
-	END;
-GO
-PRINT N'Creating [dbo].[dv_hub_column_audit]...';
-
-
-GO
-CREATE TRIGGER [dbo].[dv_hub_column_audit] ON [dbo].[dv_hub_column]
-AFTER INSERT, UPDATE
-AS
-	BEGIN
-	    UPDATE [a]
-		 SET
-			[updated_datetime] = SYSDATETIMEOFFSET()
-		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_hub_column] AS [a]
-									   JOIN [inserted] AS [b]
-									   ON [a].[hub_col_key] = [b].[hub_col_key];
-	END;
-GO
-PRINT N'Creating [dbo].[dv_satellite_column_audit]...';
-
-
-GO
-CREATE TRIGGER [dbo].[dv_satellite_column_audit] ON [dbo].[dv_satellite_column]
-AFTER INSERT, UPDATE
-AS
-	BEGIN
-	    UPDATE [a]
-		 SET
-			[updated_datetime] = SYSDATETIMEOFFSET()
-		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_satellite_column] AS [a]
-									   JOIN [inserted] AS [b]
-									   ON [a].[satellite_col_key] = [b].[satellite_col_key];
 	END;
 GO
 PRINT N'Creating [dv_log].[dv_load_state_audit]...';
@@ -2768,6 +2768,33 @@ AS
 									   ON [a].[release_key] = [b].[release_key];
 	END;
 GO
+PRINT N'Creating [dv_scheduler].[trg_dv_manifest_status]...';
+
+
+GO
+CREATE Trigger [dv_scheduler].[trg_dv_manifest_status] on [dv_scheduler].[dv_run_manifest]
+AFTER UPDATE AS
+BEGIN
+  /* Insert Can Only be Status 'Scheduled'*/
+BEGIN TRY
+IF EXISTS (SELECT 1 FROM inserted i
+            inner join deleted d
+			on i.[run_manifest_key] = d.[run_manifest_key]
+			WHERE ((i.[run_status] = 'Queued'		and d.[run_status] <> 'Scheduled' )	or
+			       (i.[run_status] = 'Processing'	and d.[run_status] <> 'Queued'	  ) or
+				   (i.[run_status] = 'Completed'	and d.[run_status] <> 'Processing')	or
+				   (i.[run_status] = 'Failed'		and d.[run_status] <> 'Processing') 			
+				   )
+			)
+      THROW 50000, N'Invalid Status Change Detected', 1;
+END TRY
+BEGIN CATCH
+	IF (@@TRANCOUNT > 0)
+		ROLLBACK;
+		THROW; 
+END CATCH;
+END;
+GO
 PRINT N'Creating [dv_scheduler].[dv_source_table_hierarchy_audit]...';
 
 
@@ -2815,33 +2842,6 @@ AS
 									   JOIN [inserted] AS [b]
 									   ON [a].[schedule_key] = [b].[schedule_key];
 	END;
-GO
-PRINT N'Creating [dv_scheduler].[trg_dv_manifest_status]...';
-
-
-GO
-CREATE Trigger [dv_scheduler].[trg_dv_manifest_status] on [dv_scheduler].[dv_run_manifest]
-AFTER UPDATE AS
-BEGIN
-  /* Insert Can Only be Status 'Scheduled'*/
-BEGIN TRY
-IF EXISTS (SELECT 1 FROM inserted i
-            inner join deleted d
-			on i.[run_manifest_key] = d.[run_manifest_key]
-			WHERE ((i.[run_status] = 'Queued'		and d.[run_status] <> 'Scheduled' )	or
-			       (i.[run_status] = 'Processing'	and d.[run_status] <> 'Queued'	  ) or
-				   (i.[run_status] = 'Completed'	and d.[run_status] <> 'Processing')	or
-				   (i.[run_status] = 'Failed'		and d.[run_status] <> 'Processing') 			
-				   )
-			)
-      THROW 50000, N'Invalid Status Change Detected', 1;
-END TRY
-BEGIN CATCH
-	IF (@@TRANCOUNT > 0)
-		ROLLBACK;
-		THROW; 
-END CATCH;
-END;
 GO
 PRINT N'Creating [dv_scheduler_m001]...';
 
@@ -3132,115 +3132,6 @@ replace(replace(replace(replace(replace(
    return @Ret
 end
 GO
-PRINT N'Creating [log4].[FormatElapsedTime]...';
-
-
-GO
-/*************************************************************************************************/
---</MaintenanceHeader>
-
-CREATE FUNCTION [log4].[FormatElapsedTime]
-(
-  @StartTime                      datetime
-, @EndTime                        datetime  = NULL
-, @ShowMillisecsIfUnderNumSecs    tinyint   = NULL
-)
-
-RETURNS varchar  (  48 )
-
-AS
-
---<CommentHeader>
-/**************************************************************************************************
-
-Properties
-==========
-FUNCTION NAME:      [log4].[FormatElapsedTime]
-DESCRIPTION:        Returns a string describing the time elapsed between start and end time
-DATE OF ORIGIN:		16-FEB-2007
-ORIGINAL AUTHOR:	Greg M. Lucas (data-centric solutions ltd. http://www.data-centric.co.uk)
-BUILD DATE:			13-MAR-2012
-BUILD VERSION:		0.0.10
-DEPENDANTS:         Various
-DEPENDENCIES:       None
-
-Additional Notes
-================
-Builds a string that looks like this: "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
-
-Revision history
-==================================================================================================
-ChangeDate		Author	Version		Narrative
-============	======	=======		==============================================================
-16-FEB-2007		GML		v0.0.2		Created
-------------	------	-------		--------------------------------------------------------------
-
-=================================================================================================
-(C) Copyright 2006-12 data-centric solutions ltd. (http://log4tsql.sourceforge.net/)
-
-This library is free software; you can redistribute it and/or modify it under the terms of the
-GNU Lesser General Public License as published by the Free Software Foundation (www.fsf.org);
-either version 3.0 of the License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-See the GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License along with this
-library; if not, you can find it at http://www.opensource.org/licenses/lgpl-3.0.html
-or http://www.gnu.org/licenses/lgpl.html
-
-**************************************************************************************************/
---</CommentHeader>
-
-BEGIN
-	DECLARE	  @time                     int
-			, @hrs                      int
-			, @mins                     int
-			, @secs                     int
-			, @msecs                    int
-			, @Duration                 varchar   (   48 )
-
-	IF @StartTime IS NULL AND @EndTime IS NULL
-		SET @Duration = 'Start and End Times are both NULL'
-	ELSE IF @StartTime IS NULL
-		SET @Duration = 'Start Time is NULL'
-	ELSE
-		BEGIN
-			IF @EndTime IS NULL SET @EndTime = GETDATE()
-
-			SET @time = DATEDIFF(ss, @StartTime, @EndTime)
-
-			IF @time > ISNULL(@ShowMillisecsIfUnderNumSecs, 5)
-				BEGIN
-					SET @hrs        = @time / 3600
-					SET @mins       = (@time % 3600) / 60
-					SET @secs       = (@time % 3600) % 60
-					SET @Duration   = CASE
-										WHEN @hrs = 0 THEN ''
-										WHEN @hrs = 1 THEN CAST(@hrs AS varchar) + ' hr, '
-										ELSE CAST(@hrs AS varchar) + ' hrs, '
-									  END
-									+ CASE
-										WHEN @mins = 1 THEN CAST(@mins AS varchar) + ' min'
-										ELSE CAST(@mins AS varchar) + ' mins'
-									  END
-									+ ' and '
-									+ CASE
-										WHEN @secs = 1 THEN CAST(@secs AS varchar) + ' sec'
-										ELSE CAST(@secs AS varchar) + ' secs'
-									  END
-				END
-			ELSE
-				BEGIN
-					SET @msecs      = DATEDIFF(ms, @StartTime, @EndTime)
-					SET @Duration   = CAST(@msecs AS varchar) + ' milliseconds'
-				END
-		END
-
-	RETURN @Duration
-END
-GO
 PRINT N'Creating [log4].[GetJournalControl]...';
 
 
@@ -3350,6 +3241,115 @@ BEGIN
 			ORDER BY
 				[Precedence] ASC
 		)
+END
+GO
+PRINT N'Creating [log4].[FormatElapsedTime]...';
+
+
+GO
+/*************************************************************************************************/
+--</MaintenanceHeader>
+
+CREATE FUNCTION [log4].[FormatElapsedTime]
+(
+  @StartTime                      datetime
+, @EndTime                        datetime  = NULL
+, @ShowMillisecsIfUnderNumSecs    tinyint   = NULL
+)
+
+RETURNS varchar  (  48 )
+
+AS
+
+--<CommentHeader>
+/**************************************************************************************************
+
+Properties
+==========
+FUNCTION NAME:      [log4].[FormatElapsedTime]
+DESCRIPTION:        Returns a string describing the time elapsed between start and end time
+DATE OF ORIGIN:		16-FEB-2007
+ORIGINAL AUTHOR:	Greg M. Lucas (data-centric solutions ltd. http://www.data-centric.co.uk)
+BUILD DATE:			13-MAR-2012
+BUILD VERSION:		0.0.10
+DEPENDANTS:         Various
+DEPENDENCIES:       None
+
+Additional Notes
+================
+Builds a string that looks like this: "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
+
+Revision history
+==================================================================================================
+ChangeDate		Author	Version		Narrative
+============	======	=======		==============================================================
+16-FEB-2007		GML		v0.0.2		Created
+------------	------	-------		--------------------------------------------------------------
+
+=================================================================================================
+(C) Copyright 2006-12 data-centric solutions ltd. (http://log4tsql.sourceforge.net/)
+
+This library is free software; you can redistribute it and/or modify it under the terms of the
+GNU Lesser General Public License as published by the Free Software Foundation (www.fsf.org);
+either version 3.0 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License along with this
+library; if not, you can find it at http://www.opensource.org/licenses/lgpl-3.0.html
+or http://www.gnu.org/licenses/lgpl.html
+
+**************************************************************************************************/
+--</CommentHeader>
+
+BEGIN
+	DECLARE	  @time                     int
+			, @hrs                      int
+			, @mins                     int
+			, @secs                     int
+			, @msecs                    int
+			, @Duration                 varchar   (   48 )
+
+	IF @StartTime IS NULL AND @EndTime IS NULL
+		SET @Duration = 'Start and End Times are both NULL'
+	ELSE IF @StartTime IS NULL
+		SET @Duration = 'Start Time is NULL'
+	ELSE
+		BEGIN
+			IF @EndTime IS NULL SET @EndTime = GETDATE()
+
+			SET @time = DATEDIFF(ss, @StartTime, @EndTime)
+
+			IF @time > ISNULL(@ShowMillisecsIfUnderNumSecs, 5)
+				BEGIN
+					SET @hrs        = @time / 3600
+					SET @mins       = (@time % 3600) / 60
+					SET @secs       = (@time % 3600) % 60
+					SET @Duration   = CASE
+										WHEN @hrs = 0 THEN ''
+										WHEN @hrs = 1 THEN CAST(@hrs AS varchar) + ' hr, '
+										ELSE CAST(@hrs AS varchar) + ' hrs, '
+									  END
+									+ CASE
+										WHEN @mins = 1 THEN CAST(@mins AS varchar) + ' min'
+										ELSE CAST(@mins AS varchar) + ' mins'
+									  END
+									+ ' and '
+									+ CASE
+										WHEN @secs = 1 THEN CAST(@secs AS varchar) + ' sec'
+										ELSE CAST(@secs AS varchar) + ' secs'
+									  END
+				END
+			ELSE
+				BEGIN
+					SET @msecs      = DATEDIFF(ms, @StartTime, @EndTime)
+					SET @Duration   = CAST(@msecs AS varchar) + ' milliseconds'
+				END
+		END
+
+	RETURN @Duration
 END
 GO
 PRINT N'Creating [dbo].[fn_get_key_definition]...';
@@ -4203,6 +4203,54 @@ AS
 
 	COMMIT
 GO
+PRINT N'Creating [dbo].[dv_default_column_update]...';
+
+
+GO
+SET ANSI_NULLS ON;
+
+SET QUOTED_IDENTIFIER OFF;
+
+
+GO
+CREATE PROC [dbo].[dv_default_column_update] 
+    @default_column_key int,
+    @object_type varchar(30),
+    @object_column_type varchar(30),
+    @ordinal_position int,
+    @column_prefix varchar(30) = NULL,
+    @column_name varchar(256),
+    @column_suffix varchar(30) = NULL,
+    @column_type varchar(30),
+    @column_length int = NULL,
+    @column_precision int = NULL,
+    @column_scale int = NULL,
+    @collation_Name nvarchar(128) = NULL,
+    @is_nullable bit,
+    @is_pk bit,
+    @discard_flag bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_default_column]
+	SET    [object_type] = @object_type, [object_column_type] = @object_column_type, [ordinal_position] = @ordinal_position, [column_prefix] = @column_prefix, [column_name] = @column_name, [column_suffix] = @column_suffix, [column_type] = @column_type, [column_length] = @column_length, [column_precision] = @column_precision, [column_scale] = @column_scale, [collation_Name] = @collation_Name, [is_nullable] = @is_nullable, [is_pk] = @is_pk, [discard_flag] = @discard_flag
+	WHERE  [default_column_key] = @default_column_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT [default_column_key], [object_type], [object_column_type], [ordinal_position], [column_prefix], [column_name], [column_suffix], [column_type], [column_length], [column_precision], [column_scale], [collation_Name], [is_nullable], [is_pk], [discard_flag], [version_number], [updated_by], [update_date_time]
+	FROM   [dbo].[dv_default_column]
+	WHERE  [default_column_key] = @default_column_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
+
+
+GO
 PRINT N'Creating [dbo].[dv_defaults_delete]...';
 
 
@@ -5013,54 +5061,6 @@ SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
 
 
 GO
-PRINT N'Creating [dbo].[dv_default_column_update]...';
-
-
-GO
-SET ANSI_NULLS ON;
-
-SET QUOTED_IDENTIFIER OFF;
-
-
-GO
-CREATE PROC [dbo].[dv_default_column_update] 
-    @default_column_key int,
-    @object_type varchar(30),
-    @object_column_type varchar(30),
-    @ordinal_position int,
-    @column_prefix varchar(30) = NULL,
-    @column_name varchar(256),
-    @column_suffix varchar(30) = NULL,
-    @column_type varchar(30),
-    @column_length int = NULL,
-    @column_precision int = NULL,
-    @column_scale int = NULL,
-    @collation_Name nvarchar(128) = NULL,
-    @is_nullable bit,
-    @is_pk bit,
-    @discard_flag bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_default_column]
-	SET    [object_type] = @object_type, [object_column_type] = @object_column_type, [ordinal_position] = @ordinal_position, [column_prefix] = @column_prefix, [column_name] = @column_name, [column_suffix] = @column_suffix, [column_type] = @column_type, [column_length] = @column_length, [column_precision] = @column_precision, [column_scale] = @column_scale, [collation_Name] = @collation_Name, [is_nullable] = @is_nullable, [is_pk] = @is_pk, [discard_flag] = @discard_flag
-	WHERE  [default_column_key] = @default_column_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [default_column_key], [object_type], [object_column_type], [ordinal_position], [column_prefix], [column_name], [column_suffix], [column_type], [column_length], [column_precision], [column_scale], [collation_Name], [is_nullable], [is_pk], [discard_flag], [version_number], [updated_by], [update_date_time]
-	FROM   [dbo].[dv_default_column]
-	WHERE  [default_column_key] = @default_column_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
-SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
-
-
-GO
 PRINT N'Creating [dv_log].[dv_log_progress]...';
 
 
@@ -5264,6 +5264,36 @@ AS
                
 	COMMIT
        RETURN SCOPE_IDENTITY()
+GO
+PRINT N'Creating [dv_scheduler].[dv_schedule_source_table_delete]...';
+
+
+GO
+CREATE PROC [dv_scheduler].[dv_schedule_source_table_delete] 
+    @schedule_source_table_key	int
+   ,@force						int = 0
+AS 
+	declare @rn1 int
+	       ,@rn2 int
+	BEGIN TRAN
+	select @rn1 = count(*)
+	from [dv_scheduler].[dv_schedule_source_table]
+	where  [schedule_source_table_key] = @schedule_source_table_key	
+	if @rn1 > 0
+	    begin
+		select @rn2 = count(*)
+		from [dv_scheduler].[dv_schedule_source_table]
+		where  [schedule_source_table_key] = @schedule_source_table_key	
+		  and (isnull(@force, 0) | isnull([is_cancelled], 0) = 1)
+		if @rn2 <> @rn1
+			raiserror('Only Cancelled Schedule Source Table Links may be deleted, unless the Force Parameter has been set', 16, 1)
+		else
+			DELETE
+			FROM   [dv_scheduler].[dv_schedule_source_table]
+			WHERE  [schedule_source_table_key] = @schedule_source_table_key	
+			  and (isnull(@force, 0) | isnull([is_cancelled], 0) = 1)
+		end
+	COMMIT
 GO
 PRINT N'Creating [dv_scheduler].[dv_schedule_insert]...';
 
@@ -6540,36 +6570,6 @@ BEGIN
 	COMMIT
        RETURN SCOPE_IDENTITY()
 END
-GO
-PRINT N'Creating [dv_scheduler].[dv_schedule_source_table_delete]...';
-
-
-GO
-CREATE PROC [dv_scheduler].[dv_schedule_source_table_delete] 
-    @schedule_source_table_key	int
-   ,@force						int = 0
-AS 
-	declare @rn1 int
-	       ,@rn2 int
-	BEGIN TRAN
-	select @rn1 = count(*)
-	from [dv_scheduler].[dv_schedule_source_table]
-	where  [schedule_source_table_key] = @schedule_source_table_key	
-	if @rn1 > 0
-	    begin
-		select @rn2 = count(*)
-		from [dv_scheduler].[dv_schedule_source_table]
-		where  [schedule_source_table_key] = @schedule_source_table_key	
-		  and (isnull(@force, 0) | isnull([is_cancelled], 0) = 1)
-		if @rn2 <> @rn1
-			raiserror('Only Cancelled Schedule Source Table Links may be deleted, unless the Force Parameter has been set', 16, 1)
-		else
-			DELETE
-			FROM   [dv_scheduler].[dv_schedule_source_table]
-			WHERE  [schedule_source_table_key] = @schedule_source_table_key	
-			  and (isnull(@force, 0) | isnull([is_cancelled], 0) = 1)
-		end
-	COMMIT
 GO
 PRINT N'Creating [log4].[SessionInfoOutput]...';
 
@@ -10339,328 +10339,6 @@ OnComplete:
 	RETURN (@_Error);
 END
 GO
-PRINT N'Creating [dbo].[dv_load_source_table]...';
-
-
-GO
-CREATE PROCEDURE [dbo].[dv_load_source_table]
-(
-  @vault_source_system_name		varchar(128) = NULL
-, @vault_source_table_schema	varchar(128) = NULL
-, @vault_source_table_name		varchar(128) = NULL
-, @vault_source_load_type		varchar(50)  = NULL
-, @dogenerateerror				bit				= 0
-, @dothrowerror					bit				= 1
-)
-AS
-BEGIN
-SET NOCOUNT ON
-
--- To Do - add Logging for the Payload Parameter
---         validate Parameters properly
---         Add Transactionality for Multi Sat Loads
---         Pick a single sat to load (from a multi sat)
--- System Wide Defaults
--- Local Defaults Values
-
-set nocount on
-
--- Object Specific Settings
--- Source Table
-declare  @source_system						varchar(128)
-        ,@source_database					varchar(128)
-		,@source_schema						varchar(128)
-		,@source_table						varchar(128)
-		,@source_table_config_key			int
-		,@source_qualified_name				varchar(512)
-		,@source_load_date_time				varchar(128)
-		,@source_payload					nvarchar(max)
---  Working Storage
-declare @load_details table 
-       (source_database_name		varchar(128)
-       ,source_table_key		int
-	   ,source_table_schema     varchar(128)
-	   ,source_table_name		varchar(128)
-	   ,source_table_load_type  varchar(50)
-	   ,satellite_database      varchar(128)
-	   ,satellite_name			varchar(128)
-	   ,link_key				int
-	   ,link_name				varchar(128)
-	   ,link_database			varchar(128)
-	   ,hub_key					int
-	   ,hub_name				varchar(128)
-	   ,hub_database			varchar(128))
-	   
-	   
--- Log4TSQL Journal Constants 										
-DECLARE @SEVERITY_CRITICAL      smallint = 1;
-DECLARE @SEVERITY_SEVERE        smallint = 2;
-DECLARE @SEVERITY_MAJOR         smallint = 4;
-DECLARE @SEVERITY_MODERATE      smallint = 8;
-DECLARE @SEVERITY_MINOR         smallint = 16;
-DECLARE @SEVERITY_CONCURRENCY   smallint = 32;
-DECLARE @SEVERITY_INFORMATION   smallint = 256;
-DECLARE @SEVERITY_SUCCESS       smallint = 512;
-DECLARE @SEVERITY_DEBUG         smallint = 1024;
-DECLARE @NEW_LINE               char(1)  = CHAR(10);
-
--- Log4TSQL Standard/ExceptionHandler variables
-DECLARE	  @_Error         int
-		, @_RowCount      int
-		, @_Step          varchar(128)
-		, @_Message       nvarchar(512)
-		, @_ErrorContext  nvarchar(512)
-
--- Log4TSQL JournalWriter variables
-DECLARE   @_FunctionName			varchar(255)
-		, @_SprocStartTime			datetime
-		, @_JournalOnOff			varchar(3)
-		, @_Severity				smallint
-		, @_ExceptionId				int
-		, @_StepStartTime			datetime
-		, @_ProgressText			nvarchar(max)
-
-SET @_Error             = 0;
-SET @_FunctionName      = OBJECT_NAME(@@PROCID);
-SET @_Severity          = @SEVERITY_INFORMATION;
-SET @_SprocStartTime    = sysdatetimeoffset();
-SET @_ProgressText      = '' 
-SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-
--- set Log4TSQL Parameters for Logging:
-SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_source_system_name     : ' + COALESCE(@vault_source_system_name, 'NULL')
-						+ @NEW_LINE + '    @vault_source_table_schema    : ' + COALESCE(@vault_source_table_schema, 'NULL')
-						+ @NEW_LINE + '    @vault_source_table_name      : ' + COALESCE(@vault_source_table_name, 'NULL')
-						+ @NEW_LINE + '    @vault_source_load_type       : ' + COALESCE(@vault_source_load_type, 'NULL')
-						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
-						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
-						+ @NEW_LINE
-
-BEGIN TRY
-
-SET @_Step = 'Generate any required error';
-IF @DoGenerateError = 1
-   select 1 / 0
-SET @_Step = 'Validate inputs';
-
-IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
-			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
---IF isnull(@recreate_flag, '') not in ('Y', 'N') 
---			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
-/*--------------------------------------------------------------------------------------------------------------*/	   
-SET @_Step = 'Get Defaults'
--- Object Specific Settings
--- Source Table
-select 	 @source_system				= s.[source_system_name]	
-        ,@source_database			= s.[timevault_name]
-		,@source_schema				= t.[source_table_schema]
-		,@source_table				= t.[source_table_name]
-		,@source_table_config_key	= t.[source_table_key]
-		,@source_qualified_name		= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
-from [dbo].[dv_source_system] s
-inner join [dbo].[dv_source_table] t
-on t.system_key = s.[source_system_key]
-where 1=1
-and s.[source_system_name]		= @vault_source_system_name
-and t.[source_table_schema]		= @vault_source_table_schema
-and t.[source_table_name]		= @vault_source_table_name
-
-SET @_Step = 'Get All Components related to the Source Table'	    
-insert @load_details            
-select  distinct
-        ss.timevault_name
-       ,st.[source_table_key] as source_table_key
-       ,st.source_table_schema	
-	   ,st.source_table_name	
-	   ,st.source_table_load_type
-	   ,s.satellite_database
-	   ,s.satellite_name
-	   ,l.link_key
-	   ,l.link_name
-	   ,l.link_database
-	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_key		else linkhub.hub_key		end as hub_key
-	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_name		else linkhub.hub_name		end as hub_name
-	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_database	else linkhub.hub_database	end as hub_database 
-from
-[dbo].[dv_source_system] ss
-inner join [dbo].[dv_source_table] st
-on st.system_key = ss.[source_system_key]
-inner join [dbo].[dv_column] c
-on c.table_key = st.[source_table_key]
-inner join [dbo].[dv_satellite_column] sc
-on sc.column_key = c.column_key
-inner join [dbo].[dv_satellite] s
-on s.satellite_key = sc.satellite_key
-left join [dbo].[dv_link] l
-on s.link_key = l.link_key
-and l.link_key > 0
-left join [dbo].[dv_hub] h 
-on h.hub_key = s.hub_key
-and h.hub_key > 0
-left join [dbo].[dv_hub_link] hl
-on hl.link_key = l.link_key
-left join [dbo].[dv_hub] linkhub
-on linkhub.hub_key = hl.hub_key
-where ss.source_system_name		= @vault_source_system_name
-  and st.source_table_schema	= @vault_source_table_schema
-  and st.source_table_name		= @vault_source_table_name
-
-/*****************************************************************************************************************/
---Load the Source Table in stages:
---declare @source_database		varchar(128)
---       ,@source_table_schema	varchar(128)
---	   ,@source_table_name		varchar(128)
-
---select @source_database		= source_database_name
---      ,@source_table_schema = source_table_schema
---	  ,@source_table_name	= source_table_name
---from @load_details
-/*****************************************************************************************************************/
-SET @_Step = 'Load Hub Tables'
---print ''
---print 'Load Hub Tables'
---print '----------------'
-declare @hub_database			varchar(128)
-       ,@hub_name				varchar(128)
-
-DECLARE hub_cursor CURSOR FOR  
-select distinct 
-       hub_database
-	  ,hub_name
-from @load_details
-where hub_name is not null
-
-OPEN hub_cursor   
-FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name  
-
-WHILE @@FETCH_STATUS = 0   
-BEGIN   
-       SET @_Step = 'Load Hub: ' + @hub_name
-	   --print @hub_name
-	   --print '/*********\'
-	   
-	   EXECUTE [dbo].[dv_load_hub_table] @source_system, @source_schema, @source_table, @hub_database, @hub_name
-	   FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name  
-END   
-
-CLOSE hub_cursor   
-DEALLOCATE hub_cursor
-
-
-/*****************************************************************************************************************/
-SET @_Step = 'Load Link Tables'
---print ''
---print 'Load Link Tables'
---print '----------------'
-declare @link_database			varchar(128)
-       ,@link_name				varchar(128)
-
-DECLARE link_cursor CURSOR FOR  
-select distinct 
-       link_database
-	  ,link_name
-from @load_details
-where link_name is not null
-
-OPEN link_cursor   
-FETCH NEXT FROM link_cursor INTO @link_database, @link_name  
-
-WHILE @@FETCH_STATUS = 0   
-BEGIN   
-       SET @_Step = 'Load Link: ' + @link_name
-	   --print @link_name
-	   --print '/*********\'
-	   EXECUTE [dbo].[dv_load_link_table] @source_system, @source_schema, @source_table, @link_database, @link_name 
-	   FETCH NEXT FROM link_cursor INTO @link_database, @link_name  
-END   
-
-CLOSE link_cursor   
-DEALLOCATE link_cursor
-
-
-/*****************************************************************************************************************/
-SET @_Step = 'Load Sat Tables for: ' + @source_database + ' ' + @source_schema + ' ' + @source_table
---print ''
---print 'Load Sat Tables'
---print '----------------'
---print '/*********\'
-EXECUTE [dv_load_sats_for_source_table] @source_system, @source_schema, @source_table, @vault_source_load_type
-/*--------------------------------------------------------------------------------------------------------------*/
-
-SET @_ProgressText  = @_ProgressText + @NEW_LINE
-				+ 'Step: [' + @_Step + '] completed ' 
-
-IF @@TRANCOUNT > 0 COMMIT TRAN;
-
-SET @_Message   = 'Successfully Loaded Object: ' + @source_qualified_name
-
-END TRY
-BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Load Object: ' + @source_qualified_name
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
-	BEGIN
-		ROLLBACK TRAN;
-		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
-	END
-	
-EXEC log4.ExceptionHandler
-		  @ErrorContext  = @_ErrorContext
-		, @ErrorNumber   = @_Error OUT
-		, @ReturnMessage = @_Message OUT
-		, @ExceptionId   = @_ExceptionId OUT
-;
-END CATCH
-
---/////////////////////////////////////////////////////////////////////////////////////////////////
-OnComplete:
---/////////////////////////////////////////////////////////////////////////////////////////////////
-
-	--! Clean up
-
-	--!
-	--! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
-	--! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
-	--!
-	IF @_Error = 0
-		BEGIN
-			SET @_Step			= 'OnComplete'
-			SET @_Severity		= @SEVERITY_SUCCESS
-			SET @_Message		= COALESCE(@_Message, @_Step)
-								+ ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-		END
-	ELSE
-		BEGIN
-			SET @_Step			= COALESCE(@_Step, 'OnError')
-			SET @_Severity		= @SEVERITY_SEVERE
-			SET @_Message		= COALESCE(@_Message, @_Step)
-								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-		END
-
-	IF @_JournalOnOff = 'ON'
-		EXEC log4.JournalWriter
-				  @Task				= @_FunctionName
-				, @FunctionName		= @_FunctionName
-				, @StepInFunction	= @_Step
-				, @MessageText		= @_Message
-				, @Severity			= @_Severity
-				, @ExceptionId		= @_ExceptionId
-				--! Supply all the progress info after we've gone to such trouble to collect it
-				, @ExtraInfo        = @_ProgressText
-
-	--! Finally, throw an exception that will be detected by the caller
-	IF @DoThrowError = 1 AND @_Error > 0
-		RAISERROR(@_Message, 16, 99);
-
-	SET NOCOUNT OFF;
-
-	--! Return the value of @@ERROR (which will be zero on success)
-	RETURN (@_Error);
-END
-GO
 PRINT N'Creating [dbo].[dv_create_DV_table]...';
 
 
@@ -12880,7 +12558,7 @@ GO
 CREATE PROCEDURE [dv_integrity].[dv_col_metrics]
 (
    @satellite_key				int				= 0
-  ,@stage_database				varchar(128)	= 'ODV_Metrics_Stage'
+  ,@stage_database				varchar(128)	= 'ODE_Metrics_Stage'
   ,@stage_schema				varchar(128)	= 'Stage'
   ,@stage_table					varchar(128)	= 'Integrity_Col_Counts'
   ,@dogenerateerror				bit				= 0
@@ -13017,45 +12695,122 @@ select @run_time = cast(sysdatetimeoffset() as varchar(50))
 -- Note that each test must have a case for each data type being references (it must be a regular matrix)
 insert @tests values('min'		, 'min'			, 'varchar'	, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
 insert @tests values('min'		, 'min'			, 'nvarchar', 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'char', 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
 insert @tests values('min'		, 'min'			, 'numeric'	, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'decimal'	, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
 insert @tests values('min'		, 'min'			, 'int'		, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
 insert @tests values('min'		, 'min'			, 'bigint'	, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'smallint', 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'tinyint'	, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'datetime', 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'date', 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'money'	, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'smallmoney'	, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'float'	, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'real'	, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
+insert @tests values('min'		, 'min'			, 'bit'		, 'cast(0 as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
 
 insert @tests values('max'		, 'max'			, 'varchar'	, 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
 insert @tests values('max'		, 'max'			, 'nvarchar', 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'char', 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
 insert @tests values('max'		, 'max'			, 'numeric'	, 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'decimal'	, 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
 insert @tests values('max'		, 'max'			, 'int'		, 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
 insert @tests values('max'		, 'max'			, 'bigint'	, 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'smallint', 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'tinyint'	, 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'datetime', 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'date', 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'money'	, 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'smallmoney'	, 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'float'	, 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'real'	, 'cast(max([<column_name>]) as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
+insert @tests values('max'		, 'max'			, 'bit'		, 'cast(0 as varchar(max)) as [max_<column_name>]', '[max_<column_name>]')
 
 insert @tests values('domain'	, 'domain'		, 'varchar' , 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
 insert @tests values('domain'	, 'domain'		, 'nvarchar', 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'char', 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
 insert @tests values('domain'	, 'domain'		, 'numeric'	, 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'decimal'	, 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
 insert @tests values('domain'	, 'domain'		, 'int'		, 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
 insert @tests values('domain'	, 'domain'		, 'bigint'	, 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'smallint', 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'tinyint'	, 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'datetime', 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'date', 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'money'	, 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'smallmoney'	, 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'float'	, 'cast(0 as bigint) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'real'	, 'cast(0 as bigint) as [domain_<column_name>]'	 , '[domain_<column_name>]')
+insert @tests values('domain'	, 'domain'		, 'bit'		, 'count_big(distinct [<column_name>]) as [domain_<column_name>]'	 , '[domain_<column_name>]')
 
 insert @tests values('nullcount', 'nullcount'	, 'varchar' , 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
-insert @tests values('nullcount', 'nullcount'	, 'nvarchar','sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'nvarchar', 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'char', 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
 insert @tests values('nullcount', 'nullcount'	, 'numeric' , 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'decimal' , 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
 insert @tests values('nullcount', 'nullcount'	, 'int'		, 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
 insert @tests values('nullcount', 'nullcount'	, 'bigint'  , 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'smallint' , 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'tinyint'  , 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'datetime', 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'date', 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'money'	, 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'smallmoney'	, 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'float'	, 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'real'	, 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
+insert @tests values('nullcount', 'nullcount'	, 'bit'		, 'sum(cast(case when [<column_name>] is null then 1 else 0 end as bigint)) as [nullcount_<column_name>]', '[nullcount_<column_name>]')
 
 insert @tests values('blankcount', 'blankcount'	, 'varchar' , 'sum(cast(case when [<column_name>] = '''' then 1 else 0 end as bigint)) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
 insert @tests values('blankcount', 'blankcount'	, 'nvarchar' ,'sum(cast(case when [<column_name>] = '''' then 1 else 0 end as bigint)) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'char' ,'sum(cast(case when [<column_name>] = '''' then 1 else 0 end as bigint)) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
 insert @tests values('blankcount', 'blankcount'	, 'numeric' , 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'decimal' , 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
 insert @tests values('blankcount', 'blankcount'	, 'int'		, 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
 insert @tests values('blankcount', 'blankcount'	, 'bigint'  , 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'smallint' , 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'tinyint'  , 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'datetime', 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'date', 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'money'	, 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'smallmoney'	, 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'float'	, 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'real'	, 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
+insert @tests values('blankcount', 'blankcount'	, 'bit'		, 'cast(0 as bigint) as [blankcount_<column_name>]', '[blankcount_<column_name>]')
 
 insert @tests values('minlength', 'minlength'	, 'varchar' , 'min(cast(len([<column_name>]) as bigint)) as [minlength_<column_name>]', '[minlength_<column_name>]')
 insert @tests values('minlength', 'minlength'	, 'nvarchar' ,'min(cast(len([<column_name>]) as bigint)) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'char' ,'min(cast(len([<column_name>]) as bigint)) as [minlength_<column_name>]', '[minlength_<column_name>]')
 insert @tests values('minlength', 'minlength'	, 'numeric' , 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'decimal' , 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
 insert @tests values('minlength', 'minlength'	, 'int'		, 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
 insert @tests values('minlength', 'minlength'	, 'bigint'  , 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'smallint'  , 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'tinyint'  , 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'datetime', 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'date', 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'money'	, 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'smallmoney'	, 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'float'	, 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'real'	, 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
+insert @tests values('minlength', 'minlength'	, 'bit'		, 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
 
 insert @tests values('maxlength', 'maxlength'	, 'varchar' , 'max(cast(len([<column_name>]) as bigint)) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
 insert @tests values('maxlength', 'maxlength'	, 'nvarchar' ,'max(cast(len([<column_name>]) as bigint)) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'char' ,'max(cast(len([<column_name>]) as bigint)) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
 insert @tests values('maxlength', 'maxlength'	, 'numeric' , 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'decimal' , 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
 insert @tests values('maxlength', 'maxlength'	, 'int'		, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
 insert @tests values('maxlength', 'maxlength'	, 'bigint'  , 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'smallint'  , 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'tinyint'  , 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'datetime', 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'date', 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'money'	, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'smallmoney'	, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'float'	, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'real'	, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'bit'		, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
 
 -- Truncate the Stage Table
 set @sql1 = 'truncate table ' + @stage_qualified_name
@@ -13077,7 +12832,7 @@ begin
 		insert @Columns
 		  select s.satellite_key
 				,s.satellite_name
-				,table_name = quotename(s.[satellite_database]) + '.' + quotename(s.[satellite_schema]) + '.' + quotename([ODV_Config].[dbo].[fn_get_object_name] (s.satellite_name, 'sat'))
+				,table_name = quotename(s.[satellite_database]) + '.' + quotename(s.[satellite_schema]) + '.' + quotename([dbo].[fn_get_object_name] (s.satellite_name, 'sat'))
 				,c.column_key
 				,c.column_name
 				,t.test_name
@@ -13346,7 +13101,7 @@ begin
 if @hub_loop_key > 0
 begin
 	select @SQL =
-	'if exists (select 1 from ' + quotename(l.[hub_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[hub_schema] + ''' and [table_name] = ''' + [ODV_Config].[dbo].[fn_get_object_name] (l.hub_name, 'hub') + ''')' + @crlf +
+	'if exists (select 1 from ' + quotename(l.[hub_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[hub_schema] + ''' and [table_name] = ''' + [dbo].[fn_get_object_name] (l.hub_name, 'hub') + ''')' + @crlf +
 	'begin' + @crlf +
 	'insert ' + @stage_qualified_name + @crlf +
 	'select ''' + @run_time + '''' + @crlf +
@@ -13357,7 +13112,7 @@ begin
 		+ ',cfg.[source_table_name]' + @crlf
 
 	+ ',count_big(*) as [RowCount]' + @crlf
-	+'from ' + quotename(l.[hub_database]) + '.' + quotename(l.[hub_schema]) + '.' + quotename([ODV_Config].[dbo].[fn_get_object_name] (l.hub_name, 'hub')) +' l' + @crlf
+	+'from ' + quotename(l.[hub_database]) + '.' + quotename(l.[hub_schema]) + '.' + quotename([dbo].[fn_get_object_name] (l.hub_name, 'hub')) +' l' + @crlf
 	+'left join [dbo].[dv_source_table] cfg on cfg.source_table_key = l.' + @hub_data_source_col + @crlf
 	+'left join [dbo].[dv_source_system] ss on ss.[source_system_key] = cfg.[system_key]' + @crlf
 	+'where ' + @hub_load_date_time + ' <= ''' + @run_time + '''' + @crlf + 
@@ -13576,7 +13331,7 @@ begin
 if @link_loop_key > 0
 begin
 	select @SQL =
-	'if exists (select 1 from ' + quotename(l.[link_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[link_schema] + ''' and [table_name] = ''' + [ODV_Config].[dbo].[fn_get_object_name] (l.link_name, 'lnk') + ''')' + @crlf +
+	'if exists (select 1 from ' + quotename(l.[link_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[link_schema] + ''' and [table_name] = ''' + [dbo].[fn_get_object_name] (l.link_name, 'lnk') + ''')' + @crlf +
 	'begin' + @crlf +
 	'insert ' + @stage_qualified_name + @crlf +
 	'select ''' + @run_time + '''' + @crlf +
@@ -13586,7 +13341,7 @@ begin
 	+ ',ss.[source_system_name]' + @crlf
 	+ ',cfg.[source_table_name]' + @crlf
 	+ ',count_big(*) as [Runkey]' + @crlf
-	+'from ' + quotename(l.[link_database]) + '.' + quotename(l.[link_schema]) + '.' + quotename([ODV_Config].[dbo].[fn_get_object_name] (l.link_name, 'lnk')) +' l' + @crlf
+	+'from ' + quotename(l.[link_database]) + '.' + quotename(l.[link_schema]) + '.' + quotename([dbo].[fn_get_object_name] (l.link_name, 'lnk')) +' l' + @crlf
 	+'left join [dbo].[dv_source_table] cfg on cfg.source_table_key = l.' + @link_data_source_col + @crlf
 	+'left join [dbo].[dv_source_system] ss on ss.[source_system_key] = cfg.[system_key]' + @crlf
 	+'where ' + @link_load_date_time + ' <= ''' + @run_time + '''' + @crlf + 
@@ -13817,7 +13572,7 @@ while @sat_loop_key >= @sat_loop_stop_key
 /**********************************************************************************************************************/
 begin
 select @SQL =
-'if exists (select 1 from ' + quotename(s.[satellite_database]) + '.[information_schema].[tables] where [table_schema] = ''' + s.[satellite_schema] + ''' and [table_name] = ''' + [ODV_Config].[dbo].[fn_get_object_name] (s.satellite_name, 'sat') + ''')' + @crlf +
+'if exists (select 1 from ' + quotename(s.[satellite_database]) + '.[information_schema].[tables] where [table_schema] = ''' + s.[satellite_schema] + ''' and [table_name] = ''' + [dbo].[fn_get_object_name] (s.satellite_name, 'sat') + ''')' + @crlf +
 'begin' + @crlf +
 'insert ' + @stage_qualified_name + @crlf +
 'select ''' + @run_time + '''' + @crlf +
@@ -13827,7 +13582,7 @@ select @SQL =
 + ',sum(cast(case when ' + @sat_tombstone_col + ' = 0 and ' + @sat_current_row_col + ' = 1 then 1 else 0 end as bigint)) as [current_rows]' + @crlf
 + ',sum(cast(case when ' + @sat_tombstone_col + ' = 0 and ' + @sat_current_row_col + ' = 0 then 1 else 0 end as bigint)) as [versioned_rows]' + @crlf
 + ',sum(cast(' + @sat_tombstone_col + ' as bigint)) as [tombstones]'  + @crlf
-+ 'from ' + quotename(s.[satellite_database]) + '.' + quotename(s.[satellite_schema]) + '.' + quotename([ODV_Config].[dbo].[fn_get_object_name] (s.satellite_name, 'sat')) + @crlf
++ 'from ' + quotename(s.[satellite_database]) + '.' + quotename(s.[satellite_schema]) + '.' + quotename([dbo].[fn_get_object_name] (s.satellite_name, 'sat')) + @crlf
 + 'end' + @crlf
 + @crlf + @crlf
 from [dbo].[dv_satellite] s
@@ -14145,6 +13900,187 @@ OnComplete:
 	RETURN (@_Error);
 END
 GO
+PRINT N'Creating [dv_release].[dv_import_release_file]...';
+
+
+GO
+CREATE PROCEDURE [dv_release].[dv_import_release_file] 
+(
+  @vault_file_location			varchar(256)	=''
+, @vault_file_name				varchar(256)	=''
+, @DoGenerateError              bit				= 0
+, @DoThrowError                 bit				= 1
+)
+AS
+BEGIN
+SET NOCOUNT ON
+-- Internal use variables
+declare @xml xml
+       ,@sql					nvarchar(max) = ''
+	   ,@parmdefinition			nvarchar(500)
+	   ,@release_build_key		int
+	   ,@temp_table_name		varchar(256)
+	   ,@full_file_name			varchar(256)
+
+-- Log4TSQL Journal Constants 
+DECLARE @SEVERITY_CRITICAL      smallint = 1;
+DECLARE @SEVERITY_SEVERE        smallint = 2;
+DECLARE @SEVERITY_MAJOR         smallint = 4;
+DECLARE @SEVERITY_MODERATE      smallint = 8;
+DECLARE @SEVERITY_MINOR         smallint = 16;
+DECLARE @SEVERITY_CONCURRENCY   smallint = 32;
+DECLARE @SEVERITY_INFORMATION   smallint = 256;
+DECLARE @SEVERITY_SUCCESS       smallint = 512;
+DECLARE @SEVERITY_DEBUG         smallint = 1024;
+DECLARE @NEW_LINE               char(1)  = CHAR(10);
+
+-- Log4TSQL Standard/ExceptionHandler variables
+DECLARE	  @_Error         int
+		, @_RowCount      int
+		, @_Step          varchar(128)
+		, @_Message       nvarchar(512)
+		, @_ErrorContext  nvarchar(512)
+
+-- Log4TSQL JournalWriter variables
+DECLARE   @_FunctionName			varchar(255)
+		, @_SprocStartTime			datetime
+		, @_JournalOnOff			varchar(3)
+		, @_Severity				smallint
+		, @_ExceptionId				int
+		, @_StepStartTime			datetime
+		, @_ProgressText			nvarchar(max)
+
+SET @_Error             = 0;
+SET @_FunctionName      = OBJECT_NAME(@@PROCID);
+SET @_Severity          = @SEVERITY_INFORMATION;
+SET @_SprocStartTime    = sysdatetimeoffset();
+SET @_ProgressText      = '' 
+SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
+		
+-- set the Parameters for logging:
+SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
+						+ @NEW_LINE + '    @vault_file_location			 : ' + COALESCE(@vault_file_location, '<NULL>')
+						+ @NEW_LINE + '    @vault_file_name		         : ' + COALESCE(cast(@vault_file_name as varchar(20)), '<NULL>')
+						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
+						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
+						+ @NEW_LINE
+
+BEGIN TRY
+SET @_Step = 'Generate any required error';
+IF @DoGenerateError = 1
+   select 1 / 0
+SET @_Step = 'Validate Inputs';
+
+SET @_Step = 'Initialise Variables';
+
+if isnull(@vault_file_location, '') = ''
+	set @vault_file_location = 'C:\bcp\'
+
+set @full_file_name = @vault_file_location + '\' + @vault_file_name		
+set @full_file_name = replace (@full_file_name, '\\', '\')
+-- Create Temp Table Name
+select @temp_table_name = '##temp_001_' + replace(cast(newid() as varchar(50)), '-', '')
+-- Build a Global Temp Table
+set @sql = 'create table #table_name# (XmlCol xml)'
+set @sql = replace (@sql, '#table_name#', @temp_table_name)
+exec(@sql)
+--Load the File into the Golbal Temp Table
+set @sql = 'INSERT INTO #temp_table_name#(XmlCol) SELECT * FROM OPENROWSET(BULK ''#filename#'',SINGLE_CLOB) AS x;' 
+set @sql = replace(@sql, '#temp_table_name#', @temp_table_name)
+set @sql = replace(@sql, '#filename#', @full_file_name)
+exec(@sql)
+-- return the Build as an XML variable
+SET @parmdefinition = N'@XMLData xml OUTPUT'
+set @sql = 'select @XMLData = XmlCol from #temp_table_name#'
+set @sql = replace(@sql, '#temp_table_name#', @temp_table_name)
+EXECUTE sp_executesql @sql, @ParmDefinition, @XMLData = @xml OUTPUT;
+--Clear the release out of the master file
+SELECT @release_build_key = Tbl.Col.value('release_build_key[1]', 'varchar(4000)') 
+FROM   @xml.nodes('//statement') Tbl(Col)
+select @release_build_key
+delete from [dv_release].[dv_release_build] where release_build_key = @release_build_key
+--Import the release into the Build Table, Ready to apply
+insert [dv_release].[dv_release_build]
+   SELECT  
+       Tbl.Col.value('release_build_key[1]', 'varchar(4000)') as release_build_key, 
+	   Tbl.Col.value('release_statement_sequence[1]', 'varchar(4000)') as release_statement_sequence, 
+	   Tbl.Col.value('release_number[1]', 'varchar(4000)') as release_number,
+	   Tbl.Col.value('release_statement_type[1]', 'varchar(4000)') as release_statement_type,
+	   Tbl.Col.value('release_statement[1]', 'varchar(max)') as release_statement,
+	   Tbl.Col.value('affected_row_count[1]', 'varchar(4000)') as affected_row_count
+FROM   @xml.nodes('//statement') Tbl(Col) 
+
+/*--------------------------------------------------------------------------------------------------------------*/
+IF @@TRANCOUNT > 0 COMMIT TRAN;
+
+SET @_Message   = 'Successfully Imported Release File: ' + @full_file_name
+
+END TRY
+BEGIN CATCH
+SET @_ErrorContext	= 'Failed to Import Release File: ' + @full_file_name
+IF (XACT_STATE() = -1) -- uncommitable transaction
+OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
+	BEGIN
+		ROLLBACK TRAN;
+		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
+	END
+	
+EXEC log4.ExceptionHandler
+		  @ErrorContext  = @_ErrorContext
+		, @ErrorNumber   = @_Error OUT
+		, @ReturnMessage = @_Message OUT
+		, @ExceptionId   = @_ExceptionId OUT
+;
+END CATCH
+
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+OnComplete:
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+
+	--! Clean up
+
+	--!
+	--! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
+	--! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
+	--!
+	IF @_Error = 0
+		BEGIN
+			SET @_Step			= 'OnComplete'
+			SET @_Severity		= @SEVERITY_SUCCESS
+			SET @_Message		= COALESCE(@_Message, @_Step)
+								+ ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+		END
+	ELSE
+		BEGIN
+			SET @_Step			= COALESCE(@_Step, 'OnError')
+			SET @_Severity		= @SEVERITY_SEVERE
+			SET @_Message		= COALESCE(@_Message, @_Step)
+								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+		END
+
+	IF @_JournalOnOff = 'ON'
+		EXEC log4.JournalWriter
+				  @Task				= @_FunctionName
+				, @FunctionName		= @_FunctionName
+				, @StepInFunction	= @_Step
+				, @MessageText		= @_Message
+				, @Severity			= @_Severity
+				, @ExceptionId		= @_ExceptionId
+				--! Supply all the progress info after we've gone to such trouble to collect it
+				, @ExtraInfo        = @_ProgressText
+
+	--! Finally, throw an exception that will be detected by the caller
+	IF @DoThrowError = 1 AND @_Error > 0
+		RAISERROR(@_Message, 16, 99);
+
+	SET NOCOUNT OFF;
+
+	--! Return the value of @@ERROR (which will be zero on success)
+	RETURN (@_Error);
+END
+GO
 PRINT N'Creating [dv_release].[dv_change_object_release]...';
 
 
@@ -14268,6 +14204,164 @@ SET @_Message   = 'Successfully Moved ' + @vault_config_table + '(' +  format(@v
 END TRY
 BEGIN CATCH
 SET @_ErrorContext	= 'Failed to Move ' + @vault_config_table + '(' +  format(@vault_config_table_key, '00000000') + ')'
+IF (XACT_STATE() = -1) -- uncommitable transaction
+OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
+	BEGIN
+		ROLLBACK TRAN;
+		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
+	END
+	
+EXEC log4.ExceptionHandler
+		  @ErrorContext  = @_ErrorContext
+		, @ErrorNumber   = @_Error OUT
+		, @ReturnMessage = @_Message OUT
+		, @ExceptionId   = @_ExceptionId OUT
+;
+END CATCH
+
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+OnComplete:
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+
+	--! Clean up
+
+	--!
+	--! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
+	--! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
+	--!
+	IF @_Error = 0
+		BEGIN
+			SET @_Step			= 'OnComplete'
+			SET @_Severity		= @SEVERITY_SUCCESS
+			SET @_Message		= COALESCE(@_Message, @_Step)
+								+ ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+		END
+	ELSE
+		BEGIN
+			SET @_Step			= COALESCE(@_Step, 'OnError')
+			SET @_Severity		= @SEVERITY_SEVERE
+			SET @_Message		= COALESCE(@_Message, @_Step)
+								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+		END
+
+	IF @_JournalOnOff = 'ON'
+		EXEC log4.JournalWriter
+				  @Task				= @_FunctionName
+				, @FunctionName		= @_FunctionName
+				, @StepInFunction	= @_Step
+				, @MessageText		= @_Message
+				, @Severity			= @_Severity
+				, @ExceptionId		= @_ExceptionId
+				--! Supply all the progress info after we've gone to such trouble to collect it
+				, @ExtraInfo        = @_ProgressText
+
+	--! Finally, throw an exception that will be detected by the caller
+	IF @DoThrowError = 1 AND @_Error > 0
+		RAISERROR(@_Message, 16, 99);
+
+	SET NOCOUNT OFF;
+
+	--! Return the value of @@ERROR (which will be zero on success)
+	RETURN (@_Error);
+END
+GO
+PRINT N'Creating [dv_release].[dv_export_release_file]...';
+
+
+GO
+
+CREATE PROCEDURE [dv_release].[dv_export_release_file] 
+(
+  @vault_release_number			int
+, @vault_file_location			varchar(256)	=''
+, @DoGenerateError              bit				= 0
+, @DoThrowError                 bit				= 1
+)
+AS
+BEGIN
+SET NOCOUNT ON
+-- Internal use variables
+declare  @sql							nvarchar(4000)	= ''
+	   , @filename						varchar(128)	= ''
+	   , @database_name					varchar(128)	= ''
+
+-- Log4TSQL Journal Constants 
+DECLARE @SEVERITY_CRITICAL      smallint = 1;
+DECLARE @SEVERITY_SEVERE        smallint = 2;
+DECLARE @SEVERITY_MAJOR         smallint = 4;
+DECLARE @SEVERITY_MODERATE      smallint = 8;
+DECLARE @SEVERITY_MINOR         smallint = 16;
+DECLARE @SEVERITY_CONCURRENCY   smallint = 32;
+DECLARE @SEVERITY_INFORMATION   smallint = 256;
+DECLARE @SEVERITY_SUCCESS       smallint = 512;
+DECLARE @SEVERITY_DEBUG         smallint = 1024;
+DECLARE @NEW_LINE               char(1)  = CHAR(10);
+
+-- Log4TSQL Standard/ExceptionHandler variables
+DECLARE	  @_Error         int
+		, @_RowCount      int
+		, @_Step          varchar(128)
+		, @_Message       nvarchar(512)
+		, @_ErrorContext  nvarchar(512)
+
+-- Log4TSQL JournalWriter variables
+DECLARE   @_FunctionName			varchar(255)
+		, @_SprocStartTime			datetime
+		, @_JournalOnOff			varchar(3)
+		, @_Severity				smallint
+		, @_ExceptionId				int
+		, @_StepStartTime			datetime
+		, @_ProgressText			nvarchar(max)
+
+SET @_Error             = 0;
+SET @_FunctionName      = OBJECT_NAME(@@PROCID);
+SET @_Severity          = @SEVERITY_INFORMATION;
+SET @_SprocStartTime    = sysdatetimeoffset();
+SET @_ProgressText      = '' 
+SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
+
+-- set the Parameters for logging:
+SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
+						+ @NEW_LINE + '    @vault_file_location			 : ' + COALESCE(@vault_file_location, '<NULL>')
+						+ @NEW_LINE + '    @vault_release_number         : ' + COALESCE(cast(@vault_release_number as varchar(20)), '<NULL>')
+						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
+						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
+						+ @NEW_LINE
+
+BEGIN TRY
+SET @_Step = 'Generate any required error';
+IF @DoGenerateError = 1
+   select 1 / 0
+SET @_Step = 'Validate Inputs';
+
+SET @_Step = 'Initialise Variables';
+
+if isnull(@vault_file_location, '') = ''
+	set @vault_file_location = 'C:\bcp'
+
+
+select @database_name = quotename(db_name())
+select @filename = 'DV_Release__' + format(@vault_release_number, '000000') + '__' + format(sysdatetimeoffset(), 'yyyyMMdd_HHmmss')
+
+select @sql = 'bcp "select [release_build_key],[release_statement_sequence],[release_number],[release_statement_type],[release_statement] = REPLACE(REPLACE([release_statement],CHAR(13),''''),CHAR(10),''''),[affected_row_count] from #database_name#.[dv_release].[dv_release_build]  where [release_number] = #release_number# FOR XML RAW(''statement''), ROOT (''statements''), ELEMENTS" queryout #file_location#\#filename#.txt -c -T -S#servername# -r -t' 
+select @sql = replace(@sql, '#database_name#', quotename(db_name())) 
+select @sql = replace(@sql, '#release_number#', format(@vault_release_number, '000000'))
+select @sql = replace(@sql, '#file_location#',@vault_file_location) 
+select @sql = replace(@sql, '#filename#', @filename)
+select @sql = replace(@sql, '#servername#', @@servername)
+--select @sql
+exec master.dbo.xp_cmdshell @sql
+
+/*--------------------------------------------------------------------------------------------------------------*/
+IF @@TRANCOUNT > 0 COMMIT TRAN;
+
+SET @_Message   = 'Successfully Exported Release: ' + format(@vault_release_number, '000000')
+
+END TRY
+BEGIN CATCH
+SET @_ErrorContext	= 'Failed to Export Release: ' + format(@vault_release_number, '000000')
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
@@ -14988,345 +15082,6 @@ OnComplete:
 	RETURN (@_Error);
 END
 GO
-PRINT N'Creating [dv_release].[dv_import_release_file]...';
-
-
-GO
-CREATE PROCEDURE [dv_release].[dv_import_release_file] 
-(
-  @vault_file_location			varchar(256)	=''
-, @vault_file_name				varchar(256)	=''
-, @DoGenerateError              bit				= 0
-, @DoThrowError                 bit				= 1
-)
-AS
-BEGIN
-SET NOCOUNT ON
--- Internal use variables
-declare @xml xml
-       ,@sql					nvarchar(max) = ''
-	   ,@parmdefinition			nvarchar(500)
-	   ,@release_build_key		int
-	   ,@temp_table_name		varchar(256)
-	   ,@full_file_name			varchar(256)
-
--- Log4TSQL Journal Constants 
-DECLARE @SEVERITY_CRITICAL      smallint = 1;
-DECLARE @SEVERITY_SEVERE        smallint = 2;
-DECLARE @SEVERITY_MAJOR         smallint = 4;
-DECLARE @SEVERITY_MODERATE      smallint = 8;
-DECLARE @SEVERITY_MINOR         smallint = 16;
-DECLARE @SEVERITY_CONCURRENCY   smallint = 32;
-DECLARE @SEVERITY_INFORMATION   smallint = 256;
-DECLARE @SEVERITY_SUCCESS       smallint = 512;
-DECLARE @SEVERITY_DEBUG         smallint = 1024;
-DECLARE @NEW_LINE               char(1)  = CHAR(10);
-
--- Log4TSQL Standard/ExceptionHandler variables
-DECLARE	  @_Error         int
-		, @_RowCount      int
-		, @_Step          varchar(128)
-		, @_Message       nvarchar(512)
-		, @_ErrorContext  nvarchar(512)
-
--- Log4TSQL JournalWriter variables
-DECLARE   @_FunctionName			varchar(255)
-		, @_SprocStartTime			datetime
-		, @_JournalOnOff			varchar(3)
-		, @_Severity				smallint
-		, @_ExceptionId				int
-		, @_StepStartTime			datetime
-		, @_ProgressText			nvarchar(max)
-
-SET @_Error             = 0;
-SET @_FunctionName      = OBJECT_NAME(@@PROCID);
-SET @_Severity          = @SEVERITY_INFORMATION;
-SET @_SprocStartTime    = sysdatetimeoffset();
-SET @_ProgressText      = '' 
-SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-		
--- set the Parameters for logging:
-SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_file_location			 : ' + COALESCE(@vault_file_location, '<NULL>')
-						+ @NEW_LINE + '    @vault_file_name		         : ' + COALESCE(cast(@vault_file_name as varchar(20)), '<NULL>')
-						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
-						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
-						+ @NEW_LINE
-
-BEGIN TRY
-SET @_Step = 'Generate any required error';
-IF @DoGenerateError = 1
-   select 1 / 0
-SET @_Step = 'Validate Inputs';
-
-SET @_Step = 'Initialise Variables';
-
-if isnull(@vault_file_location, '') = ''
-	set @vault_file_location = 'C:\bcp\'
-
-set @full_file_name = @vault_file_location + '\' + @vault_file_name		
-set @full_file_name = replace (@full_file_name, '\\', '\')
--- Create Temp Table Name
-select @temp_table_name = '##temp_001_' + replace(cast(newid() as varchar(50)), '-', '')
--- Build a Global Temp Table
-set @sql = 'create table #table_name# (XmlCol xml)'
-set @sql = replace (@sql, '#table_name#', @temp_table_name)
-exec(@sql)
---Load the File into the Golbal Temp Table
-set @sql = 'INSERT INTO #temp_table_name#(XmlCol) SELECT * FROM OPENROWSET(BULK ''#filename#'',SINGLE_CLOB) AS x;' 
-set @sql = replace(@sql, '#temp_table_name#', @temp_table_name)
-set @sql = replace(@sql, '#filename#', @full_file_name)
-exec(@sql)
--- return the Build as an XML variable
-SET @parmdefinition = N'@XMLData xml OUTPUT'
-set @sql = 'select @XMLData = XmlCol from #temp_table_name#'
-set @sql = replace(@sql, '#temp_table_name#', @temp_table_name)
-EXECUTE sp_executesql @sql, @ParmDefinition, @XMLData = @xml OUTPUT;
---Clear the release out of the master file
-SELECT @release_build_key = Tbl.Col.value('release_build_key[1]', 'varchar(4000)') 
-FROM   @xml.nodes('//statement') Tbl(Col)
-select @release_build_key
-delete from [dv_release].[dv_release_build] where release_build_key = @release_build_key
---Import the release into the Build Table, Ready to apply
-insert [dv_release].[dv_release_build]
-   SELECT  
-       Tbl.Col.value('release_build_key[1]', 'varchar(4000)') as release_build_key, 
-	   Tbl.Col.value('release_statement_sequence[1]', 'varchar(4000)') as release_statement_sequence, 
-	   Tbl.Col.value('release_number[1]', 'varchar(4000)') as release_number,
-	   Tbl.Col.value('release_statement_type[1]', 'varchar(4000)') as release_statement_type,
-	   Tbl.Col.value('release_statement[1]', 'varchar(max)') as release_statement,
-	   Tbl.Col.value('affected_row_count[1]', 'varchar(4000)') as affected_row_count
-FROM   @xml.nodes('//statement') Tbl(Col) 
-
-/*--------------------------------------------------------------------------------------------------------------*/
-IF @@TRANCOUNT > 0 COMMIT TRAN;
-
-SET @_Message   = 'Successfully Imported Release File: ' + @full_file_name
-
-END TRY
-BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Import Release File: ' + @full_file_name
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
-	BEGIN
-		ROLLBACK TRAN;
-		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
-	END
-	
-EXEC log4.ExceptionHandler
-		  @ErrorContext  = @_ErrorContext
-		, @ErrorNumber   = @_Error OUT
-		, @ReturnMessage = @_Message OUT
-		, @ExceptionId   = @_ExceptionId OUT
-;
-END CATCH
-
---/////////////////////////////////////////////////////////////////////////////////////////////////
-OnComplete:
---/////////////////////////////////////////////////////////////////////////////////////////////////
-
-	--! Clean up
-
-	--!
-	--! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
-	--! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
-	--!
-	IF @_Error = 0
-		BEGIN
-			SET @_Step			= 'OnComplete'
-			SET @_Severity		= @SEVERITY_SUCCESS
-			SET @_Message		= COALESCE(@_Message, @_Step)
-								+ ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-		END
-	ELSE
-		BEGIN
-			SET @_Step			= COALESCE(@_Step, 'OnError')
-			SET @_Severity		= @SEVERITY_SEVERE
-			SET @_Message		= COALESCE(@_Message, @_Step)
-								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-		END
-
-	IF @_JournalOnOff = 'ON'
-		EXEC log4.JournalWriter
-				  @Task				= @_FunctionName
-				, @FunctionName		= @_FunctionName
-				, @StepInFunction	= @_Step
-				, @MessageText		= @_Message
-				, @Severity			= @_Severity
-				, @ExceptionId		= @_ExceptionId
-				--! Supply all the progress info after we've gone to such trouble to collect it
-				, @ExtraInfo        = @_ProgressText
-
-	--! Finally, throw an exception that will be detected by the caller
-	IF @DoThrowError = 1 AND @_Error > 0
-		RAISERROR(@_Message, 16, 99);
-
-	SET NOCOUNT OFF;
-
-	--! Return the value of @@ERROR (which will be zero on success)
-	RETURN (@_Error);
-END
-GO
-PRINT N'Creating [dv_release].[dv_export_release_file]...';
-
-
-GO
-
-CREATE PROCEDURE [dv_release].[dv_export_release_file] 
-(
-  @vault_release_number			int
-, @vault_file_location			varchar(256)	=''
-, @DoGenerateError              bit				= 0
-, @DoThrowError                 bit				= 1
-)
-AS
-BEGIN
-SET NOCOUNT ON
--- Internal use variables
-declare  @sql							nvarchar(4000)	= ''
-	   , @filename						varchar(128)	= ''
-	   , @database_name					varchar(128)	= ''
-
--- Log4TSQL Journal Constants 
-DECLARE @SEVERITY_CRITICAL      smallint = 1;
-DECLARE @SEVERITY_SEVERE        smallint = 2;
-DECLARE @SEVERITY_MAJOR         smallint = 4;
-DECLARE @SEVERITY_MODERATE      smallint = 8;
-DECLARE @SEVERITY_MINOR         smallint = 16;
-DECLARE @SEVERITY_CONCURRENCY   smallint = 32;
-DECLARE @SEVERITY_INFORMATION   smallint = 256;
-DECLARE @SEVERITY_SUCCESS       smallint = 512;
-DECLARE @SEVERITY_DEBUG         smallint = 1024;
-DECLARE @NEW_LINE               char(1)  = CHAR(10);
-
--- Log4TSQL Standard/ExceptionHandler variables
-DECLARE	  @_Error         int
-		, @_RowCount      int
-		, @_Step          varchar(128)
-		, @_Message       nvarchar(512)
-		, @_ErrorContext  nvarchar(512)
-
--- Log4TSQL JournalWriter variables
-DECLARE   @_FunctionName			varchar(255)
-		, @_SprocStartTime			datetime
-		, @_JournalOnOff			varchar(3)
-		, @_Severity				smallint
-		, @_ExceptionId				int
-		, @_StepStartTime			datetime
-		, @_ProgressText			nvarchar(max)
-
-SET @_Error             = 0;
-SET @_FunctionName      = OBJECT_NAME(@@PROCID);
-SET @_Severity          = @SEVERITY_INFORMATION;
-SET @_SprocStartTime    = sysdatetimeoffset();
-SET @_ProgressText      = '' 
-SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-
--- set the Parameters for logging:
-SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_file_location			 : ' + COALESCE(@vault_file_location, '<NULL>')
-						+ @NEW_LINE + '    @vault_release_number         : ' + COALESCE(cast(@vault_release_number as varchar(20)), '<NULL>')
-						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
-						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
-						+ @NEW_LINE
-
-BEGIN TRY
-SET @_Step = 'Generate any required error';
-IF @DoGenerateError = 1
-   select 1 / 0
-SET @_Step = 'Validate Inputs';
-
-SET @_Step = 'Initialise Variables';
-
-if isnull(@vault_file_location, '') = ''
-	set @vault_file_location = 'C:\bcp'
-
-
-select @database_name = quotename(db_name())
-select @filename = 'DV_Release__' + format(@vault_release_number, '000000') + '__' + format(sysdatetimeoffset(), 'yyyyMMdd_HHmmss')
-
-select @sql = 'bcp "select [release_build_key],[release_statement_sequence],[release_number],[release_statement_type],[release_statement] = REPLACE(REPLACE([release_statement],CHAR(13),''''),CHAR(10),''''),[affected_row_count] from #database_name#.[dv_release].[dv_release_build]  where [release_number] = #release_number# FOR XML RAW(''statement''), ROOT (''statements''), ELEMENTS" queryout #file_location#\#filename#.txt -c -T -S#servername# -r -t' 
-select @sql = replace(@sql, '#database_name#', quotename(db_name())) 
-select @sql = replace(@sql, '#release_number#', format(@vault_release_number, '000000'))
-select @sql = replace(@sql, '#file_location#',@vault_file_location) 
-select @sql = replace(@sql, '#filename#', @filename)
-select @sql = replace(@sql, '#servername#', @@servername)
---select @sql
-exec master.dbo.xp_cmdshell @sql
-
-/*--------------------------------------------------------------------------------------------------------------*/
-IF @@TRANCOUNT > 0 COMMIT TRAN;
-
-SET @_Message   = 'Successfully Exported Release: ' + format(@vault_release_number, '000000')
-
-END TRY
-BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Export Release: ' + format(@vault_release_number, '000000')
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
-	BEGIN
-		ROLLBACK TRAN;
-		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
-	END
-	
-EXEC log4.ExceptionHandler
-		  @ErrorContext  = @_ErrorContext
-		, @ErrorNumber   = @_Error OUT
-		, @ReturnMessage = @_Message OUT
-		, @ExceptionId   = @_ExceptionId OUT
-;
-END CATCH
-
---/////////////////////////////////////////////////////////////////////////////////////////////////
-OnComplete:
---/////////////////////////////////////////////////////////////////////////////////////////////////
-
-	--! Clean up
-
-	--!
-	--! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
-	--! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
-	--!
-	IF @_Error = 0
-		BEGIN
-			SET @_Step			= 'OnComplete'
-			SET @_Severity		= @SEVERITY_SUCCESS
-			SET @_Message		= COALESCE(@_Message, @_Step)
-								+ ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-		END
-	ELSE
-		BEGIN
-			SET @_Step			= COALESCE(@_Step, 'OnError')
-			SET @_Severity		= @SEVERITY_SEVERE
-			SET @_Message		= COALESCE(@_Message, @_Step)
-								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-		END
-
-	IF @_JournalOnOff = 'ON'
-		EXEC log4.JournalWriter
-				  @Task				= @_FunctionName
-				, @FunctionName		= @_FunctionName
-				, @StepInFunction	= @_Step
-				, @MessageText		= @_Message
-				, @Severity			= @_Severity
-				, @ExceptionId		= @_ExceptionId
-				--! Supply all the progress info after we've gone to such trouble to collect it
-				, @ExtraInfo        = @_ProgressText
-
-	--! Finally, throw an exception that will be detected by the caller
-	IF @DoThrowError = 1 AND @_Error > 0
-		RAISERROR(@_Message, 16, 99);
-
-	SET NOCOUNT OFF;
-
-	--! Return the value of @@ERROR (which will be zero on success)
-	RETURN (@_Error);
-END
-GO
 PRINT N'Creating [dv_scheduler].[dv_populate_manifest_hierarchy]...';
 
 
@@ -15950,6 +15705,328 @@ SET @_ErrorContext	= 'Failed to Build Manifest Schedule: ' + @schedule_list
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 ) --AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 IF @@TRANCOUNT > 0
+	BEGIN
+		ROLLBACK TRAN;
+		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
+	END
+	
+EXEC log4.ExceptionHandler
+		  @ErrorContext  = @_ErrorContext
+		, @ErrorNumber   = @_Error OUT
+		, @ReturnMessage = @_Message OUT
+		, @ExceptionId   = @_ExceptionId OUT
+;
+END CATCH
+
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+OnComplete:
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+
+	--! Clean up
+
+	--!
+	--! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
+	--! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
+	--!
+	IF @_Error = 0
+		BEGIN
+			SET @_Step			= 'OnComplete'
+			SET @_Severity		= @SEVERITY_SUCCESS
+			SET @_Message		= COALESCE(@_Message, @_Step)
+								+ ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+		END
+	ELSE
+		BEGIN
+			SET @_Step			= COALESCE(@_Step, 'OnError')
+			SET @_Severity		= @SEVERITY_SEVERE
+			SET @_Message		= COALESCE(@_Message, @_Step)
+								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+		END
+
+	IF @_JournalOnOff = 'ON'
+		EXEC log4.JournalWriter
+				  @Task				= @_FunctionName
+				, @FunctionName		= @_FunctionName
+				, @StepInFunction	= @_Step
+				, @MessageText		= @_Message
+				, @Severity			= @_Severity
+				, @ExceptionId		= @_ExceptionId
+				--! Supply all the progress info after we've gone to such trouble to collect it
+				, @ExtraInfo        = @_ProgressText
+
+	--! Finally, throw an exception that will be detected by the caller
+	IF @DoThrowError = 1 AND @_Error > 0
+		RAISERROR(@_Message, 16, 99);
+
+	SET NOCOUNT OFF;
+
+	--! Return the value of @@ERROR (which will be zero on success)
+	RETURN (@_Error);
+END
+GO
+PRINT N'Creating [dbo].[dv_load_source_table]...';
+
+
+GO
+CREATE PROCEDURE [dbo].[dv_load_source_table]
+(
+  @vault_source_system_name		varchar(128) = NULL
+, @vault_source_table_schema	varchar(128) = NULL
+, @vault_source_table_name		varchar(128) = NULL
+, @vault_source_load_type		varchar(50)  = NULL
+, @dogenerateerror				bit				= 0
+, @dothrowerror					bit				= 1
+)
+AS
+BEGIN
+SET NOCOUNT ON
+
+-- To Do - add Logging for the Payload Parameter
+--         validate Parameters properly
+--         Add Transactionality for Multi Sat Loads
+--         Pick a single sat to load (from a multi sat)
+-- System Wide Defaults
+-- Local Defaults Values
+
+set nocount on
+
+-- Object Specific Settings
+-- Source Table
+declare  @source_system						varchar(128)
+        ,@source_database					varchar(128)
+		,@source_schema						varchar(128)
+		,@source_table						varchar(128)
+		,@source_table_config_key			int
+		,@source_qualified_name				varchar(512)
+		,@source_load_date_time				varchar(128)
+		,@source_payload					nvarchar(max)
+--  Working Storage
+declare @load_details table 
+       (source_database_name		varchar(128)
+       ,source_table_key		int
+	   ,source_table_schema     varchar(128)
+	   ,source_table_name		varchar(128)
+	   ,source_table_load_type  varchar(50)
+	   ,satellite_database      varchar(128)
+	   ,satellite_name			varchar(128)
+	   ,link_key				int
+	   ,link_name				varchar(128)
+	   ,link_database			varchar(128)
+	   ,hub_key					int
+	   ,hub_name				varchar(128)
+	   ,hub_database			varchar(128))
+	   
+	   
+-- Log4TSQL Journal Constants 										
+DECLARE @SEVERITY_CRITICAL      smallint = 1;
+DECLARE @SEVERITY_SEVERE        smallint = 2;
+DECLARE @SEVERITY_MAJOR         smallint = 4;
+DECLARE @SEVERITY_MODERATE      smallint = 8;
+DECLARE @SEVERITY_MINOR         smallint = 16;
+DECLARE @SEVERITY_CONCURRENCY   smallint = 32;
+DECLARE @SEVERITY_INFORMATION   smallint = 256;
+DECLARE @SEVERITY_SUCCESS       smallint = 512;
+DECLARE @SEVERITY_DEBUG         smallint = 1024;
+DECLARE @NEW_LINE               char(1)  = CHAR(10);
+
+-- Log4TSQL Standard/ExceptionHandler variables
+DECLARE	  @_Error         int
+		, @_RowCount      int
+		, @_Step          varchar(128)
+		, @_Message       nvarchar(512)
+		, @_ErrorContext  nvarchar(512)
+
+-- Log4TSQL JournalWriter variables
+DECLARE   @_FunctionName			varchar(255)
+		, @_SprocStartTime			datetime
+		, @_JournalOnOff			varchar(3)
+		, @_Severity				smallint
+		, @_ExceptionId				int
+		, @_StepStartTime			datetime
+		, @_ProgressText			nvarchar(max)
+
+SET @_Error             = 0;
+SET @_FunctionName      = OBJECT_NAME(@@PROCID);
+SET @_Severity          = @SEVERITY_INFORMATION;
+SET @_SprocStartTime    = sysdatetimeoffset();
+SET @_ProgressText      = '' 
+SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
+
+-- set Log4TSQL Parameters for Logging:
+SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
+						+ @NEW_LINE + '    @vault_source_system_name     : ' + COALESCE(@vault_source_system_name, 'NULL')
+						+ @NEW_LINE + '    @vault_source_table_schema    : ' + COALESCE(@vault_source_table_schema, 'NULL')
+						+ @NEW_LINE + '    @vault_source_table_name      : ' + COALESCE(@vault_source_table_name, 'NULL')
+						+ @NEW_LINE + '    @vault_source_load_type       : ' + COALESCE(@vault_source_load_type, 'NULL')
+						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
+						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
+						+ @NEW_LINE
+
+BEGIN TRY
+
+SET @_Step = 'Generate any required error';
+IF @DoGenerateError = 1
+   select 1 / 0
+SET @_Step = 'Validate inputs';
+
+IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
+			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
+--IF isnull(@recreate_flag, '') not in ('Y', 'N') 
+--			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
+/*--------------------------------------------------------------------------------------------------------------*/	   
+SET @_Step = 'Get Defaults'
+-- Object Specific Settings
+-- Source Table
+select 	 @source_system				= s.[source_system_name]	
+        ,@source_database			= s.[timevault_name]
+		,@source_schema				= t.[source_table_schema]
+		,@source_table				= t.[source_table_name]
+		,@source_table_config_key	= t.[source_table_key]
+		,@source_qualified_name		= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
+from [dbo].[dv_source_system] s
+inner join [dbo].[dv_source_table] t
+on t.system_key = s.[source_system_key]
+where 1=1
+and s.[source_system_name]		= @vault_source_system_name
+and t.[source_table_schema]		= @vault_source_table_schema
+and t.[source_table_name]		= @vault_source_table_name
+
+SET @_Step = 'Get All Components related to the Source Table'	    
+insert @load_details            
+select  distinct
+        ss.timevault_name
+       ,st.[source_table_key] as source_table_key
+       ,st.source_table_schema	
+	   ,st.source_table_name	
+	   ,st.source_table_load_type
+	   ,s.satellite_database
+	   ,s.satellite_name
+	   ,l.link_key
+	   ,l.link_name
+	   ,l.link_database
+	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_key		else linkhub.hub_key		end as hub_key
+	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_name		else linkhub.hub_name		end as hub_name
+	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_database	else linkhub.hub_database	end as hub_database 
+from
+[dbo].[dv_source_system] ss
+inner join [dbo].[dv_source_table] st
+on st.system_key = ss.[source_system_key]
+inner join [dbo].[dv_column] c
+on c.table_key = st.[source_table_key]
+inner join [dbo].[dv_satellite_column] sc
+on sc.column_key = c.column_key
+inner join [dbo].[dv_satellite] s
+on s.satellite_key = sc.satellite_key
+left join [dbo].[dv_link] l
+on s.link_key = l.link_key
+and (l.link_key > 0 OR l.link_key < -100)
+left join [dbo].[dv_hub] h 
+on h.hub_key = s.hub_key
+and (h.hub_key > 0 OR h.hub_key < -100)
+left join [dbo].[dv_hub_link] hl
+on hl.link_key = l.link_key
+left join [dbo].[dv_hub] linkhub
+on linkhub.hub_key = hl.hub_key
+where ss.source_system_name		= @vault_source_system_name
+  and st.source_table_schema	= @vault_source_table_schema
+  and st.source_table_name		= @vault_source_table_name
+
+/*****************************************************************************************************************/
+--Load the Source Table in stages:
+--declare @source_database		varchar(128)
+--       ,@source_table_schema	varchar(128)
+--	   ,@source_table_name		varchar(128)
+
+--select @source_database		= source_database_name
+--      ,@source_table_schema = source_table_schema
+--	  ,@source_table_name	= source_table_name
+--from @load_details
+/*****************************************************************************************************************/
+SET @_Step = 'Load Hub Tables'
+--print ''
+--print 'Load Hub Tables'
+--print '----------------'
+declare @hub_database			varchar(128)
+       ,@hub_name				varchar(128)
+
+DECLARE hub_cursor CURSOR FOR  
+select distinct 
+       hub_database
+	  ,hub_name
+from @load_details
+where hub_name is not null
+
+OPEN hub_cursor   
+FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name  
+
+WHILE @@FETCH_STATUS = 0   
+BEGIN   
+       SET @_Step = 'Load Hub: ' + @hub_name
+	   --print @hub_name
+	   --print '/*********\'
+	   
+	   EXECUTE [dbo].[dv_load_hub_table] @source_system, @source_schema, @source_table, @hub_database, @hub_name
+	   FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name  
+END   
+
+CLOSE hub_cursor   
+DEALLOCATE hub_cursor
+
+
+/*****************************************************************************************************************/
+SET @_Step = 'Load Link Tables'
+--print ''
+--print 'Load Link Tables'
+--print '----------------'
+declare @link_database			varchar(128)
+       ,@link_name				varchar(128)
+
+DECLARE link_cursor CURSOR FOR  
+select distinct 
+       link_database
+	  ,link_name
+from @load_details
+where link_name is not null
+
+OPEN link_cursor   
+FETCH NEXT FROM link_cursor INTO @link_database, @link_name  
+
+WHILE @@FETCH_STATUS = 0   
+BEGIN   
+       SET @_Step = 'Load Link: ' + @link_name
+	   --print @link_name
+	   --print '/*********\'
+	   EXECUTE [dbo].[dv_load_link_table] @source_system, @source_schema, @source_table, @link_database, @link_name 
+	   FETCH NEXT FROM link_cursor INTO @link_database, @link_name  
+END   
+
+CLOSE link_cursor   
+DEALLOCATE link_cursor
+
+
+/*****************************************************************************************************************/
+SET @_Step = 'Load Sat Tables for: ' + @source_database + ' ' + @source_schema + ' ' + @source_table
+--print ''
+--print 'Load Sat Tables'
+--print '----------------'
+--print '/*********\'
+EXECUTE [dv_load_sats_for_source_table] @source_system, @source_schema, @source_table, @vault_source_load_type
+/*--------------------------------------------------------------------------------------------------------------*/
+
+SET @_ProgressText  = @_ProgressText + @NEW_LINE
+				+ 'Step: [' + @_Step + '] completed ' 
+
+IF @@TRANCOUNT > 0 COMMIT TRAN;
+
+SET @_Message   = 'Successfully Loaded Object: ' + @source_qualified_name
+
+END TRY
+BEGIN CATCH
+SET @_ErrorContext	= 'Failed to Load Object: ' + @source_qualified_name
+IF (XACT_STATE() = -1) -- uncommitable transaction
+OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
@@ -17329,21 +17406,21 @@ OnComplete:
 	RETURN (@_Error);
 END
 GO
-PRINT N'Creating [dbo].[dv_scheduler_q001]...';
-
-
-GO
-CREATE QUEUE [dbo].[dv_scheduler_q001]
-    WITH ACTIVATION (STATUS = ON, PROCEDURE_NAME = [dv_scheduler].[dv_process_queued_001], MAX_QUEUE_READERS = 4, EXECUTE AS N'SBLogin');
-
-
-GO
 PRINT N'Creating [dbo].[dv_scheduler_q002]...';
 
 
 GO
 CREATE QUEUE [dbo].[dv_scheduler_q002]
     WITH ACTIVATION (STATUS = ON, PROCEDURE_NAME = [dv_scheduler].[dv_process_queued_002], MAX_QUEUE_READERS = 3, EXECUTE AS N'SBLogin');
+
+
+GO
+PRINT N'Creating [dbo].[dv_scheduler_q001]...';
+
+
+GO
+CREATE QUEUE [dbo].[dv_scheduler_q001]
+    WITH ACTIVATION (STATUS = ON, PROCEDURE_NAME = [dv_scheduler].[dv_process_queued_001], MAX_QUEUE_READERS = 4, EXECUTE AS N'SBLogin');
 
 
 GO
@@ -17369,19 +17446,19 @@ CREATE SERVICE [dv_scheduler_s002]
 
 
 GO
-PRINT N'Creating [log4].[FormatElapsedTime].[MS_Description]...';
-
-
-GO
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Returns a string describing the time elapsed between start and end time', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'FUNCTION', @level1name = N'FormatElapsedTime';
-
-
-GO
 PRINT N'Creating [log4].[GetJournalControl].[MS_Description]...';
 
 
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Returns the ON/OFF value for the specified Journal Name, or Group Name if Module not found or the system default if neither is found', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'FUNCTION', @level1name = N'GetJournalControl';
+
+
+GO
+PRINT N'Creating [log4].[FormatElapsedTime].[MS_Description]...';
+
+
+GO
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Returns a string describing the time elapsed between start and end time', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'FUNCTION', @level1name = N'FormatElapsedTime';
 
 
 GO
