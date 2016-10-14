@@ -433,20 +433,20 @@ end
 -- Compile the SQL
 -- If it is a link, create the temp table with all Hub keys plus a dummy for the Link Keys.
 
-set @sql1 = ''
+set @sql1 = 'WITH wBaseSet as (' + @crlf
 if @sat_link_hub_flag = 'H'
-        set @sql1 = 'SELECT ' + quotename(@hub_surrogate_keyname) + ' = isnull(hub.' + quotename(@hub_surrogate_keyname) + ', ' + cast(@def_global_failed_lookup_key as varchar(50)) + ')' + @crlf
+        set @sql1 += 'SELECT ' + quotename(@hub_surrogate_keyname) + ' = isnull(hub.' + quotename(@hub_surrogate_keyname) + ', ' + cast(@def_global_failed_lookup_key as varchar(50)) + ')' + @crlf
 
 if @sat_link_hub_flag = 'L'
     begin
-        set @sql1 = 'SELECT ' + quotename(@link_surrogate_keyname) + ' = cast(0 as integer) ' + @crlf
+        set @sql1 += 'SELECT ' + quotename(@link_surrogate_keyname) + ' = cast(0 as integer) ' + @crlf
         set @sql1 = @sql1 + @wrk_hub_joins
         end
 
 if not (@link_load_only = 'Y' and @sat_link_hub_flag = 'L')
         set @sql1 = @sql1 + ', ' + @source_payload
 set @sql1 = @sql1 + ', [vault_load_time] = ' + @source_load_date_time + @crlf
-set @sql1 = @sql1 + ' INTO ' + @temp_table_name_001 + @crlf
+--set @sql1 = @sql1 + ' INTO ' + @temp_table_name_001 + @crlf
 set @sql1 = @sql1 + 'FROM ' + @source_qualified_name + ' src' + @crlf
 
 
@@ -455,7 +455,8 @@ if @sat_link_hub_flag = 'H'
 
 if @sat_link_hub_flag = 'L'
         set @sql1 = @sql1 + @link_lookup_joins
-set @sql1 = @sql1 + ';' + @crlf
+set @sql1 = @sql1 + ')' + @crlf +
+            'SELECT * ' + ' INTO ' + @temp_table_name_001 + ' FROM wBaseSet;'
 
 if (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y')
         begin

@@ -252,25 +252,23 @@ select top 1 k.[column_name]
 select @hub_link_surrogate_key = [column_name] from @payload_columns
 
 insert @payload_columns
-select  c.[column_name]
-       ,c.[column_type]
-       ,c.[column_length]
-	   ,c.[column_precision]
-	   ,c.[column_scale]
-	   ,c.[collation_Name]
-	   ,c.[bk_ordinal_position]
-       ,c.[source_ordinal_position]
-	   ,c.[satellite_ordinal_position]
+select  sc.[column_name]
+       ,sc.[column_type]
+       ,sc.[column_length]
+	   ,sc.[column_precision]
+	   ,sc.[column_scale]
+	   ,sc.[collation_Name]
+	   ,''
+	   ,''
+	   ,sc.[satellite_ordinal_position]
 	   ,''
 	   ,''
   FROM [dbo].[dv_satellite] s
-  inner join [dbo].[dv_satellite_column] hc
-  on s.satellite_key = hc.satellite_key
-  inner join [dbo].[dv_column] c
-  on hc.column_key = c.column_key
+  inner join [dbo].[dv_satellite_column] sc
+  on s.satellite_key = sc.satellite_key
   where 1=1
-  and s.[satellite_key] = @sat_config_key
-  and isnull(c.discard_flag, 0) <> 1 
+  and s.[satellite_key] = 1
+  --and isnull(c.discard_flag, 0) <> 1 
 
  /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Sat'
@@ -288,7 +286,7 @@ EXECUTE [dbo].[dv_create_DV_table]
   ,@dothrowerror
 
 /*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Index the Sat on the Surrogate Key Plus Row End Date'
+SET @_Step = 'Index the Sat on the Surrogate Key Plus Row Start Date'
 select @SQL = ''
 if @sat_is_columnstore = 0
 	begin

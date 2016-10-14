@@ -186,6 +186,44 @@ IF EXISTS (SELECT 1
 
 
 GO
+IF EXISTS (SELECT 1
+           FROM   [master].[dbo].[sysdatabases]
+           WHERE  [name] = N'$(DatabaseName)')
+    BEGIN
+        ALTER DATABASE [$(DatabaseName)]
+            SET QUERY_STORE (QUERY_CAPTURE_MODE = ALL, FLUSH_INTERVAL_SECONDS = 900, INTERVAL_LENGTH_MINUTES = 60, MAX_PLANS_PER_QUERY = 200, CLEANUP_POLICY = (STALE_QUERY_THRESHOLD_DAYS = 367), MAX_STORAGE_SIZE_MB = 100) 
+            WITH ROLLBACK IMMEDIATE;
+    END
+
+
+GO
+IF EXISTS (SELECT 1
+           FROM   [master].[dbo].[sysdatabases]
+           WHERE  [name] = N'$(DatabaseName)')
+    BEGIN
+        ALTER DATABASE [$(DatabaseName)]
+            SET QUERY_STORE = OFF 
+            WITH ROLLBACK IMMEDIATE;
+    END
+
+
+GO
+IF EXISTS (SELECT 1
+           FROM   [master].[dbo].[sysdatabases]
+           WHERE  [name] = N'$(DatabaseName)')
+    BEGIN
+        ALTER DATABASE SCOPED CONFIGURATION SET MAXDOP = 0;
+        ALTER DATABASE SCOPED CONFIGURATION FOR SECONDARY SET MAXDOP = PRIMARY;
+        ALTER DATABASE SCOPED CONFIGURATION SET LEGACY_CARDINALITY_ESTIMATION = OFF;
+        ALTER DATABASE SCOPED CONFIGURATION FOR SECONDARY SET LEGACY_CARDINALITY_ESTIMATION = PRIMARY;
+        ALTER DATABASE SCOPED CONFIGURATION SET PARAMETER_SNIFFING = ON;
+        ALTER DATABASE SCOPED CONFIGURATION FOR SECONDARY SET PARAMETER_SNIFFING = PRIMARY;
+        ALTER DATABASE SCOPED CONFIGURATION SET QUERY_OPTIMIZER_HOTFIXES = OFF;
+        ALTER DATABASE SCOPED CONFIGURATION FOR SECONDARY SET QUERY_OPTIMIZER_HOTFIXES = PRIMARY;
+    END
+
+
+GO
 USE [$(DatabaseName)];
 
 
@@ -315,36 +353,26 @@ PRINT N'Creating [dbo].[dv_column]...';
 
 GO
 CREATE TABLE [dbo].[dv_column] (
-    [column_key]                 INT                IDENTITY (1, 1) NOT NULL,
-    [table_key]                  INT                NOT NULL,
-    [column_name]                VARCHAR (128)      NOT NULL,
-    [column_type]                VARCHAR (30)       NOT NULL,
-    [column_length]              INT                NULL,
-    [column_precision]           INT                NULL,
-    [column_scale]               INT                NULL,
-    [Collation_Name]             [sysname]          NULL,
-    [bk_ordinal_position]        INT                NOT NULL,
-    [source_ordinal_position]    INT                NOT NULL,
-    [satellite_ordinal_position] INT                NOT NULL,
-    [is_source_date]             BIT                NOT NULL,
-    [discard_flag]               BIT                NOT NULL,
-    [is_retired]                 BIT                NOT NULL,
-    [release_key]                INT                NOT NULL,
-    [version_number]             INT                NOT NULL,
-    [updated_by]                 VARCHAR (30)       NULL,
-    [update_date_time]           DATETIMEOFFSET (7) NULL,
+    [column_key]              INT                IDENTITY (1, 1) NOT NULL,
+    [table_key]               INT                NOT NULL,
+    [column_name]             VARCHAR (128)      NOT NULL,
+    [column_type]             VARCHAR (30)       NOT NULL,
+    [column_length]           INT                NULL,
+    [column_precision]        INT                NULL,
+    [column_scale]            INT                NULL,
+    [Collation_Name]          [sysname]          NULL,
+    [bk_ordinal_position]     INT                NOT NULL,
+    [source_ordinal_position] INT                NOT NULL,
+    [is_source_date]          BIT                NOT NULL,
+    [discard_flag]            BIT                NOT NULL,
+    [is_retired]              BIT                NOT NULL,
+    [release_key]             INT                NOT NULL,
+    [version_number]          INT                NOT NULL,
+    [updated_by]              VARCHAR (30)       NULL,
+    [update_date_time]        DATETIMEOFFSET (7) NULL,
     CONSTRAINT [PK__dv_colum__448C9D1E0C33CF7F] PRIMARY KEY CLUSTERED ([column_key] ASC),
     CONSTRAINT [dv_column_unique] UNIQUE NONCLUSTERED ([table_key] ASC, [column_name] ASC)
 );
-
-
-GO
-PRINT N'Creating [dbo].[dv_column].[dv_satellite_ordinal_position_unique]...';
-
-
-GO
-CREATE UNIQUE NONCLUSTERED INDEX [dv_satellite_ordinal_position_unique]
-    ON [dbo].[dv_column]([table_key] ASC, [satellite_ordinal_position] ASC);
 
 
 GO
@@ -551,25 +579,6 @@ CREATE TABLE [dbo].[dv_satellite] (
 
 
 GO
-PRINT N'Creating [dbo].[dv_satellite_column]...';
-
-
-GO
-CREATE TABLE [dbo].[dv_satellite_column] (
-    [satellite_col_key] INT                IDENTITY (1, 1) NOT NULL,
-    [satellite_key]     INT                NOT NULL,
-    [column_key]        INT                NOT NULL,
-    [release_key]       INT                NOT NULL,
-    [version_number]    INT                NOT NULL,
-    [updated_by]        VARCHAR (30)       NULL,
-    [updated_datetime]  DATETIMEOFFSET (7) NULL,
-    CONSTRAINT [PK__dv_satel__FCBA778F866D59FE] PRIMARY KEY CLUSTERED ([satellite_col_key] ASC),
-    CONSTRAINT [dv_satellite_column_unique] UNIQUE NONCLUSTERED ([satellite_key] ASC, [column_key] ASC),
-    CONSTRAINT [dv_satellite_source_column_unique] UNIQUE NONCLUSTERED ([column_key] ASC)
-);
-
-
-GO
 PRINT N'Creating [dbo].[dv_source_system]...';
 
 
@@ -608,6 +617,62 @@ CREATE TABLE [dbo].[dv_source_table] (
     [update_date_time]        DATETIMEOFFSET (7) NULL,
     CONSTRAINT [PK__dv_sourc__D64CD3B7E8292317] PRIMARY KEY CLUSTERED ([source_table_key] ASC),
     CONSTRAINT [dv_source_system_unique] UNIQUE NONCLUSTERED ([system_key] ASC, [source_table_schema] ASC, [source_table_name] ASC)
+);
+
+
+GO
+PRINT N'Creating [dbo].[dv_ref_function]...';
+
+
+GO
+CREATE TABLE [dbo].[dv_ref_function] (
+    [ref_function_key]       INT                IDENTITY (1, 1) NOT NULL,
+    [ref_function_name]      VARCHAR (128)      NOT NULL,
+    [ref_function]           VARCHAR (4096)     NOT NULL,
+    [ref_function_arguments] VARCHAR (512)      NOT NULL,
+    [is_retired]             BIT                NOT NULL,
+    [release_key]            INT                NOT NULL,
+    [version_number]         INT                NOT NULL,
+    [updated_by]             VARCHAR (30)       NULL,
+    [updated_datetime]       DATETIMEOFFSET (7) NULL,
+    CONSTRAINT [PK__dv_ref_function] PRIMARY KEY CLUSTERED ([ref_function_key] ASC)
+);
+
+
+GO
+PRINT N'Creating [dbo].[dv_ref_function].[dv_ref_function_name_unique]...';
+
+
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [dv_ref_function_name_unique]
+    ON [dbo].[dv_ref_function]([ref_function_name] ASC);
+
+
+GO
+PRINT N'Creating [dbo].[dv_satellite_column]...';
+
+
+GO
+CREATE TABLE [dbo].[dv_satellite_column] (
+    [satellite_col_key]          INT                IDENTITY (1, 1) NOT NULL,
+    [satellite_key]              INT                NOT NULL,
+    [column_key]                 INT                NOT NULL,
+    [column_name]                VARCHAR (128)      NOT NULL,
+    [column_type]                VARCHAR (30)       NOT NULL,
+    [column_length]              INT                NULL,
+    [column_precision]           INT                NULL,
+    [column_scale]               INT                NULL,
+    [Collation_Name]             [sysname]          NULL,
+    [satellite_ordinal_position] INT                NOT NULL,
+    [ref_function_key]           INT                NOT NULL,
+    [func_ordinal_position]      INT                NOT NULL,
+    [release_key]                INT                NOT NULL,
+    [version_number]             INT                NOT NULL,
+    [updated_by]                 VARCHAR (30)       NULL,
+    [updated_datetime]           DATETIMEOFFSET (7) NULL,
+    CONSTRAINT [PK__dv_satellite_column] PRIMARY KEY CLUSTERED ([satellite_col_key] ASC),
+    CONSTRAINT [dv_satellite_column_unique] UNIQUE NONCLUSTERED ([satellite_key] ASC, [column_key] ASC),
+    CONSTRAINT [dv_satellite_source_column_unique] UNIQUE NONCLUSTERED ([column_key] ASC)
 );
 
 
@@ -1519,42 +1584,6 @@ ALTER TABLE [dbo].[dv_satellite]
 
 
 GO
-PRINT N'Creating [dbo].[DF_dv_satellite_column_release_key]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [DF_dv_satellite_column_release_key] DEFAULT ((0)) FOR [release_key];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__versi__3CF40B7E]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [DF__dv_satell__versi__3CF40B7E] DEFAULT ((1)) FOR [version_number];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__updat__3DE82FB7]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [DF__dv_satell__updat__3DE82FB7] DEFAULT (suser_name()) FOR [updated_by];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__updat__3EDC53F0]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [DF__dv_satell__updat__3EDC53F0] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
-
-
-GO
 PRINT N'Creating unnamed constraint on [dbo].[dv_source_system]...';
 
 
@@ -1651,6 +1680,114 @@ PRINT N'Creating [dbo].[DF__dv_source__updat__0A9D95DB]...';
 GO
 ALTER TABLE [dbo].[dv_source_table]
     ADD CONSTRAINT [DF__dv_source__updat__0A9D95DB] DEFAULT (sysdatetimeoffset()) FOR [update_date_time];
+
+
+GO
+PRINT N'Creating unnamed constraint on [dbo].[dv_ref_function]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function]
+    ADD DEFAULT ((0)) FOR [is_retired];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_ref_function_release_key]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function]
+    ADD CONSTRAINT [DF_dv_ref_function_release_key] DEFAULT ((0)) FOR [release_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_ref_function_version]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function]
+    ADD CONSTRAINT [DF_dv_ref_function_version] DEFAULT ((1)) FOR [version_number];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_ref_function_updated]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function]
+    ADD CONSTRAINT [DF_dv_ref_function_updated] DEFAULT (suser_name()) FOR [updated_by];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_ref_function_updated_datetime]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function]
+    ADD CONSTRAINT [DF_dv_ref_function_updated_datetime] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_column_column_key]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF_dv_satellite_column_column_key] DEFAULT ((0)) FOR [column_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_column_ref_function_key]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF_dv_satellite_column_ref_function_key] DEFAULT ((0)) FOR [ref_function_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_column_func_ordinal_position]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF_dv_satellite_column_func_ordinal_position] DEFAULT ((0)) FOR [func_ordinal_position];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_column_release_key]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF_dv_satellite_column_release_key] DEFAULT ((0)) FOR [release_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_column_version_number]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF_dv_satellite_column_version_number] DEFAULT ((1)) FOR [version_number];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_column_updated_by]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF_dv_satellite_column_updated_by] DEFAULT (suser_name()) FOR [updated_by];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_column_updated_datetime]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [DF_dv_satellite_column_updated_datetime] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
 
 
 GO
@@ -2257,33 +2394,6 @@ ALTER TABLE [dbo].[dv_satellite]
 
 
 GO
-PRINT N'Creating [dbo].[FK__dv_satellite_column__dv_column]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [FK__dv_satellite_column__dv_column] FOREIGN KEY ([column_key]) REFERENCES [dbo].[dv_column] ([column_key]);
-
-
-GO
-PRINT N'Creating [dbo].[FK__dv_satellite_column__dv_satellite]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [FK__dv_satellite_column__dv_satellite] FOREIGN KEY ([satellite_key]) REFERENCES [dbo].[dv_satellite] ([satellite_key]);
-
-
-GO
-PRINT N'Creating [dbo].[FK_dv_satellite_column_dv_release_master]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite_column]
-    ADD CONSTRAINT [FK_dv_satellite_column_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
-
-
-GO
 PRINT N'Creating [dbo].[FK_dv_source_system_dv_release_master]...';
 
 
@@ -2308,6 +2418,42 @@ PRINT N'Creating [dbo].[FK_dv_source_table_dv_release_master]...';
 GO
 ALTER TABLE [dbo].[dv_source_table]
     ADD CONSTRAINT [FK_dv_source_table_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK_dv_ref_function_dv_release_master]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function]
+    ADD CONSTRAINT [FK_dv_ref_function_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK__dv_satellite_column__dv_column]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [FK__dv_satellite_column__dv_column] FOREIGN KEY ([column_key]) REFERENCES [dbo].[dv_column] ([column_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK__dv_satellite_column__dv_satellite]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [FK__dv_satellite_column__dv_satellite] FOREIGN KEY ([satellite_key]) REFERENCES [dbo].[dv_satellite] ([satellite_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK_dv_satellite_column_dv_release_master]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite_column]
+    ADD CONSTRAINT [FK_dv_satellite_column_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
 
 
 GO
@@ -2668,22 +2814,6 @@ AS
 									   ON [a].[satellite_key] = [b].[satellite_key];
 	END;
 GO
-PRINT N'Creating [dbo].[dv_satellite_column_audit]...';
-
-
-GO
-CREATE TRIGGER [dbo].[dv_satellite_column_audit] ON [dbo].[dv_satellite_column]
-AFTER INSERT, UPDATE
-AS
-	BEGIN
-	    UPDATE [a]
-		 SET
-			[updated_datetime] = SYSDATETIMEOFFSET()
-		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_satellite_column] AS [a]
-									   JOIN [inserted] AS [b]
-									   ON [a].[satellite_col_key] = [b].[satellite_col_key];
-	END;
-GO
 PRINT N'Creating [dbo].[dv_source_system_audit]...';
 
 
@@ -2715,6 +2845,23 @@ AS
 		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_source_table] AS [a]
 									   JOIN [inserted] AS [b]
 									   ON [a].[source_table_key] = [b].[source_table_key];
+	END;
+GO
+PRINT N'Creating [dbo].[dv_ref_function_audit]...';
+
+
+GO
+
+CREATE TRIGGER [dbo].[dv_ref_function_audit] ON [dbo].[dv_ref_function]
+AFTER INSERT, UPDATE
+AS
+	BEGIN
+	    UPDATE [a]
+		 SET
+			[updated_datetime] = SYSDATETIMEOFFSET()
+		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_ref_function] AS [a]
+									   JOIN [inserted] AS [b]
+									   ON [a].[ref_function_key] = [b].[ref_function_key];
 	END;
 GO
 PRINT N'Creating [dv_log].[dv_load_state_audit]...';
@@ -3456,6 +3603,7 @@ RETURN
 (
       SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_default_column'			as sysname), dv_key_name = cast('default_column_key'		as sysname), dv_load_order = cast(10  as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_defaults'					as sysname), dv_key_name = cast('default_key'				as sysname), dv_load_order = cast(20  as int)
+union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_ref_function'				as sysname), dv_key_name = cast('ref_function_key'			as sysname), dv_load_order = cast(25  as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_source_system'			as sysname), dv_key_name = cast('source_system_key'			as sysname), dv_load_order = cast(30  as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_source_table'				as sysname), dv_key_name = cast('source_table_key'			as sysname), dv_load_order = cast(40  as int)
 union SELECT dv_schema_name = cast('dbo'			as sysname), dv_table_name = cast('dv_column'					as sysname), dv_key_name = cast('column_key'				as sysname), dv_load_order = cast(50  as int)
@@ -3862,75 +4010,6 @@ AS
 	DELETE
 	FROM   [dbo].[dv_satellite_column]
 	WHERE  [satellite_col_key] = @satellite_col_key
-
-	COMMIT
-GO
-PRINT N'Creating [dbo].[dv_satellite_column_insert]...';
-
-
-GO
-SET ANSI_NULLS ON;
-
-SET QUOTED_IDENTIFIER OFF;
-
-
-GO
-CREATE PROC [dbo].[dv_satellite_column_insert] 
-    @satellite_key int,
-    @column_key int,
-	@release_number int
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-	
-	declare @release_key int
-	       ,@rc int
-	select @release_key = [release_key] from [dv_release].[dv_release_master] where [release_number] = @release_number
-	set @rc = @@rowcount
-	if @rc <> 1 
-		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
-
-	INSERT INTO [dbo].[dv_satellite_column] ([satellite_key], [column_key],[release_key])
-	SELECT @satellite_key, @column_key, @release_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [satellite_col_key], [satellite_key], [column_key],[release_key], [version_number], [updated_by], [updated_datetime]
-	FROM   [dbo].[dv_satellite_column]
-	WHERE  [satellite_col_key] = SCOPE_IDENTITY()
-	-- End Return Select <- do not remove
-               
-	COMMIT
-       RETURN SCOPE_IDENTITY()
-GO
-SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
-
-
-GO
-PRINT N'Creating [dbo].[dv_satellite_column_update]...';
-
-
-GO
-CREATE PROC [dbo].[dv_satellite_column_update] 
-    @satellite_col_key int,
-    @satellite_key int,
-    @column_key int
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_satellite_column]
-	SET    [satellite_key] = @satellite_key, [column_key] = @column_key
-	WHERE  [satellite_col_key] = @satellite_col_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [satellite_col_key], [satellite_key], [column_key], [version_number], [updated_by], [updated_datetime]
-	FROM   [dbo].[dv_satellite_column]
-	WHERE  [satellite_col_key] = @satellite_col_key	
-	-- End Return Select <- do not remove
 
 	COMMIT
 GO
@@ -4890,95 +4969,6 @@ AS
 
 	COMMIT
 GO
-PRINT N'Creating [dbo].[dv_column_insert]...';
-
-
-GO
-SET ANSI_NULLS ON;
-
-SET QUOTED_IDENTIFIER OFF;
-
-
-GO
-CREATE PROC [dbo].[dv_column_insert] 
-    @table_key int,
-	@release_number int,
-    @column_name varchar(128),
-    @column_type varchar(30),
-    @column_length int = NULL,
-    @column_precision int = NULL,
-    @column_scale int = NULL,
-    @Collation_Name nvarchar(128) = NULL,
-    @bk_ordinal_position int,
-    @source_ordinal_position int,
-    @satellite_ordinal_position int,
-    @is_source_date bit,
-    @discard_flag bit,
-    @is_retired bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-		declare @release_key int
-	       ,@rc int
-	select @release_key = [release_key] from [dv_release].[dv_release_master] where [release_number] = @release_number
-	set @rc = @@rowcount
-	if @rc <> 1 
-		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
-	INSERT INTO [dbo].[dv_column] ([table_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [satellite_ordinal_position], [is_source_date], [discard_flag], [is_retired],[release_key])
-	SELECT @table_key, @column_name, @column_type, @column_length, @column_precision, @column_scale, @Collation_Name, @bk_ordinal_position, @source_ordinal_position, @satellite_ordinal_position, @is_source_date, @discard_flag, @is_retired, @release_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [column_key], [table_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [satellite_ordinal_position], [is_source_date], [discard_flag], [is_retired],[release_key],[version_number], [updated_by], [update_date_time]
-	FROM   [dbo].[dv_column]
-	WHERE  [column_key] = SCOPE_IDENTITY()
-	-- End Return Select <- do not remove
-               
-	COMMIT
-       RETURN SCOPE_IDENTITY()
-GO
-SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
-
-
-GO
-PRINT N'Creating [dbo].[dv_column_update]...';
-
-
-GO
-CREATE PROC [dbo].[dv_column_update] 
-    @column_key int,
-    @table_key int,
-    @column_name varchar(128),
-    @column_type varchar(30),
-    @column_length int = NULL,
-    @column_precision int = NULL,
-    @column_scale int = NULL,
-    @Collation_Name nvarchar(128) = NULL,
-    @bk_ordinal_position int,
-    @source_ordinal_position int,
-    @satellite_ordinal_position int,
-    @is_source_date bit,
-    @discard_flag bit,
-    @is_retired bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_column]
-	SET    [table_key] = @table_key, [column_name] = @column_name, [column_type] = @column_type, [column_length] = @column_length, [column_precision] = @column_precision, [column_scale] = @column_scale, [Collation_Name] = @Collation_Name, [bk_ordinal_position] = @bk_ordinal_position, [source_ordinal_position] = @source_ordinal_position, [satellite_ordinal_position] = @satellite_ordinal_position, [is_source_date] = @is_source_date, [discard_flag] = @discard_flag, [is_retired] = @is_retired
-	WHERE  [column_key] = @column_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [column_key], [table_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [satellite_ordinal_position], [is_source_date], [discard_flag], [is_retired], [version_number], [updated_by], [update_date_time]
-	FROM   [dbo].[dv_column]
-	WHERE  [column_key] = @column_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
 PRINT N'Creating [dbo].[dv_default_column_delete]...';
 
 
@@ -5060,6 +5050,182 @@ GO
 SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
 
 
+GO
+PRINT N'Creating [dbo].[dv_column_update]...';
+
+
+GO
+CREATE PROC [dbo].[dv_column_update] 
+    @column_key int,
+    @table_key int,
+    @column_name varchar(128),
+    @column_type varchar(30),
+    @column_length int = NULL,
+    @column_precision int = NULL,
+    @column_scale int = NULL,
+    @Collation_Name nvarchar(128) = NULL,
+    @bk_ordinal_position int,
+    @source_ordinal_position int,
+    @is_source_date bit,
+    @discard_flag bit,
+    @is_retired bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_column]
+	SET    [table_key] = @table_key, [column_name] = @column_name, [column_type] = @column_type, [column_length] = @column_length, [column_precision] = @column_precision, [column_scale] = @column_scale, [Collation_Name] = @Collation_Name, [bk_ordinal_position] = @bk_ordinal_position, [source_ordinal_position] = @source_ordinal_position, [is_source_date] = @is_source_date, [discard_flag] = @discard_flag, [is_retired] = @is_retired
+	WHERE  [column_key] = @column_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT [column_key], [table_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [is_source_date], [discard_flag], [is_retired], [version_number], [updated_by], [update_date_time]
+	FROM   [dbo].[dv_column]
+	WHERE  [column_key] = @column_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+PRINT N'Creating [dbo].[dv_column_insert]...';
+
+
+GO
+SET ANSI_NULLS ON;
+
+SET QUOTED_IDENTIFIER OFF;
+
+
+GO
+CREATE PROC [dbo].[dv_column_insert] 
+    @table_key int,
+	@release_number int,
+    @column_name varchar(128),
+    @column_type varchar(30),
+    @column_length int = NULL,
+    @column_precision int = NULL,
+    @column_scale int = NULL,
+    @Collation_Name nvarchar(128) = NULL,
+    @bk_ordinal_position int,
+    @source_ordinal_position int,
+    @is_source_date bit,
+    @discard_flag bit,
+    @is_retired bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+		declare @release_key int
+	       ,@rc int
+	select @release_key = [release_key] from [dv_release].[dv_release_master] where [release_number] = @release_number
+	set @rc = @@rowcount
+	if @rc <> 1 
+		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
+	INSERT INTO [dbo].[dv_column] ([table_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [is_source_date], [discard_flag], [is_retired],[release_key])
+	SELECT @table_key, @column_name, @column_type, @column_length, @column_precision, @column_scale, @Collation_Name, @bk_ordinal_position, @source_ordinal_position, @is_source_date, @discard_flag, @is_retired, @release_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT [column_key], [table_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [is_source_date], [discard_flag], [is_retired],[release_key],[version_number], [updated_by], [update_date_time]
+	FROM   [dbo].[dv_column]
+	WHERE  [column_key] = SCOPE_IDENTITY()
+	-- End Return Select <- do not remove
+               
+	COMMIT
+       RETURN SCOPE_IDENTITY()
+GO
+SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
+
+
+GO
+PRINT N'Creating [dbo].[dv_satellite_column_insert]...';
+
+
+GO
+SET ANSI_NULLS ON;
+
+SET QUOTED_IDENTIFIER OFF;
+
+
+GO
+CREATE PROC [dbo].[dv_satellite_column_insert] 
+    @satellite_key int,
+    @column_key int,
+	@column_name [varchar](128),
+	@column_type [varchar](30),
+	@column_length [int],
+	@column_precision [int],
+	@column_scale [int],
+	@Collation_Name [sysname],
+	@satellite_ordinal_position [int],
+	@ref_function_key [int],
+	@func_ordinal_position [int],
+	@release_number int
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+	
+	declare @release_key int
+	       ,@rc int
+	select @release_key = [release_key] from [dv_release].[dv_release_master] where [release_number] = @release_number
+	set @rc = @@rowcount
+	if @rc <> 1 
+		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
+
+	INSERT INTO [dbo].[dv_satellite_column]([satellite_key],[column_key],[column_name],[column_type],[column_length],[column_precision],[column_scale],[Collation_Name],[satellite_ordinal_position],[ref_function_key],[func_ordinal_position],[release_key])
+	SELECT @satellite_key, @column_key, @column_name,@column_type,@column_length,@column_precision,@column_scale,@Collation_Name,@satellite_ordinal_position,@ref_function_key,@func_ordinal_position,@release_key
+
+	
+	-- Begin Return Select <- do not remove
+	SELECT [satellite_col_key], [satellite_key],[column_key],[column_name],[column_type],[column_length],[column_precision],[column_scale],[Collation_Name],[satellite_ordinal_position],[ref_function_key],[func_ordinal_position],[release_key], [version_number], [updated_by], [updated_datetime]
+	FROM   [dbo].[dv_satellite_column]
+	WHERE  [satellite_col_key] = SCOPE_IDENTITY()
+	-- End Return Select <- do not remove
+               
+	COMMIT
+       RETURN SCOPE_IDENTITY()
+GO
+SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
+
+
+GO
+PRINT N'Creating [dbo].[dv_satellite_column_update]...';
+
+
+GO
+CREATE PROC [dbo].[dv_satellite_column_update] 
+    @satellite_col_key int,
+    @satellite_key int,
+    @column_key int,
+	@column_name [varchar](128),
+	@column_type [varchar](30),
+	@column_length [int],
+	@column_precision [int],
+	@column_scale [int],
+	@Collation_Name [sysname],
+	@satellite_ordinal_position [int],
+	@ref_function_key [int],
+	@func_ordinal_position [int]
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_satellite_column]
+	SET    [satellite_key] = @satellite_key, [column_key] = @column_key,[column_name] = @column_name,[column_type] = @column_type,[column_length] = @column_length,[column_precision] = @column_precision, [column_scale] = @column_scale, [Collation_Name] = @Collation_Name, [satellite_ordinal_position] = @satellite_ordinal_position, [ref_function_key] = @ref_function_key, [func_ordinal_position] = @func_ordinal_position
+	
+	WHERE  [satellite_col_key] = @satellite_col_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT [satellite_col_key], [satellite_key],[column_key],[column_name],[column_type],[column_length],[column_precision],[column_scale],[Collation_Name],[satellite_ordinal_position],[ref_function_key],[func_ordinal_position],[release_key], [version_number], [updated_by], [updated_datetime]
+	FROM   [dbo].[dv_satellite_column]
+	WHERE  [satellite_col_key] = @satellite_col_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
 GO
 PRINT N'Creating [dv_log].[dv_log_progress]...';
 
@@ -8098,584 +8264,6 @@ OnComplete:
 	RETURN (@_Error);
 END
 GO
-PRINT N'Creating [dbo].[dv_load_source_table_key_lookup]...';
-
-
-GO
-CREATE PROCEDURE [dbo].[dv_load_source_table_key_lookup]
-(
-  @vault_source_system_name             varchar(128) = NULL
-, @vault_source_table_schema			varchar(128) = NULL
-, @vault_source_table_name              varchar(128) = NULL
-, @link_load_only						char(1) = 'N'  -- "Y" Indicates that this temp table is being used for a link load key lookup, not a Sat key Lookup.
-, @vault_temp_table_name				varchar(116) OUTPUT
-, @vault_sql_statement					nvarchar(max) OUTPUT
-, @dogenerateerror                      bit		= 0
-, @dothrowerror                         bit		= 1
-
-)
-AS
-BEGIN
-SET NOCOUNT ON
-
--- To Do - add Logging for the Payload Parameter
---         validate Parameters properly
---declare @sat_name varchar(100) =  'AdventureWorks2014_production_productinventory'
-
--- System Wide Defaults
--- Local Defaults Values
-DECLARE @crlf											char(2) = CHAR(13) + CHAR(10)
--- Global Defaults
-DECLARE
-                 @def_global_lowdate                    datetime
-				,@def_global_highdate                   datetime
-				,@def_global_default_load_date_time     varchar(128)
-                ,@def_global_failed_lookup_key          int
--- Hub Defaults
-				,@def_hub_prefix                        varchar(128)
-                ,@def_hub_schema                        varchar(128)
-                ,@def_hub_filegroup                     varchar(128)
---Link Defaults
-                ,@def_link_prefix                       varchar(128)
-                ,@def_link_schema                       varchar(128)
-                ,@def_link_filegroup                    varchar(128)
---Sat Defaults
-                ,@def_sat_prefix                        varchar(128)
-                ,@def_sat_schema                        varchar(128)
-                ,@def_sat_filegroup                     varchar(128)
-                ,@sat_start_date_col                    varchar(128)
-                ,@sat_end_date_col                      varchar(128)
-
--- Object Specific Settings
--- Source Table
-                ,@source_system                         varchar(128)
-				,@source_database                       varchar(128)
-                ,@source_schema                         varchar(128)
-                ,@source_table                          varchar(128)
-                ,@source_table_config_key               int
-                ,@source_qualified_name                 varchar(512)
-                ,@source_load_date_time                 varchar(128)
-                ,@source_payload                        nvarchar(max)
--- Hub Table
-                ,@hub_database                          varchar(128)
-                ,@hub_schema                            varchar(128)
-                ,@hub_table                             varchar(128)
-                ,@hub_surrogate_keyname                 varchar(128)
-                ,@hub_config_key                        int
-                ,@hub_qualified_name                    varchar(512)
-                ,@hubt_technical_columns                nvarchar(max)
--- Link Table
-                ,@link_database                         varchar(128)
-                ,@link_schema                           varchar(128)
-                ,@link_table                            varchar(128)
-                ,@link_surrogate_keyname                varchar(128)
-                ,@link_config_key                       int
-                ,@link_qualified_name                   varchar(512)
-                ,@link_technical_columns                nvarchar(max)
-                ,@link_lookup_joins                     nvarchar(max)
-                ,@link_hub_keys                         nvarchar(max)
--- Sat Table
-                ,@sat_database                          varchar(128)
-                ,@sat_schema                            varchar(128)
-                ,@sat_table                             varchar(128)
-                ,@sat_surrogate_keyname                 varchar(128)
-                ,@sat_config_key                        int
-                ,@sat_link_hub_flag                     char(1)
-				,@sat_duplicate_removal_threshold		int			
-                ,@sat_qualified_name                    varchar(512)
-                ,@sat_technical_columns                 nvarchar(max)
-                ,@sat_payload                           nvarchar(max)
-
-
-
-
-
---  Working Storage
-DECLARE @sat_insert_count								int
-       ,@temp_table_name_001							varchar(116)
-       ,@sql											nvarchar(max)
-       ,@sql1											nvarchar(max)
-       ,@sql2											nvarchar(max)
-       ,@surrogate_key_match							nvarchar(max)
-DECLARE @declare										nvarchar(512)   = ''
-DECLARE @count_rows										nvarchar(256)   = ''
-DECLARE @match_list										nvarchar(max)   = ''
-DECLARE @value_list										nvarchar(max)   = ''
-DECLARE @sat_column_list								nvarchar(max)   = ''
-DECLARE @hub_column_list								nvarchar(max)   = ''
-
-DECLARE @ParmDefinition									nvarchar(500);
-
-
-DECLARE @wrk_link_joins									nvarchar(max)
-DECLARE @wrk_hub_joins									nvarchar(max)
-DECLARE @wrk_link_keys									nvarchar(max)
-
--- Log4TSQL Journal Constants
-DECLARE @SEVERITY_CRITICAL								smallint = 1;
-DECLARE @SEVERITY_SEVERE								smallint = 2;
-DECLARE @SEVERITY_MAJOR									smallint = 4;
-DECLARE @SEVERITY_MODERATE								smallint = 8;
-DECLARE @SEVERITY_MINOR									smallint = 16;
-DECLARE @SEVERITY_CONCURRENCY							smallint = 32;
-DECLARE @SEVERITY_INFORMATION							smallint = 256;
-DECLARE @SEVERITY_SUCCESS								smallint = 512;
-DECLARE @SEVERITY_DEBUG									smallint = 1024;
-DECLARE @NEW_LINE										char(1)  = CHAR(10);
-
--- Log4TSQL Standard/ExceptionHandler variables
-DECLARE	@_Error											int
-      , @_RowCount										int
-      , @_Step											varchar(128)
-      , @_Message										nvarchar(512)
-      , @_ErrorContext									nvarchar(512)
-
--- Log4TSQL JournalWriter variables
-DECLARE			  @_FunctionName                        varchar(255)
-                , @_SprocStartTime                      datetime
-                , @_JournalOnOff                        varchar(3)
-                , @_Severity                            smallint
-                , @_ExceptionId                         int
-                , @_StepStartTime                       datetime
-                , @_ProgressText                        nvarchar(max)
-
-SET @_Error             = 0;
-SET @_FunctionName      = OBJECT_NAME(@@PROCID);
-SET @_Severity          = @SEVERITY_INFORMATION;
-SET @_SprocStartTime    = sysdatetimeoffset();
-SET @_ProgressText      = ''
-SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-
--- set Log4TSQL Parameters for Logging:
-SET @_ProgressText              = @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-                                                 + @NEW_LINE + '    @vault_source_system_name  : ' + COALESCE(@vault_source_system_name, 'NULL')
-                                                 + @NEW_LINE + '    @vault_source_table_schema : ' + COALESCE(@vault_source_table_schema, 'NULL')
-                                                 + @NEW_LINE + '    @vault_source_table_name   : ' + COALESCE(@vault_source_table_name, 'NULL')
-                                                 + @NEW_LINE + '    @link_load_only            : ' + COALESCE(@link_load_only, 'NULL')
-                                                 + @NEW_LINE + '    @DoGenerateError           : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
-                                                 + @NEW_LINE + '    @DoThrowError              : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
-                                                 + @NEW_LINE
-
-BEGIN TRY
-SET @_Step = 'Generate any required error';
-IF @DoGenerateError = 1
-   select 1 / 0
-SET @_Step = 'Validate inputs';
-
---IF (select count(*) from [dbo].[dv_sat] where sat_name = @sat_name) <> 1
---                      RAISERROR('Invalid sat Name: %s', 16, 1, @sat_name);
---IF isnull(@recreate_flag, '') not in ('Y', 'N')
---                      RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
-/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Get Defaults'
--- System Wide Defaults
-select
--- Global Defaults
- @def_global_lowdate                            = cast([dbo].[fn_get_default_value] ('LowDate','Global')              as datetime)
-,@def_global_highdate                           = cast([dbo].[fn_get_default_value] ('HighDate','Global')             as datetime)
-,@def_global_default_load_date_time				= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')  as varchar(128))
-,@def_global_failed_lookup_key					= cast([dbo].[fn_get_default_value] ('FailedLookupKey', 'Global')     as integer)
--- Hub Defaults
-,@def_hub_prefix                                = cast([dbo].[fn_get_default_value] ('prefix','hub')                  as varchar(128))
-,@def_hub_schema                                = cast([dbo].[fn_get_default_value] ('schema','hub')                  as varchar(128))
-,@def_hub_filegroup                             = cast([dbo].[fn_get_default_value] ('filegroup','hub')               as varchar(128))
--- Link Defaults
-,@def_link_prefix                               = cast([dbo].[fn_get_default_value] ('prefix','lnk')                  as varchar(128))
-,@def_link_schema                               = cast([dbo].[fn_get_default_value] ('schema','lnk')                  as varchar(128))
-,@def_link_filegroup                            = cast([dbo].[fn_get_default_value] ('filegroup','lnk')               as varchar(128))
--- Sat Defaults
-,@def_sat_prefix                                = cast([dbo].[fn_get_default_value] ('prefix','sat')                  as varchar(128))
-,@def_sat_schema                                = cast([dbo].[fn_get_default_value] ('schema','sat')                  as varchar(128))
-,@def_sat_filegroup                             = cast([dbo].[fn_get_default_value] ('filegroup','sat')               as varchar(128))
-
-select @sat_start_date_col = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type = 'sat'
-and object_column_type = 'Version_Start_Date'
-select @sat_end_date_col = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type = 'sat'
-and object_column_type = 'Version_End_Date'
-
--- Object Specific Settings
--- Source Table
-select   @source_system                         = s.[source_system_name]
-        ,@source_database                       = s.[timevault_name]
-        ,@source_schema                         = t.[source_table_schema]
-        ,@source_table                          = t.[source_table_name]
-        ,@source_table_config_key				= t.[source_table_key]
-        ,@source_qualified_name					= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
-from [dbo].[dv_source_system] s
-inner join [dbo].[dv_source_table] t
-on t.system_key = s.[source_system_key]
-where 1=1
-and s.[source_system_name]						= @vault_source_system_name
-and t.[source_table_schema]						= @vault_source_table_schema
-and t.[source_table_name]						= @vault_source_table_name
-
--- Satellite
-select	   @sat_config_key						= sat.[satellite_key]
-          ,@sat_link_hub_flag					= sat.[link_hub_satellite_flag]
-		  ,@sat_duplicate_removal_threshold		= sat.[duplicate_removal_threshold]
-from [dbo].[dv_source_table] t
-inner join [dbo].[dv_column] c
-on c.table_key = t.[source_table_key]
-inner join [dbo].[dv_satellite_column] sc
-on sc.column_key = c.column_key
-inner join [dbo].[dv_satellite] sat
-on sat.satellite_key = sc.satellite_key
-where 1=1
-and t.[source_table_key] = @source_table_config_key
-
--- Owner Hub Table
-if @sat_link_hub_flag = 'H'
-        select   @hub_database                  = h.[hub_database]
-                ,@hub_schema                    = coalesce([hub_schema], @def_hub_schema, 'dbo')
-                ,@hub_table                     = h.[hub_name]
-                --,@hub_surrogate_keyname			= [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
-				,@hub_surrogate_keyname			= (select replace(replace(column_name, '[', ''), ']', '') from [dbo].[fn_get_key_definition](h.[hub_name], 'hub'))
-                ,@hub_config_key                = h.[hub_key]
-                ,@hub_qualified_name			= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))
-        from [dbo].[dv_satellite] s
-        inner join [dbo].[dv_hub] h
-        on s.hub_key = h.hub_key
-where 1=1
-and s.[satellite_key] = @sat_config_key
-
--- Owner Link Table
-if @sat_link_hub_flag = 'L'
-begin
-        select   @link_database                 = l.[link_database]
-                ,@link_schema                   = coalesce(l.[link_schema], @def_link_schema, 'dbo')
-                ,@link_table                    = l.[link_name]
-                --,@link_surrogate_keyname		= [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
-				,@link_surrogate_keyname		= (select replace(replace(column_name, '[', ''), ']', '') from [dbo].[fn_get_key_definition](l.[link_name], 'lnk'))
-                ,@link_config_key               = l.[link_key]
-                ,@link_qualified_name			= quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([link_name], 'lnk')))
-        from [dbo].[dv_satellite] s
-        inner join [dbo].[dv_link] l
-        on s.link_key = l.link_key
-    where 1=1
-    and s.[satellite_key] = @sat_config_key
-
-        set @link_lookup_joins = ''
-        set @link_hub_keys = ''
-
-
-declare @c_hub_key                      int
-    ,@c_hub_name                        varchar(128)
-    ,@c_hub_schema						varchar(128)
-    ,@c_hub_database					varchar(128)
-    ,@c_hub_abbreviation				varchar(4)
-
-
-set @link_hub_keys		= ''
-set @wrk_link_keys		= ''
-set @link_lookup_joins	= ''
-set @wrk_hub_joins		= ''
-
-DECLARE c_hub_key CURSOR FOR
-select h.[hub_key]
-      ,h.[hub_name]
-      ,h.[hub_schema]
-      ,h.[hub_database]
-      ,h.[hub_abbreviation]
-
-  FROM [dbo].[dv_link] l
-  inner join [dbo].[dv_hub_link] hl
-  on hl.[link_key] = l.[link_key]
-  inner join [dbo].[dv_hub] h
-  on h.[hub_key] = hl.[hub_key]
-  where 1=1
-  and l.[link_key] = @link_config_key
-  order by hl.hub_link_key
-OPEN c_hub_key
-FETCH NEXT FROM c_hub_key
-INTO @c_hub_key
-    ,@c_hub_name
-    ,@c_hub_schema
-    ,@c_hub_database
-    ,@c_hub_abbreviation
-
-
-WHILE @@FETCH_STATUS = 0
-BEGIN
-	    select @wrk_link_joins  = 'LEFT JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + @c_hub_abbreviation + @crlf + ' ON  '
-        select @wrk_link_keys  += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + 
-				     		      ' = link.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + @crlf + ' AND '
-              ,@wrk_link_joins += @c_hub_abbreviation + '.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
-
-        from [dbo].[dv_hub] h
-        inner join [dbo].[dv_hub_key_column] hkc
-        on h.hub_key = hkc.hub_key
-        inner join [dbo].[dv_hub_column] hc
-        on hc.hub_key_column_key = hkc.hub_key_column_key
-        inner join [dbo].[dv_column] c
-        on c.column_key = hc.column_key
-        inner join [dbo].[dv_source_table] st
-        on c.[table_key] = st.[source_table_key]
-        where 1=1
-        and h.hub_key = @c_hub_key
-        and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1
-        ORDER BY hkc.hub_key_ordinal_position
-
-		select  @wrk_hub_joins += ', ' + @c_hub_abbreviation + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub'))  + @crlf
-        from(
-        select distinct hub_name--, hub_key_ordinal_position
-        from [dbo].[dv_hub] h
-        inner join [dbo].[dv_hub_key_column] hkc
-        on h.hub_key = hkc.hub_key
-        inner join [dbo].[dv_hub_column] hc
-        on hc.hub_key_column_key = hkc.hub_key_column_key
-        inner join [dbo].[dv_column] c
-        on c.column_key = hc.column_key
-        inner join [dbo].[dv_source_table] st
-        on c.[table_key] = st.[source_table_key]
-        where 1=1
-        and h.hub_key = @c_hub_key
-        and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1) hkc
-        --ORDER BY hkc.hub_key_ordinal_position
-
-        set @link_hub_keys = @link_hub_keys + @wrk_link_keys
-
-		-------------------
-
-        set @link_lookup_joins = @link_lookup_joins + left(@wrk_link_joins, len(@wrk_link_joins) - 4)
-        FETCH NEXT FROM c_hub_key
-        INTO @c_hub_key
-                ,@c_hub_name
-                ,@c_hub_schema
-                ,@c_hub_database
-                ,@c_hub_abbreviation
-END
-
-CLOSE c_hub_key
-DEALLOCATE c_hub_key
-select @wrk_link_keys = left(@wrk_link_keys, len(@wrk_link_keys) - 4)
-end
-
-
----- Use either a date time from the source or the default
-select @source_load_date_time = [column_name]
-from [dbo].[dv_source_table] st
-inner join [dbo].[dv_column] c
-on st.[source_table_key] = c.table_key
-where 1=1
-and st.[source_table_key] = @source_table_config_key
-and c.[is_source_date] = 1
---NB do not check Discard Flag here as the Date Column may not be included in the Sat.
-if @@rowcount > 1 RAISERROR ('Source Table has Multiple Source Dates Defined',16,1);
-select @source_load_date_time = isnull(@source_load_date_time, @def_global_default_load_date_time)
-
--- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
-set @sql = ''
-select @sql += 'src.' +quotename([column_name]) + @crlf +', '
-from [dbo].[dv_column]
-where 1=1
-and [discard_flag] <> 1
-and [table_key] = @source_table_config_key
-order by source_ordinal_position
-select @source_payload = left(@sql, len(@sql) -1)
-
----- Build the Sat Payload
-set @sql = ''
-select @sql += 'sat.' +quotename([column_name]) + @crlf +', '
-from [dbo].[dv_default_column]
-where 1=1
-and object_column_type <> 'Object_Key'
-and [object_type] = 'Sat'
-order by [ordinal_position]
-set @sat_technical_columns = @sql
-
----- Temp Tables
-
-select @temp_table_name_001 = '##temp_001_' + replace(cast(newid() as varchar(50)), '-', '')
-
--- Build the SQL to obtain Surrogate Keys, before Merging the Sat.
--- HUB based
-
--- Get the Key Match
-if @sat_link_hub_flag = 'H'
-begin
-        select @sql = ''
-        select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
-        from [dbo].[dv_hub] h
-        inner join [dbo].[dv_hub_key_column] hkc
-        on h.hub_key = hkc.hub_key
-        inner join [dbo].[dv_hub_column] hc
-        on hc.hub_key_column_key = hkc.hub_key_column_key
-        inner join [dbo].[dv_column] c
-        on c.column_key = hc.column_key
-        inner join [dbo].[dv_source_table] st
-        on c.[table_key] = st.[source_table_key]
-        where 1=1
-        and h.hub_key = @hub_config_key
-        and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1
-        ORDER BY hkc.hub_key_ordinal_position
-        select @surrogate_key_match =  left(@sql, len(@sql) - 4)
-end
-
--- Compile the SQL
--- If it is a link, create the temp table with all Hub keys plus a dummy for the Link Keys.
-
-set @sql1 = ''
-if @sat_link_hub_flag = 'H'
-        set @sql1 = 'SELECT ' + quotename(@hub_surrogate_keyname) + ' = isnull(hub.' + quotename(@hub_surrogate_keyname) + ', ' + cast(@def_global_failed_lookup_key as varchar(50)) + ')' + @crlf
-
-if @sat_link_hub_flag = 'L'
-    begin
-        set @sql1 = 'SELECT ' + quotename(@link_surrogate_keyname) + ' = cast(0 as integer) ' + @crlf
-        set @sql1 = @sql1 + @wrk_hub_joins
-        end
-
-if not (@link_load_only = 'Y' and @sat_link_hub_flag = 'L')
-        set @sql1 = @sql1 + ', ' + @source_payload
-set @sql1 = @sql1 + ', [vault_load_time] = ' + @source_load_date_time + @crlf
-set @sql1 = @sql1 + ' INTO ' + @temp_table_name_001 + @crlf
-set @sql1 = @sql1 + 'FROM ' + @source_qualified_name + ' src' + @crlf
-
-
-if @sat_link_hub_flag = 'H'
-        set @sql1 = @sql1 + 'LEFT JOIN ' + @hub_qualified_name + ' hub' + ' ON ' + @surrogate_key_match + @crlf
-
-if @sat_link_hub_flag = 'L'
-        set @sql1 = @sql1 + @link_lookup_joins
-set @sql1 = @sql1 + ';' + @crlf
-
-if (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y')
-        begin
-        set @sql1 = @sql1 + @crlf + 'UPDATE tmp ' + @crlf
-        set @sql1 = @sql1 + 'SET tmp.' + quotename(@link_surrogate_keyname) + ' = isnull(link.' + quotename(@link_surrogate_keyname) + ', ' + cast(@def_global_failed_lookup_key as varchar(50)) + ')' + @crlf
-        set @sql1 = @sql1 + 'FROM ' + @temp_table_name_001 + ' tmp' + @crlf
-        set @sql1 = @sql1 + 'LEFT JOIN ' + @link_qualified_name + ' link ' + @crlf + ' ON ' + @wrk_link_keys + ';'
-        end
-
-/****************************************************************************************************************************************/
--- Duplicate Checking
-set @sql1 = @sql1 + @crlf
-
-if (@sat_link_hub_flag = 'H' or (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y'))
-        begin
-        if @sat_duplicate_removal_threshold > 0
-        begin
-        set @sql1 = @sql1 + 'select ''' + @temp_table_name_001 + ''' as global_temp_table_name, * into #t1 from ' + @temp_table_name_001 + ' where ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' in( ' + @crlf
-        set @sql1 = @sql1 + '        select top ' + cast(@sat_duplicate_removal_threshold + 1 as varchar) + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' from '
-                          + @temp_table_name_001 + ' group by ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' having count(*) > 1)'  + @crlf
-        set @sql1 = @sql1 + 'IF (select count(*) from #t1) > 0 ' + @crlf
-        set @sql1 = @sql1 + '    begin' + @crlf
-        set @sql1 = @sql1 + '    declare @xml1 varchar(max);' + @crlf
-        set @sql1 = @sql1 + '    select  @xml1 = (select * from #t1 order by 2 for xml auto);' + @crlf
-        set @sql1 = @sql1 + '    EXECUTE [log4].[JournalWriter]  @FunctionName = ''' + @_FunctionName + ''''
-                                                            + ', @MessageText = ''Duplicate Keys Removed while Loading - ' + @source_qualified_name + ' - See [log4].[JournalDetail] for details'''
-                                                            + ', @ExtraInfo = @xml1'
-                                                            + ', @DatabaseName = ''' + @source_database + ''''
-                                                            + ', @Task = ''Key Lookup before Loading Source Table'''
-                                                            + ', @StepInFunction = ''Remove Duplicates before Loading Source Table'''
-                                                            + ', @Severity = 256'
-                                                            + ', @ExceptionId = 3601;' + @crlf
-
-        set @sql1 = @sql1 + '    IF (select count(*) from #t1) >  ' + cast(@sat_duplicate_removal_threshold as varchar) + @crlf
-        set @sql1 = @sql1 + '        raiserror (''Duplicate Keys Detected while Loading ' + @source_qualified_name + '''' + ', 16, 1)' + @crlf
-        set @sql1 = @sql1 + '    else' + @crlf
-        set @sql1 = @sql1 + '    DELETE FROM ' + @temp_table_name_001 + ' WHERE ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' IN(' + @crlf
-        set @sql1 = @sql1 + '           select distinct ' +  case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' FROM #t1); ' + @crlf
-        set @sql1 = @sql1 + '    end' + @crlf
-
-        end
-        else
-                set @sql1 = @sql1 + 'if exists (select 1 from ' + @temp_table_name_001 + ' group by ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' having count(*) > 1)' + @crlf + '    raiserror (''Duplicate Keys Detected while Loading ' + @source_qualified_name + '''' + ', 16, 1)' + @crlf + @crlf
-        end
-/****************************************************************************************************************************************/
-
-set @vault_sql_statement        = @sql1
-select @vault_temp_table_name   = @temp_table_name_001
-IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @crlf
-/*--------------------------------------------------------------------------------------------------------------*/
---SET @_Step = 'Load The ' + case when @sat_link_hub_flag = 'H' then 'Hub' else 'Link' end
---IF @_JournalOnOff = 'ON'
---      SET @_ProgressText += @sql
---print @vault_sql_statement
---EXECUTE sp_executesql @SQL;
-/*--------------------------------------------------------------------------------------------------------------*/
-
-SET @_ProgressText  = @_ProgressText + @NEW_LINE
-                                + 'Step: [' + @_Step + '] completed '
-
-IF @@TRANCOUNT > 0 COMMIT TRAN;
-
-SET @_Message   = 'Successfully Loaded Keys For: ' + @source_qualified_name
-
-END TRY
-BEGIN CATCH
-SET @_ErrorContext      = 'Failed to Load Keys For: ' + @source_qualified_name
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
-        BEGIN
-                ROLLBACK TRAN;
-                SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
-        END
-
-EXEC log4.ExceptionHandler
-                  @ErrorContext  = @_ErrorContext
-                , @ErrorNumber   = @_Error OUT
-                , @ReturnMessage = @_Message OUT
-                , @ExceptionId   = @_ExceptionId OUT
-;
-END CATCH
-
---/////////////////////////////////////////////////////////////////////////////////////////////////
-OnComplete:
---/////////////////////////////////////////////////////////////////////////////////////////////////
-
-        --! Clean up
-
-        --!
-        --! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
-        --! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
-        --!
-        IF @_Error = 0
-                BEGIN
-                        SET @_Step                      = 'OnComplete'
-                        SET @_Severity          = @SEVERITY_SUCCESS
-                        SET @_Message           = COALESCE(@_Message, @_Step)
-                                                                + ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-                        SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-                END
-        ELSE
-                BEGIN
-                        SET @_Step                      = COALESCE(@_Step, 'OnError')
-                        SET @_Severity          = @SEVERITY_SEVERE
-                        SET @_Message           = COALESCE(@_Message, @_Step)
-                                                                + ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-                        SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-                END
-
-        IF @_JournalOnOff = 'ON'
-                EXEC log4.JournalWriter
-                                  @Task                         = @_FunctionName
-                                , @FunctionName         = @_FunctionName
-                                , @StepInFunction       = @_Step
-                                , @MessageText          = @_Message
-                                , @Severity                     = @_Severity
-                                , @ExceptionId          = @_ExceptionId
-                                --! Supply all the progress info after we've gone to such trouble to collect it
-                                , @ExtraInfo        = @_ProgressText
-
-        --! Finally, throw an exception that will be detected by the caller
-        IF @DoThrowError = 1 AND @_Error > 0
-                RAISERROR(@_Message, 16, 99);
-
-        SET NOCOUNT OFF;
-
-        --! Return the value of @@ERROR (which will be zero on success)
-        RETURN (@_Error);
-END
-GO
 PRINT N'Creating [dbo].[dv_load_hub_table]...';
 
 
@@ -8940,514 +8528,6 @@ OnComplete:
 
 	--! Return the value of @@ERROR (which will be zero on success)
 	RETURN (@_Error);
-END
-GO
-PRINT N'Creating [dbo].[dv_load_link_table]...';
-
-
-GO
-CREATE PROCEDURE [dbo].[dv_load_link_table]
-(
-  @vault_source_system_name             varchar(256)    = NULL
-, @vault_source_table_schema			varchar(256)    = NULL
-, @vault_source_table_name              varchar(256)    = NULL
-, @vault_database                       varchar(256)    = NULL
-, @vault_link_name                      varchar(256)    = NULL
-, @dogenerateerror                      bit             = 0
-, @dothrowerror                         bit             = 1
-
-)
-AS
-BEGIN
-SET NOCOUNT ON
-
--- To Do - add Logging for the Payload Parameter
---         validate Parameters properly
---declare @sat_name varchar(100) =  'AdventureWorks2014_production_productinventory'
-
--- System Wide Defaults
--- Local Defaults Values
-DECLARE @crlf	char(2)	= CHAR(13) + CHAR(10)
--- Global Defaults
-DECLARE
-         @def_global_lowdate									datetime
-		,@def_global_highdate									datetime
-        ,@def_global_default_load_date_time						varchar(128)
-        ,@dv_load_date_time_column								varchar(128)
-        ,@def_global_failed_lookup_key							int
--- Hub Defaults
-        ,@def_hub_prefix                                        varchar(128)
-        ,@def_hub_schema                                        varchar(128)
-        ,@def_hub_filegroup                                     varchar(128)
---Link Defaults
-        ,@def_link_prefix                                       varchar(128)
-        ,@def_link_schema                                       varchar(128)
-        ,@def_link_filegroup									varchar(128)
---Sat Defaults
-        ,@def_sat_prefix                                        varchar(128)
-        ,@def_sat_schema                                        varchar(128)
-        ,@def_sat_filegroup                                     varchar(128)
-        ,@sat_start_date_col									varchar(128)
-        ,@sat_end_date_col                                      varchar(128)
-
--- Object Specific Settings
--- Source Table
-        ,@source_system                                         varchar(128)
-        ,@source_database                                       varchar(128)
-        ,@source_schema                                         varchar(128)
-        ,@source_table                                          varchar(128)
-        ,@source_table_config_key								int
-        ,@source_qualified_name									varchar(512)
-        ,@source_load_date_time									varchar(128)
-        ,@source_payload                                        varchar(max)
--- Hub Table
-        ,@hub_database                                          varchar(128)
-        ,@hub_schema                                            varchar(128)
-        ,@hub_table                                              varchar(128)
-        ,@hub_surrogate_keyname									varchar(128)
-        ,@hub_config_key                                        int
-        ,@hub_qualified_name									varchar(512)
-        ,@hub_technical_columns									varchar(max)
--- Link Table
-        ,@link_database                                         varchar(128)
-        ,@link_schema                                           varchar(128)
-        ,@link_table                                            varchar(128)
-        ,@link_surrogate_keyname								varchar(128)
-        ,@link_config_key                                       int
-        ,@link_qualified_name									varchar(512)
-        ,@link_technical_columns								nvarchar(max)
-        --,@link_lookup_joins                                   nvarchar(max)
-        ,@link_hub_keys                                         nvarchar(max)
--- Sat Table
-        ,@sat_database                                          varchar(128)
-        ,@sat_schema                                            varchar(128)
-        ,@sat_table                                             varchar(128)
-        ,@sat_surrogate_keyname									varchar(128)
-        ,@sat_config_key                                        int
-        ,@sat_link_hub_flag                                     char(1)
-        ,@sat_qualified_name									varchar(512)
-        ,@sat_technical_columns									nvarchar(max)
-        ,@sat_payload                                           nvarchar(max)
-
-
-
-
-
---  Working Storage
-DECLARE @sat_insert_count									int
-       ,@temp_table_name									varchar(116)
-       ,@sql                                                nvarchar(max)
-       ,@sql1                                               nvarchar(max)
-       ,@sql2                                               nvarchar(max)
-       ,@surrogate_key_match								nvarchar(max)
-DECLARE @declare											nvarchar(512)   = ''
-DECLARE @count_rows											nvarchar(256)   = ''
-DECLARE @match_list											nvarchar(max)   = ''
-DECLARE @value_list											nvarchar(max)   = ''
-DECLARE @sat_column_list									nvarchar(max)   = ''
-DECLARE @hub_column_list									nvarchar(max)   = ''
-
-DECLARE @ParmDefinition										nvarchar(500);
-DECLARE @insert_count										int;
-
-DECLARE @wrk_hub_joins										varchar(max)
-DECLARE @wrk_link_keys										varchar(max)
-DECLARE @wrk_link_match										varchar(max)
--- Log4TSQL Journal Constants
-DECLARE @SEVERITY_CRITICAL									smallint = 1;
-DECLARE @SEVERITY_SEVERE									smallint = 2;
-DECLARE @SEVERITY_MAJOR										smallint = 4;
-DECLARE @SEVERITY_MODERATE									smallint = 8;
-DECLARE @SEVERITY_MINOR										smallint = 16;
-DECLARE @SEVERITY_CONCURRENCY								smallint = 32;
-DECLARE @SEVERITY_INFORMATION								smallint = 256;
-DECLARE @SEVERITY_SUCCESS									smallint = 512;
-DECLARE @SEVERITY_DEBUG										smallint = 1024;
-DECLARE @NEW_LINE											char(1)  = CHAR(10);
-
--- Log4TSQL Standard/ExceptionHandler variables
-DECLARE   @_Error											int
-        , @_RowCount										int
-        , @_Step											varchar(128)
-        , @_Message											nvarchar(512)
-        , @_ErrorContext									nvarchar(512)
-
--- Log4TSQL JournalWriter variables
-DECLARE   @_FunctionName									varchar(255)
-        , @_SprocStartTime									datetime
-        , @_JournalOnOff									varchar(3)
-        , @_Severity										smallint
-        , @_ExceptionId										int
-        , @_StepStartTime									datetime
-        , @_ProgressText									nvarchar(max)
-
-SET @_Error             = 0;
-SET @_FunctionName      = OBJECT_NAME(@@PROCID);
-SET @_Severity          = @SEVERITY_INFORMATION;
-SET @_SprocStartTime    = sysdatetimeoffset();
-SET @_ProgressText      = ''
-SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-
-
--- set Log4TSQL Parameters for Logging:
-SET @_ProgressText              = @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-                                                + @NEW_LINE + '    @vault_source_system          : ' + COALESCE(@source_system, 'NULL')
-                                                + @NEW_LINE + '    @vault_source_table           : ' + COALESCE(@source_schema, 'NULL')
-                                                + @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
-                                                + @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
-                                                + @NEW_LINE
-
-BEGIN TRY
-SET @_Step = 'Generate any required error';
-IF @DoGenerateError = 1
-   select 1 / 0
-SET @_Step = 'Validate inputs';
-
---IF (select count(*) from [dbo].[dv_sat] where sat_name = @sat_name) <> 1
---                      RAISERROR('Invalid sat Name: %s', 16, 1, @sat_name);
---IF isnull(@recreate_flag, '') not in ('Y', 'N')
---                      RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
-/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Get Defaults'
-
---select @declare = 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf
---select @count_rows = 'OUTPUT $action into @rowcounts;' + @crlf + 'select @insertcount = count(*) from @rowcounts;'
-
--- System Wide Defaults
-select
--- Global Defaults
- @def_global_lowdate                            = cast([dbo].[fn_get_default_value] ('LowDate','Global')							as datetime)
-,@def_global_highdate                           = cast([dbo].[fn_get_default_value] ('HighDate','Global')							as datetime)
-,@def_global_default_load_date_time				= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')				as varchar(128))
-,@def_global_failed_lookup_key					= cast([dbo].[fn_get_default_value] ('FailedLookupKey', 'Global')					as integer)
-
--- Hub Defaults
-,@def_hub_prefix                                = cast([dbo].[fn_get_default_value] ('prefix','hub')                                as varchar(128))
-,@def_hub_schema                                = cast([dbo].[fn_get_default_value] ('schema','hub')                                as varchar(128))
-,@def_hub_filegroup                             = cast([dbo].[fn_get_default_value] ('filegroup','hub')								as varchar(128))
--- Link Defaults
-,@def_link_prefix                               = cast([dbo].[fn_get_default_value] ('prefix','lnk')                                as varchar(128))
-,@def_link_schema                               = cast([dbo].[fn_get_default_value] ('schema','lnk')                                as varchar(128))
-,@def_link_filegroup							= cast([dbo].[fn_get_default_value] ('filegroup','lnk')								as varchar(128))
--- Sat Defaults
-,@def_sat_prefix                                = cast([dbo].[fn_get_default_value] ('prefix','sat')                                as varchar(128))
-,@def_sat_schema                                = cast([dbo].[fn_get_default_value] ('schema','sat')                                as varchar(128))
-,@def_sat_filegroup                             = cast([dbo].[fn_get_default_value] ('filegroup','sat')								as varchar(128))
-
-select @sat_start_date_col = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type = 'sat'
-and object_column_type = 'Version_Start_Date'
-select @sat_end_date_col = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type = 'sat'
-and object_column_type = 'Version_End_Date'
-
--- Object Specific Settings
--- Source Table
-select   @source_system                         = s.[source_system_name]
-        ,@source_database                       = s.[timevault_name]
-        ,@source_schema                         = t.[source_table_schema]
-        ,@source_table                          = t.[source_table_name]
-        ,@source_table_config_key				= t.[source_table_key]
-        ,@source_qualified_name					= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
-from [dbo].[dv_source_system] s
-inner join [dbo].[dv_source_table] t
-on t.system_key = s.[source_system_key]
-where 1=1
-and s.[source_system_name]						= @vault_source_system_name
-and t.[source_table_schema]						= @vault_source_table_schema
-and t.[source_table_name]						= @vault_source_table_name
-
--- Get the Type Of Load - Hub or Link, together with Any Related Sat Key, for identifying the Surrogate Key Manager (Hub or Link).
--- The join goes via Column. Should be a direct relationship between source table and Sat - For RI Purposes, Plus for direct navigation , rather than inferring by Column.
-select
-           @sat_config_key = sat.[satellite_key]
-          ,@sat_link_hub_flag = sat.[link_hub_satellite_flag]
-from [dbo].[dv_source_table] t
-inner join [dbo].[dv_column] c
-on c.table_key = t.[source_table_key]
-inner join [dbo].[dv_satellite_column] sc
-on sc.column_key = c.column_key
-inner join [dbo].[dv_satellite] sat
-on sat.satellite_key = sc.satellite_key
-where 1=1
-and t.[source_table_key] = @source_table_config_key
-
--- Owner Hub Table
-if @sat_link_hub_flag = 'H'
-        select   @hub_database                  = h.[hub_database]
-                ,@hub_schema                    = coalesce([hub_schema], @def_hub_schema, 'dbo')
-                ,@hub_table                     = h.[hub_name]
- --               ,@hub_surrogate_keyname			= [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
-				,@hub_surrogate_keyname			= (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub'))
-                ,@hub_config_key                = h.[hub_key]
-                ,@hub_qualified_name			= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))
-        from [dbo].[dv_satellite] s
-        inner join [dbo].[dv_hub] h
-        on s.hub_key = h.hub_key
-where 1=1
-and s.[satellite_key] = @sat_config_key
-
--- Owner Link Table
-if @sat_link_hub_flag = 'L'
-begin
-        select   @link_database                 = l.[link_database]
-                ,@link_schema                   = coalesce(l.[link_schema], @def_link_schema, 'dbo')
-                ,@link_table                    = l.[link_name]
-                --,@link_surrogate_keyname		= [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
-				,@link_surrogate_keyname		= (select column_name from [dbo].[fn_get_key_definition]([link_name], 'lnk'))
-                ,@link_config_key               = l.[link_key]
-                ,@link_qualified_name			= quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([link_name], 'lnk')))
-        from [dbo].[dv_satellite] s
-        inner join [dbo].[dv_link] l
-        on s.link_key = l.link_key
-    where 1=1
-    and s.[satellite_key] = @sat_config_key
---set @link_hub_keys = ''
-
-declare @c_hub_key							int
-		,@c_hub_name                        varchar(128)
-        ,@c_hub_schema						varchar(128)
-        ,@c_hub_database					varchar(128)
-        ,@c_hub_abbreviation				varchar(4)
-
-
-set @link_hub_keys	= ''
-set @wrk_link_keys	= ''
-set @wrk_link_match = '' 
-set @wrk_hub_joins	= ''
-
-DECLARE c_hub_key CURSOR FOR
-select h.[hub_key]
-      ,h.[hub_name]
-      ,h.[hub_schema]
-      ,h.[hub_database]
-      ,h.[hub_abbreviation]
-
-  FROM [dbo].[dv_link] l
-  inner join [dbo].[dv_hub_link] hl
-  on hl.[link_key] = l.[link_key]
-  inner join [dbo].[dv_hub] h
-  on h.[hub_key] = hl.[hub_key]
-  where 1=1
-  and l.[link_key] = @link_config_key
-  order by hl.hub_link_key
-OPEN c_hub_key
-FETCH NEXT FROM c_hub_key
-INTO @c_hub_key
-    ,@c_hub_name
-    ,@c_hub_schema
-    ,@c_hub_database
-    ,@c_hub_abbreviation
-
-
-WHILE @@FETCH_STATUS = 0
-BEGIN
- 
-      --  select  @wrk_hub_joins   += quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')) + ', '
-      --         ,@wrk_link_keys   += ' tmp.' + quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')) + ' = link.' + quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')) + @crlf + ' AND '
-			   --,@wrk_link_match  += quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate'))  + ' , '
-        select  @wrk_hub_joins   += (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ', '
-               ,@wrk_link_keys   += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ' = link.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + @crlf + ' AND '
-			   ,@wrk_link_match  += (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub'))  + ' , '
-
-
-         from (
-        select distinct
-            h.hub_name
-           --,hkc.hub_key_ordinal_position
-        from [dbo].[dv_hub] h
-        inner join [dbo].[dv_hub_key_column] hkc
-        on h.hub_key = hkc.hub_key
-        inner join [dbo].[dv_hub_column] hc
-        on hc.hub_key_column_key = hkc.hub_key_column_key
-        inner join [dbo].[dv_column] c
-        on c.column_key = hc.column_key
-        inner join [dbo].[dv_source_table] st
-        on c.[table_key] = st.[source_table_key]
-        where 1=1
-        and h.hub_key = @c_hub_key
-        and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1) hkc
-       -- ORDER BY hkc.hub_key_ordinal_position
-        set @link_hub_keys = @link_hub_keys + @wrk_link_keys
-        FETCH NEXT FROM c_hub_key
-        INTO @c_hub_key
-                ,@c_hub_name
-                ,@c_hub_schema
-                ,@c_hub_database
-                ,@c_hub_abbreviation
-END
-
-CLOSE c_hub_key
-DEALLOCATE c_hub_key
-select @wrk_link_keys	= left(@wrk_link_keys, len(@wrk_link_keys) - 4)
-select @wrk_hub_joins	= left(@wrk_hub_joins, len(@wrk_hub_joins) - 1)
-select @wrk_link_match	= left(@wrk_link_match, len(@wrk_link_match) -2)
-end
-
-
----- Use either a date time from the source or the default
-select @source_load_date_time = [column_name]
-from [dbo].[dv_source_table] st
-inner join [dbo].[dv_column] c
-on st.[source_table_key] = c.table_key
-where 1=1
-and st.[source_table_key] = @source_table_config_key
-and c.[is_source_date] = 1
---NB do not check Discard Flag here as the Date Column may not be included in the Sat.
-if @@rowcount > 1 RAISERROR ('Source Table has Multiple Source Dates Defined',16,1);
-select @source_load_date_time = isnull(@source_load_date_time, @def_global_default_load_date_time)
-
--- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
-set @sql = ''
-select @sql += 'src.' +quotename([column_name]) + @crlf +', '
-from [dbo].[dv_column]
-where 1=1
-and [discard_flag] <> 1
-and [table_key] = @source_table_config_key
-order by source_ordinal_position
-select @source_payload = left(@sql, len(@sql) -1)
-
----- Build the Link Payload
-set @sql = ''
-select @sql += quotename([column_name]) +', '
-from [dbo].[dv_default_column]
-where 1=1
-and object_column_type <> 'Object_Key'
-and [object_type] = 'Lnk'
-order by [ordinal_position]
-set @link_technical_columns = @sql
--- Build the SQL to obtain Surrogate Keys, before Merging the Sat.
--- HUB based
-
--- Get the Key Match
-if @sat_link_hub_flag = 'H'
-begin
-        select @sql = ''
-        select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
-        from [dbo].[dv_hub] h
-        inner join [dbo].[dv_hub_key_column] hkc
-        on h.hub_key = hkc.hub_key
-        inner join [dbo].[dv_hub_column] hc
-        on hc.hub_key_column_key = hkc.hub_key_column_key
-        inner join [dbo].[dv_column] c
-        on c.column_key = hc.column_key
-        inner join [dbo].[dv_source_table] st
-        on c.[table_key] = st.[source_table_key]
-        where 1=1
-        and h.hub_key = @hub_config_key
-        and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1
-        ORDER BY hkc.hub_key_ordinal_position
-        select @surrogate_key_match =  left(@sql, len(@sql) - 4)
-        --select '@surrogate_key_match', @surrogate_key_match
-end
--- Compile the SQL
---SQL to do the look up the hub keys that make up the link
-EXECUTE [dbo].[dv_load_source_table_key_lookup] @source_system , @source_schema, @source_table, 'Y', @temp_table_name OUTPUT, @sql OUTPUT
-
-set @sql1 = @sql
-set @sql1 = @sql1 + 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf
-set @sql1 = @sql1 + 'WITH wBaseSet AS (SELECT DISTINCT ' + @wrk_link_match + ' FROM ' + quotename(@temp_table_name) + ')' + @crlf
-set @sql1 = @sql1 + 'MERGE ' + @link_qualified_name + ' WITH (HOLDLOCK) AS link' + @crlf
---set @sql1 = @sql1 + 'USING ' + @temp_table_name + ' AS tmp' + @crlf
-set @sql1 = @sql1 + 'USING wBaseSet AS tmp' + @crlf
-set @sql1 = @sql1 + 'ON' + @wrk_link_keys
-set @sql1 = @sql1 + 'WHEN NOT MATCHED BY TARGET THEN ' + @crlf
-set @sql1 = @sql1 + 'INSERT(' + @link_technical_columns + @wrk_hub_joins +  ')' + @crlf
-set @sql1 = @sql1 + 'VALUES(sysdatetimeoffset(), ''' + cast(@source_table_config_key as varchar(20)) + ''',' + @wrk_hub_joins + ')OUTPUT $action into @rowcounts;' + @crlf
-set @sql1 = @sql1 + 'select @insertcount = count(*) from @rowcounts;' + @crlf
-set @sql = @sql1
-
-/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Load The Hub'
-IF @_JournalOnOff = 'ON'
-        SET @_ProgressText += @SQL
-SET @ParmDefinition = N'@insertcount int OUTPUT';
-
---print 'link'
---print @SQL  
-EXECUTE sp_executesql @SQL, @ParmDefinition, @insertcount = @insert_count OUTPUT;
-
-/*--------------------------------------------------------------------------------------------------------------*/
-
-SET @_ProgressText  = @_ProgressText + @NEW_LINE
-                                + 'Step: [' + @_Step + '] completed '
-
-IF @@TRANCOUNT > 0 COMMIT TRAN;
-
-SET @_Message   = 'Successfully Loaded Object: ' + @link_qualified_name
-
-END TRY
-BEGIN CATCH
-SET @_ErrorContext      = 'Failed to Load Object: ' + @link_qualified_name
-
-
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
-        BEGIN
-                ROLLBACK TRAN;
-                SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
-        END
-
-EXEC log4.ExceptionHandler
-                  @ErrorContext  = @_ErrorContext
-                , @ErrorNumber   = @_Error OUT
-                , @ReturnMessage = @_Message OUT
-                , @ExceptionId   = @_ExceptionId OUT
-;
-END CATCH
-
---/////////////////////////////////////////////////////////////////////////////////////////////////
-OnComplete:
---/////////////////////////////////////////////////////////////////////////////////////////////////
-
-        --! Clean up
-
-        --!
-        --! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
-        --! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
-        --!
-        IF @_Error = 0
-                BEGIN
-                        SET @_Step                      = 'OnComplete'
-                        SET @_Severity          = @SEVERITY_SUCCESS
-                        SET @_Message           = COALESCE(@_Message, @_Step)
-                                                                + ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-                        SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-                END
-        ELSE
-                BEGIN
-                        SET @_Step                      = COALESCE(@_Step, 'OnError')
-                        SET @_Severity          = @SEVERITY_SEVERE
-                        SET @_Message           = COALESCE(@_Message, @_Step)
-                                                                + ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-                        SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-                END
-
-        IF @_JournalOnOff = 'ON'
-                EXEC log4.JournalWriter
-                                  @Task                         = @_FunctionName
-                                , @FunctionName         = @_FunctionName
-                                , @StepInFunction       = @_Step
-                                , @MessageText          = @_Message
-                                , @Severity                     = @_Severity
-                                , @ExceptionId          = @_ExceptionId
-                                --! Supply all the progress info after we've gone to such trouble to collect it
-                                , @ExtraInfo        = @_ProgressText
-
-        --! Finally, throw an exception that will be detected by the caller
-        IF @DoThrowError = 1 AND @_Error > 0
-                RAISERROR(@_Message, 16, 99);
-
-        SET NOCOUNT OFF;
-
-        --! Return the value of @@ERROR (which will be zero on success)
-        RETURN (@_Error);
 END
 GO
 PRINT N'Creating [dbo].[dv_load_sat_table]...';
@@ -9741,7 +8821,7 @@ select @source_load_date_time = 'vault_load_time'
 
 -- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
 set @sql = ''
-select @sql += 'src.' +quotename([column_name]) + @crlf +', '      
+select @sql += 'src.' +quotename(sc.[column_name]) + @crlf +', '      
 from [dbo].[dv_column] c
 inner join dv_Satellite_Column sc
 on c.column_key = sc.column_key
@@ -9749,7 +8829,7 @@ where 1=1
 and [discard_flag] <> 1
 and [table_key] = @source_table_config_key
 and sc.[satellite_key] = @sat_config_key
-order by c.satellite_ordinal_position
+order by sc.satellite_ordinal_position
 
 select @source_payload = left(@sql, len(@sql) -1)
 
@@ -9764,7 +8844,7 @@ order by [ordinal_position]
 set @sat_technical_columns = @sql
 
 set @sql = ''
-select @sql += 'sat.' +quotename([column_name]) + @crlf +', '
+select @sql += 'sat.' +quotename(sc.[column_name]) + @crlf +', '
 from [dbo].[dv_satellite] s
 inner join [dbo].[dv_satellite_column] sc
 on s.[satellite_key] = sc.[satellite_key]
@@ -9773,7 +8853,7 @@ on c.column_key = sc.column_key
 where 1=1
 and [discard_flag] <> 1
 and s.[satellite_key] = @sat_config_key
-order by c.satellite_ordinal_position
+order by sc.satellite_ordinal_position
 select @sat_payload = left(@sql, len(@sql) -1)	
 
 
@@ -9883,387 +8963,6 @@ IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @cr
 --print @vault_sql_statement
 --select @vault_sql_statement
 --EXECUTE sp_executesql @SQL;
-/*--------------------------------------------------------------------------------------------------------------*/
-
-SET @_ProgressText  = @_ProgressText + @NEW_LINE
-				+ 'Step: [' + @_Step + '] completed ' 
-
-IF @@TRANCOUNT > 0 COMMIT TRAN;
-
-SET @_Message   = 'Successfully Loaded Object: ' + @sat_qualified_name
-
-END TRY
-BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Load Object: ' + @sat_qualified_name
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
-	BEGIN
-		ROLLBACK TRAN;
-		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
-	END
-	
-EXEC log4.ExceptionHandler
-		  @ErrorContext  = @_ErrorContext
-		, @ErrorNumber   = @_Error OUT
-		, @ReturnMessage = @_Message OUT
-		, @ExceptionId   = @_ExceptionId OUT
-;
-END CATCH
-
---/////////////////////////////////////////////////////////////////////////////////////////////////
-OnComplete:
---/////////////////////////////////////////////////////////////////////////////////////////////////
-
-	--! Clean up
-
-	--!
-	--! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
-	--! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
-	--!
-	IF @_Error = 0
-		BEGIN
-			SET @_Step			= 'OnComplete'
-			SET @_Severity		= @SEVERITY_SUCCESS
-			SET @_Message		= COALESCE(@_Message, @_Step)
-								+ ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-		END
-	ELSE
-		BEGIN
-			SET @_Step			= COALESCE(@_Step, 'OnError')
-			SET @_Severity		= @SEVERITY_SEVERE
-			SET @_Message		= COALESCE(@_Message, @_Step)
-								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-		END
-
-	IF @_JournalOnOff = 'ON'
-		EXEC log4.JournalWriter
-				  @Task				= @_FunctionName
-				, @FunctionName		= @_FunctionName
-				, @StepInFunction	= @_Step
-				, @MessageText		= @_Message
-				, @Severity			= @_Severity
-				, @ExceptionId		= @_ExceptionId
-				--! Supply all the progress info after we've gone to such trouble to collect it
-				, @ExtraInfo        = @_ProgressText
-
-	--! Finally, throw an exception that will be detected by the caller
-	IF @DoThrowError = 1 AND @_Error > 0
-		RAISERROR(@_Message, 16, 99);
-
-	SET NOCOUNT OFF;
-
-	--! Return the value of @@ERROR (which will be zero on success)
-	RETURN (@_Error);
-END
-GO
-PRINT N'Creating [dbo].[dv_load_sats_for_source_table]...';
-
-
-GO
-
-CREATE PROCEDURE [dbo].[dv_load_sats_for_source_table]
-(
-  @vault_source_system_name		varchar(128) = NULL
-, @vault_source_table_schema	varchar(128) = NULL
-, @vault_source_table_name		varchar(128) = NULL
-, @vault_source_load_type		varchar(50)  = NULL
-, @dogenerateerror				bit				= 0
-, @dothrowerror					bit				= 1
-)
-AS
-BEGIN
-SET NOCOUNT ON
-
--- To Do - add Logging for the Payload Parameter
---         validate Parameters properly
---         Add Transactionality for Multi Sat Loads
---         Pick a single sat to load (from a multi sat)
--- System Wide Defaults
--- Local Defaults Values
-DECLARE @crlf								char(2)			= CHAR(13) + CHAR(10)
--- Global Defaults
-DECLARE  
-		 @def_global_lowdate				datetime
-        ,@def_global_highdate				datetime
-        ,@def_global_default_load_date_time	varchar(128)
-		,@def_global_failed_lookup_key		int
--- Hub Defaults									
-        ,@def_hub_prefix					varchar(128)
-		,@def_hub_schema					varchar(128)
-		,@def_hub_filegroup					varchar(128)
---Link Defaults									
-		,@def_link_prefix					varchar(128)
-		,@def_link_schema					varchar(128)
-		,@def_link_filegroup				varchar(128)
---Sat Defaults									
-		,@def_sat_prefix					varchar(128)
-		,@def_sat_schema					varchar(128)
-		,@def_sat_filegroup					varchar(128)
-		,@sat_start_date_col				varchar(128)
-		,@sat_end_date_col					varchar(128)				
-
--- Object Specific Settings
--- Source Table
-		,@source_system						varchar(128)
-        ,@source_database					varchar(128)
-		,@source_schema						varchar(128)
-		,@source_table						varchar(128)
-		,@source_table_config_key			int
-		,@source_qualified_name				varchar(512)
-		,@source_load_date_time				varchar(128)
-		,@source_payload					nvarchar(max)
--- Hub Table
-		,@hub_database						varchar(128)
-		,@hub_schema						varchar(128)
-		,@hub_table							varchar(128)
-		,@hub_surrogate_keyname				varchar(128)
-		,@hub_config_key					int
-		,@hub_qualified_name				varchar(512)
-		,@hubt_technical_columns			nvarchar(max)
--- Link Table
-		,@link_database						varchar(128)
-		,@link_schema						varchar(128)
-		,@link_table						varchar(128)
-		,@link_surrogate_keyname			varchar(128)
-		,@link_config_key					int
-		,@link_qualified_name				varchar(512)
-		,@link_technical_columns			nvarchar(max)
-		,@link_lookup_joins					nvarchar(max)
-		,@link_hub_keys						nvarchar(max)
--- Sat Table
-		,@sat_database						varchar(128)
-		,@sat_schema						varchar(128)
-		,@sat_table							varchar(128)
-		,@sat_surrogate_keyname				varchar(128)
-		,@sat_config_key					int
-		,@sat_link_hub_flag					char(1)
-		,@sat_qualified_name				varchar(512)
-		,@sat_technical_columns				nvarchar(max)
-		,@sat_payload						nvarchar(max)
-
---  Working Storage
-DECLARE @sat_insert_count			int
-       ,@temp_table_name			varchar(116)
-	   ,@sql						nvarchar(max)
-	   ,@sql1						nvarchar(max)
-	   ,@sql2						nvarchar(max)
-	   ,@surrogate_key_match        varchar(1000)
-DECLARE @declare					nvarchar(512)	= ''
-DECLARE @count_rows					nvarchar(256)	= ''
-DECLARE @match_list					nvarchar(max)	= ''
-DECLARE @value_list					nvarchar(max)	= ''
-DECLARE @sat_column_list			nvarchar(max)	= ''
-DECLARE @hub_column_list			nvarchar(max)	= ''
-
-DECLARE @ParmDefinition				nvarchar(500);
-
-DECLARE @satellite_list				table (sat_database				varchar(128)				
-										  ,sat_schema				varchar(128)			
-										  ,sat_table				varchar(128)
-										  ,sat_surrogate_keyname    varchar(128)
-										  ,sat_config_key			int
-										  ,sat_link_hub_flag		char(1)
-										  ,sat_qualified_name		varchar(512)
-										  )
-
-DECLARE @wrk_link_joins			nvarchar(max)
-DECLARE @wrk_link__keys			nvarchar(max)
--- Log4TSQL Journal Constants 										
-DECLARE @SEVERITY_CRITICAL      smallint = 1;
-DECLARE @SEVERITY_SEVERE        smallint = 2;
-DECLARE @SEVERITY_MAJOR         smallint = 4;
-DECLARE @SEVERITY_MODERATE      smallint = 8;
-DECLARE @SEVERITY_MINOR         smallint = 16;
-DECLARE @SEVERITY_CONCURRENCY   smallint = 32;
-DECLARE @SEVERITY_INFORMATION   smallint = 256;
-DECLARE @SEVERITY_SUCCESS       smallint = 512;
-DECLARE @SEVERITY_DEBUG         smallint = 1024;
-DECLARE @NEW_LINE               char(1)  = CHAR(10);
-
--- Log4TSQL Standard/ExceptionHandler variables
-DECLARE	  @_Error         int
-		, @_RowCount      int
-		, @_Step          varchar(128)
-		, @_Message       nvarchar(512)
-		, @_ErrorContext  nvarchar(512)
-
--- Log4TSQL JournalWriter variables
-DECLARE   @_FunctionName			varchar(255)
-		, @_SprocStartTime			datetime
-		, @_JournalOnOff			varchar(3)
-		, @_Severity				smallint
-		, @_ExceptionId				int
-		, @_StepStartTime			datetime
-		, @_ProgressText			nvarchar(max)
-
-SET @_Error             = 0;
-SET @_FunctionName      = OBJECT_NAME(@@PROCID);
-SET @_Severity          = @SEVERITY_INFORMATION;
-SET @_SprocStartTime    = sysdatetimeoffset();
-SET @_ProgressText      = '' 
-SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-
-
--- set Log4TSQL Parameters for Logging:
-SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_source_system_name     : ' + COALESCE(@vault_source_system_name, 'NULL')
-						+ @NEW_LINE + '    @vault_source_table_schema    : ' + COALESCE(@vault_source_table_schema, 'NULL')
-						+ @NEW_LINE + '    @vault_source_table_name      : ' + COALESCE(@vault_source_table_name, 'NULL')
-						+ @NEW_LINE + '    @vault_source_load_type       : ' + COALESCE(@vault_source_load_type, 'NULL')
-						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
-						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
-						+ @NEW_LINE
-
-BEGIN TRY
-
-SET @_Step = 'Generate any required error';
-IF @DoGenerateError = 1
-   select 1 / 0
-SET @_Step = 'Validate inputs';
-
-IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
-			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
---IF isnull(@recreate_flag, '') not in ('Y', 'N') 
---			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
-/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Get Defaults'
--- System Wide Defaults
-select
--- Global Defaults
- @def_global_lowdate				= cast([dbo].[fn_get_default_value] ('LowDate','Global')				as datetime)			
-,@def_global_highdate				= cast([dbo].[fn_get_default_value] ('HighDate','Global')				as datetime)	
-,@def_global_default_load_date_time	= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')	as varchar(128))
-,@def_global_failed_lookup_key		= cast([dbo].[fn_get_default_value] ('FailedLookupKey', 'Global')     as integer)
--- Hub Defaults								
-,@def_hub_prefix					= cast([dbo].[fn_get_default_value] ('prefix','hub')					as varchar(128))	
-,@def_hub_schema					= cast([dbo].[fn_get_default_value] ('schema','hub')					as varchar(128))	
-,@def_hub_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','hub')				as varchar(128))	
--- Link Defaults																						
-,@def_link_prefix					= cast([dbo].[fn_get_default_value] ('prefix','lnk')					as varchar(128))	
-,@def_link_schema					= cast([dbo].[fn_get_default_value] ('schema','lnk')					as varchar(128))	
-,@def_link_filegroup				= cast([dbo].[fn_get_default_value] ('filegroup','lnk')				as varchar(128))	
--- Sat Defaults																							
-,@def_sat_prefix					= cast([dbo].[fn_get_default_value] ('prefix','sat')					as varchar(128))	
-,@def_sat_schema					= cast([dbo].[fn_get_default_value] ('schema','sat')					as varchar(128))	
-,@def_sat_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','sat')				as varchar(128))
-
-select @sat_start_date_col = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type	= 'sat'
-and object_column_type = 'Version_Start_Date'
-select @sat_end_date_col = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type	= 'sat'
-and object_column_type = 'Version_End_Date'
-
--- Object Specific Settings
--- Source Table
-select 	 @source_system				= s.[source_system_name]	
-        ,@source_database			= s.[timevault_name]
-		,@source_schema				= t.[source_table_schema]
-		,@source_table				= t.[source_table_name]
-		,@source_table_config_key	= t.[source_table_key]
-		,@source_qualified_name		= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
-from [dbo].[dv_source_system] s
-inner join [dbo].[dv_source_table] t
-on t.system_key = s.[source_system_key]
-where 1=1
-and s.[source_system_name]		= @vault_source_system_name
-and t.[source_table_schema]		= @vault_source_table_schema
-and t.[source_table_name]		= @vault_source_table_name
-
--- Get a list of Satellites
-insert @satellite_list
-select distinct 
-       sat.[satellite_database]
-      ,coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')
-	  ,sat.[satellite_name]
-	  ,[dbo].[fn_get_object_name] (sat.[satellite_name],'SatSurrogate') 
-	  ,sat.[satellite_key] 
-	  ,sat.[link_hub_satellite_flag]
-	  ,quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat')))       
-from [dbo].[dv_source_table] t
-inner join [dbo].[dv_column] c
-on c.table_key = t.[source_table_key]
-inner join [dbo].[dv_satellite_column] sc
-on sc.column_key = c.column_key
-inner join [dbo].[dv_satellite] sat
-on sat.satellite_key = sc.satellite_key
-where 1=1
-and t.[source_table_key] = @source_table_config_key
-
--- Note that split satellites can only be of 1 type - Link or Hub
-select @sat_link_hub_flag = [sat_link_hub_flag] from @satellite_list 
-
--- Owner Hub Table
-
-if @sat_link_hub_flag = 'H' 
-	select   @hub_database			= h.[hub_database]
-	        ,@hub_schema			= coalesce([hub_schema], @def_hub_schema, 'dbo')				
-			,@hub_table				= h.[hub_name]
-			,@hub_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
-			,@hub_config_key		= h.[hub_key]
-			,@hub_qualified_name	= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))	
-	from [dbo].[dv_satellite] s
-	inner join [dbo].[dv_hub] h
-	on s.hub_key = h.hub_key
-where 1=1
-and s.[satellite_key] = (select top 1 sat_config_key from @satellite_list) 	
-		
--- Owner Link Table
-if @sat_link_hub_flag = 'L' 
-	select   @link_database			= l.[link_database]
-	        ,@link_schema			= coalesce(l.[link_schema], @def_link_schema, 'dbo')				
-			,@link_table			= l.[link_name]
-			,@link_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
-			,@link_config_key		= l.[link_key]
-			,@link_qualified_name	= quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([link_name], 'lnk')))
-	from [dbo].[dv_satellite] s
-	inner join [dbo].[dv_link] l
-	on s.link_key = l.link_key
-    where 1=1
-    and s.[satellite_key] = (select top 1 sat_config_key from @satellite_list)
- 
- -- Get the SQL for the Key Lookup   
-
-EXECUTE [dbo].[dv_load_source_table_key_lookup] @source_system,@source_schema,@source_table, 'N', @temp_table_name OUTPUT, @sql1 OUTPUT
-
--- Now Get the Satellite Update SQL
-
-set @sql2 =			'DECLARE @version_date_char VARCHAR(20)' + @crlf
-set @sql2 = @sql2 + 'DECLARE @version_date datetimeoffset(7)' + @crlf
-set @sql2 = @sql2 + 'select @version_date = sysdatetimeoffset()'  + @crlf 
-set @sql2 = @sql2 + 'select @version_date_char = CONVERT(varchar(50), @version_date) '  + @crlf 
-DECLARE c_sat_list CURSOR FOR 
-select sat_table
-  FROM @satellite_list
-
-OPEN c_sat_list   
-FETCH NEXT FROM c_sat_list 
-INTO @sat_table		 
-
-WHILE @@FETCH_STATUS = 0   
-BEGIN   
-EXECUTE [dbo].[dv_load_sat_table] @source_system,@source_schema,@source_table, @sat_table, @temp_table_name, @vault_source_load_type, @sql OUTPUT
-set @sql2 += @sql
-FETCH NEXT FROM c_sat_list 
-INTO @sat_table	
-END   
-
-CLOSE c_sat_list   
-DEALLOCATE c_sat_list
-	
-set @sql = @sql1 + @sql2
-
---/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Load The Source into Sat(s)'
-IF @_JournalOnOff = 'ON' SET @_ProgressText += @SQL
---select @SQL2
-EXECUTE(@SQL);
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE
@@ -11028,6 +9727,599 @@ OnComplete:
 	RETURN (@_Error);
 END
 GO
+PRINT N'Creating [dbo].[dv_load_source_table_key_lookup]...';
+
+
+GO
+CREATE PROCEDURE [dbo].[dv_load_source_table_key_lookup]
+(
+  @vault_source_system_name             varchar(128) = NULL
+, @vault_source_table_schema			varchar(128) = NULL
+, @vault_source_table_name              varchar(128) = NULL
+, @link_load_only						char(1) = 'N'  -- "Y" Indicates that this temp table is being used for a link load key lookup, not a Sat key Lookup.
+, @vault_temp_table_name				varchar(116) OUTPUT
+, @vault_sql_statement					nvarchar(max) OUTPUT
+, @dogenerateerror                      bit		= 0
+, @dothrowerror                         bit		= 1
+
+)
+AS
+BEGIN
+SET NOCOUNT ON
+
+-- To Do - add Logging for the Payload Parameter
+--         validate Parameters properly
+--declare @sat_name varchar(100) =  'AdventureWorks2014_production_productinventory'
+
+-- System Wide Defaults
+-- Local Defaults Values
+DECLARE @crlf											char(2) = CHAR(13) + CHAR(10)
+-- Global Defaults
+DECLARE
+                 @def_global_lowdate                    datetime
+				,@def_global_highdate                   datetime
+				,@def_global_default_load_date_time     varchar(128)
+                ,@def_global_failed_lookup_key          int
+-- Hub Defaults
+				,@def_hub_prefix                        varchar(128)
+                ,@def_hub_schema                        varchar(128)
+                ,@def_hub_filegroup                     varchar(128)
+--Link Defaults
+                ,@def_link_prefix                       varchar(128)
+                ,@def_link_schema                       varchar(128)
+                ,@def_link_filegroup                    varchar(128)
+--Sat Defaults
+                ,@def_sat_prefix                        varchar(128)
+                ,@def_sat_schema                        varchar(128)
+                ,@def_sat_filegroup                     varchar(128)
+                ,@sat_start_date_col                    varchar(128)
+                ,@sat_end_date_col                      varchar(128)
+
+-- Object Specific Settings
+-- Source Table
+                ,@source_system                         varchar(128)
+				,@source_database                       varchar(128)
+                ,@source_schema                         varchar(128)
+                ,@source_table                          varchar(128)
+                ,@source_table_config_key               int
+                ,@source_qualified_name                 varchar(512)
+                ,@source_load_date_time                 varchar(128)
+                ,@source_payload                        nvarchar(max)
+-- Hub Table
+                ,@hub_database                          varchar(128)
+                ,@hub_schema                            varchar(128)
+                ,@hub_table                             varchar(128)
+                ,@hub_surrogate_keyname                 varchar(128)
+                ,@hub_config_key                        int
+                ,@hub_qualified_name                    varchar(512)
+                ,@hubt_technical_columns                nvarchar(max)
+-- Link Table
+                ,@link_database                         varchar(128)
+                ,@link_schema                           varchar(128)
+                ,@link_table                            varchar(128)
+                ,@link_surrogate_keyname                varchar(128)
+                ,@link_config_key                       int
+                ,@link_qualified_name                   varchar(512)
+                ,@link_technical_columns                nvarchar(max)
+                ,@link_lookup_joins                     nvarchar(max)
+                ,@link_hub_keys                         nvarchar(max)
+-- Sat Table
+                ,@sat_database                          varchar(128)
+                ,@sat_schema                            varchar(128)
+                ,@sat_table                             varchar(128)
+                ,@sat_surrogate_keyname                 varchar(128)
+                ,@sat_config_key                        int
+                ,@sat_link_hub_flag                     char(1)
+				,@sat_duplicate_removal_threshold		int			
+                ,@sat_qualified_name                    varchar(512)
+                ,@sat_technical_columns                 nvarchar(max)
+                ,@sat_payload                           nvarchar(max)
+
+
+
+
+
+--  Working Storage
+DECLARE @sat_insert_count								int
+       ,@temp_table_name_001							varchar(116)
+       ,@sql											nvarchar(max)
+       ,@sql1											nvarchar(max)
+       ,@sql2											nvarchar(max)
+       ,@surrogate_key_match							nvarchar(max)
+DECLARE @declare										nvarchar(512)   = ''
+DECLARE @count_rows										nvarchar(256)   = ''
+DECLARE @match_list										nvarchar(max)   = ''
+DECLARE @value_list										nvarchar(max)   = ''
+DECLARE @sat_column_list								nvarchar(max)   = ''
+DECLARE @hub_column_list								nvarchar(max)   = ''
+
+DECLARE @ParmDefinition									nvarchar(500);
+
+
+DECLARE @wrk_link_joins									nvarchar(max)
+DECLARE @wrk_hub_joins									nvarchar(max)
+DECLARE @wrk_link_keys									nvarchar(max)
+
+-- Log4TSQL Journal Constants
+DECLARE @SEVERITY_CRITICAL								smallint = 1;
+DECLARE @SEVERITY_SEVERE								smallint = 2;
+DECLARE @SEVERITY_MAJOR									smallint = 4;
+DECLARE @SEVERITY_MODERATE								smallint = 8;
+DECLARE @SEVERITY_MINOR									smallint = 16;
+DECLARE @SEVERITY_CONCURRENCY							smallint = 32;
+DECLARE @SEVERITY_INFORMATION							smallint = 256;
+DECLARE @SEVERITY_SUCCESS								smallint = 512;
+DECLARE @SEVERITY_DEBUG									smallint = 1024;
+DECLARE @NEW_LINE										char(1)  = CHAR(10);
+
+-- Log4TSQL Standard/ExceptionHandler variables
+DECLARE	@_Error											int
+      , @_RowCount										int
+      , @_Step											varchar(128)
+      , @_Message										nvarchar(512)
+      , @_ErrorContext									nvarchar(512)
+
+-- Log4TSQL JournalWriter variables
+DECLARE			  @_FunctionName                        varchar(255)
+                , @_SprocStartTime                      datetime
+                , @_JournalOnOff                        varchar(3)
+                , @_Severity                            smallint
+                , @_ExceptionId                         int
+                , @_StepStartTime                       datetime
+                , @_ProgressText                        nvarchar(max)
+
+SET @_Error             = 0;
+SET @_FunctionName      = OBJECT_NAME(@@PROCID);
+SET @_Severity          = @SEVERITY_INFORMATION;
+SET @_SprocStartTime    = sysdatetimeoffset();
+SET @_ProgressText      = ''
+SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
+
+-- set Log4TSQL Parameters for Logging:
+SET @_ProgressText              = @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
+                                                 + @NEW_LINE + '    @vault_source_system_name  : ' + COALESCE(@vault_source_system_name, 'NULL')
+                                                 + @NEW_LINE + '    @vault_source_table_schema : ' + COALESCE(@vault_source_table_schema, 'NULL')
+                                                 + @NEW_LINE + '    @vault_source_table_name   : ' + COALESCE(@vault_source_table_name, 'NULL')
+                                                 + @NEW_LINE + '    @link_load_only            : ' + COALESCE(@link_load_only, 'NULL')
+                                                 + @NEW_LINE + '    @DoGenerateError           : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
+                                                 + @NEW_LINE + '    @DoThrowError              : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
+                                                 + @NEW_LINE
+
+BEGIN TRY
+SET @_Step = 'Generate any required error';
+IF @DoGenerateError = 1
+   select 1 / 0
+SET @_Step = 'Validate inputs';
+
+--IF (select count(*) from [dbo].[dv_sat] where sat_name = @sat_name) <> 1
+--                      RAISERROR('Invalid sat Name: %s', 16, 1, @sat_name);
+--IF isnull(@recreate_flag, '') not in ('Y', 'N')
+--                      RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
+/*--------------------------------------------------------------------------------------------------------------*/
+SET @_Step = 'Get Defaults'
+-- System Wide Defaults
+select
+-- Global Defaults
+ @def_global_lowdate                            = cast([dbo].[fn_get_default_value] ('LowDate','Global')              as datetime)
+,@def_global_highdate                           = cast([dbo].[fn_get_default_value] ('HighDate','Global')             as datetime)
+,@def_global_default_load_date_time				= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')  as varchar(128))
+,@def_global_failed_lookup_key					= cast([dbo].[fn_get_default_value] ('FailedLookupKey', 'Global')     as integer)
+-- Hub Defaults
+,@def_hub_prefix                                = cast([dbo].[fn_get_default_value] ('prefix','hub')                  as varchar(128))
+,@def_hub_schema                                = cast([dbo].[fn_get_default_value] ('schema','hub')                  as varchar(128))
+,@def_hub_filegroup                             = cast([dbo].[fn_get_default_value] ('filegroup','hub')               as varchar(128))
+-- Link Defaults
+,@def_link_prefix                               = cast([dbo].[fn_get_default_value] ('prefix','lnk')                  as varchar(128))
+,@def_link_schema                               = cast([dbo].[fn_get_default_value] ('schema','lnk')                  as varchar(128))
+,@def_link_filegroup                            = cast([dbo].[fn_get_default_value] ('filegroup','lnk')               as varchar(128))
+-- Sat Defaults
+,@def_sat_prefix                                = cast([dbo].[fn_get_default_value] ('prefix','sat')                  as varchar(128))
+,@def_sat_schema                                = cast([dbo].[fn_get_default_value] ('schema','sat')                  as varchar(128))
+,@def_sat_filegroup                             = cast([dbo].[fn_get_default_value] ('filegroup','sat')               as varchar(128))
+
+select @sat_start_date_col = quotename(column_name)
+from [dbo].[dv_default_column]
+where 1=1
+and object_type = 'sat'
+and object_column_type = 'Version_Start_Date'
+select @sat_end_date_col = quotename(column_name)
+from [dbo].[dv_default_column]
+where 1=1
+and object_type = 'sat'
+and object_column_type = 'Version_End_Date'
+
+-- Object Specific Settings
+-- Source Table
+select   @source_system                         = s.[source_system_name]
+        ,@source_database                       = s.[timevault_name]
+        ,@source_schema                         = t.[source_table_schema]
+        ,@source_table                          = t.[source_table_name]
+        ,@source_table_config_key				= t.[source_table_key]
+        ,@source_qualified_name					= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
+from [dbo].[dv_source_system] s
+inner join [dbo].[dv_source_table] t
+on t.system_key = s.[source_system_key]
+where 1=1
+and s.[source_system_name]						= @vault_source_system_name
+and t.[source_table_schema]						= @vault_source_table_schema
+and t.[source_table_name]						= @vault_source_table_name
+
+-- Satellite
+select	   @sat_config_key						= sat.[satellite_key]
+          ,@sat_link_hub_flag					= sat.[link_hub_satellite_flag]
+		  ,@sat_duplicate_removal_threshold		= sat.[duplicate_removal_threshold]
+from [dbo].[dv_source_table] t
+inner join [dbo].[dv_column] c
+on c.table_key = t.[source_table_key]
+inner join [dbo].[dv_satellite_column] sc
+on sc.column_key = c.column_key
+inner join [dbo].[dv_satellite] sat
+on sat.satellite_key = sc.satellite_key
+where 1=1
+and t.[source_table_key] = @source_table_config_key
+
+-- Owner Hub Table
+if @sat_link_hub_flag = 'H'
+        select   @hub_database                  = h.[hub_database]
+                ,@hub_schema                    = coalesce([hub_schema], @def_hub_schema, 'dbo')
+                ,@hub_table                     = h.[hub_name]
+                --,@hub_surrogate_keyname			= [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
+				,@hub_surrogate_keyname			= (select replace(replace(column_name, '[', ''), ']', '') from [dbo].[fn_get_key_definition](h.[hub_name], 'hub'))
+                ,@hub_config_key                = h.[hub_key]
+                ,@hub_qualified_name			= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))
+        from [dbo].[dv_satellite] s
+        inner join [dbo].[dv_hub] h
+        on s.hub_key = h.hub_key
+where 1=1
+and s.[satellite_key] = @sat_config_key
+
+-- Owner Link Table
+if @sat_link_hub_flag = 'L'
+begin
+        select   @link_database                 = l.[link_database]
+                ,@link_schema                   = coalesce(l.[link_schema], @def_link_schema, 'dbo')
+                ,@link_table                    = l.[link_name]
+                --,@link_surrogate_keyname		= [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
+				,@link_surrogate_keyname		= (select replace(replace(column_name, '[', ''), ']', '') from [dbo].[fn_get_key_definition](l.[link_name], 'lnk'))
+                ,@link_config_key               = l.[link_key]
+                ,@link_qualified_name			= quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([link_name], 'lnk')))
+        from [dbo].[dv_satellite] s
+        inner join [dbo].[dv_link] l
+        on s.link_key = l.link_key
+    where 1=1
+    and s.[satellite_key] = @sat_config_key
+
+        set @link_lookup_joins = ''
+        set @link_hub_keys = ''
+
+
+declare @c_hub_key                      int
+    ,@c_hub_name                        varchar(128)
+    ,@c_hub_schema						varchar(128)
+    ,@c_hub_database					varchar(128)
+    ,@c_hub_abbreviation				varchar(4)
+
+
+set @link_hub_keys		= ''
+set @wrk_link_keys		= ''
+set @link_lookup_joins	= ''
+set @wrk_hub_joins		= ''
+
+DECLARE c_hub_key CURSOR FOR
+select h.[hub_key]
+      ,h.[hub_name]
+      ,h.[hub_schema]
+      ,h.[hub_database]
+      ,h.[hub_abbreviation]
+
+  FROM [dbo].[dv_link] l
+  inner join [dbo].[dv_hub_link] hl
+  on hl.[link_key] = l.[link_key]
+  inner join [dbo].[dv_hub] h
+  on h.[hub_key] = hl.[hub_key]
+  where 1=1
+  and l.[link_key] = @link_config_key
+  order by hl.hub_link_key
+OPEN c_hub_key
+FETCH NEXT FROM c_hub_key
+INTO @c_hub_key
+    ,@c_hub_name
+    ,@c_hub_schema
+    ,@c_hub_database
+    ,@c_hub_abbreviation
+
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+	    select @wrk_link_joins  = 'LEFT JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + @c_hub_abbreviation + @crlf + ' ON  '
+        select @wrk_link_keys  += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + 
+				     		      ' = link.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + @crlf + ' AND '
+              ,@wrk_link_joins += @c_hub_abbreviation + '.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
+
+        from [dbo].[dv_hub] h
+        inner join [dbo].[dv_hub_key_column] hkc
+        on h.hub_key = hkc.hub_key
+        inner join [dbo].[dv_hub_column] hc
+        on hc.hub_key_column_key = hkc.hub_key_column_key
+        inner join [dbo].[dv_column] c
+        on c.column_key = hc.column_key
+        inner join [dbo].[dv_source_table] st
+        on c.[table_key] = st.[source_table_key]
+        where 1=1
+        and h.hub_key = @c_hub_key
+        and st.[source_table_key] = @source_table_config_key
+        and c.discard_flag <> 1
+        ORDER BY hkc.hub_key_ordinal_position
+
+		select  @wrk_hub_joins += ', ' + @c_hub_abbreviation + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub'))  + @crlf
+        from(
+        select distinct hub_name--, hub_key_ordinal_position
+        from [dbo].[dv_hub] h
+        inner join [dbo].[dv_hub_key_column] hkc
+        on h.hub_key = hkc.hub_key
+        inner join [dbo].[dv_hub_column] hc
+        on hc.hub_key_column_key = hkc.hub_key_column_key
+        inner join [dbo].[dv_column] c
+        on c.column_key = hc.column_key
+        inner join [dbo].[dv_source_table] st
+        on c.[table_key] = st.[source_table_key]
+        where 1=1
+        and h.hub_key = @c_hub_key
+        and st.[source_table_key] = @source_table_config_key
+        and c.discard_flag <> 1) hkc
+        --ORDER BY hkc.hub_key_ordinal_position
+
+        set @link_hub_keys = @link_hub_keys + @wrk_link_keys
+
+		-------------------
+
+        set @link_lookup_joins = @link_lookup_joins + left(@wrk_link_joins, len(@wrk_link_joins) - 4)
+        FETCH NEXT FROM c_hub_key
+        INTO @c_hub_key
+                ,@c_hub_name
+                ,@c_hub_schema
+                ,@c_hub_database
+                ,@c_hub_abbreviation
+END
+
+CLOSE c_hub_key
+DEALLOCATE c_hub_key
+select @wrk_link_keys = left(@wrk_link_keys, len(@wrk_link_keys) - 4)
+end
+
+
+---- Use either a date time from the source or the default
+select @source_load_date_time = [column_name]
+from [dbo].[dv_source_table] st
+inner join [dbo].[dv_column] c
+on st.[source_table_key] = c.table_key
+where 1=1
+and st.[source_table_key] = @source_table_config_key
+and c.[is_source_date] = 1
+--NB do not check Discard Flag here as the Date Column may not be included in the Sat.
+if @@rowcount > 1 RAISERROR ('Source Table has Multiple Source Dates Defined',16,1);
+select @source_load_date_time = isnull(@source_load_date_time, @def_global_default_load_date_time)
+
+-- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
+set @sql = ''
+select @sql += quotename(sc.column_name) + ' = ' + 
+           case when  replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
+		            = replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '')
+				then 'src.' + quotename(c.[column_name])
+				else 'cast(src.' + quotename(c.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '')
+				    + ')'
+				end 
+			+ @crlf +', '
+from [dbo].[dv_column] c
+inner join [dbo].[dv_satellite_column] sc on sc.column_key = c.column_key
+where 1=1
+   and c.[table_key] = @source_table_config_key
+order by c.source_ordinal_position
+select @source_payload = left(@sql, len(@sql) -1)
+
+---- Build the Sat Payload
+set @sql = ''
+select @sql += 'sat.' +quotename([column_name]) + @crlf +', '
+from [dbo].[dv_default_column]
+where 1=1
+and object_column_type <> 'Object_Key'
+and [object_type] = 'Sat'
+order by [ordinal_position]
+set @sat_technical_columns = @sql
+
+---- Temp Tables
+
+select @temp_table_name_001 = '##temp_001_' + replace(cast(newid() as varchar(50)), '-', '')
+
+-- Build the SQL to obtain Surrogate Keys, before Merging the Sat.
+-- HUB based
+
+-- Get the Key Match
+if @sat_link_hub_flag = 'H'
+begin
+        select @sql = ''
+        select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = ' +
+		       case when  replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
+		            = replace([dbo].[fn_build_column_definition] ([hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0), ' NOT NULL', '')
+				then 'src.' + quotename(c.[column_name])
+				else 'cast(src.' + quotename(c.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] ([hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0), ' NOT NULL', '')
+				    + ')'
+				end  
+		        + @crlf + ' AND '
+        from [dbo].[dv_hub] h
+        inner join [dbo].[dv_hub_key_column] hkc
+        on h.hub_key = hkc.hub_key
+        inner join [dbo].[dv_hub_column] hc
+        on hc.hub_key_column_key = hkc.hub_key_column_key
+        inner join [dbo].[dv_column] c
+        on c.column_key = hc.column_key
+        inner join [dbo].[dv_source_table] st
+        on c.[table_key] = st.[source_table_key]
+        where 1=1
+        and h.hub_key = @hub_config_key
+        and st.[source_table_key] = @source_table_config_key
+        and c.discard_flag <> 1
+        ORDER BY hkc.hub_key_ordinal_position
+        select @surrogate_key_match =  left(@sql, len(@sql) - 4)
+end
+--print @SQL
+-- Compile the SQL
+-- If it is a link, create the temp table with all Hub keys plus a dummy for the Link Keys.
+
+set @sql1 = 'WITH wBaseSet as (' + @crlf
+if @sat_link_hub_flag = 'H'
+        set @sql1 += 'SELECT ' + quotename(@hub_surrogate_keyname) + ' = isnull(hub.' + quotename(@hub_surrogate_keyname) + ', ' + cast(@def_global_failed_lookup_key as varchar(50)) + ')' + @crlf
+
+if @sat_link_hub_flag = 'L'
+    begin
+        set @sql1 += 'SELECT ' + quotename(@link_surrogate_keyname) + ' = cast(0 as integer) ' + @crlf
+        set @sql1 = @sql1 + @wrk_hub_joins
+        end
+
+if not (@link_load_only = 'Y' and @sat_link_hub_flag = 'L')
+        set @sql1 = @sql1 + ', ' + @source_payload
+set @sql1 = @sql1 + ', [vault_load_time] = ' + @source_load_date_time + @crlf
+--set @sql1 = @sql1 + ' INTO ' + @temp_table_name_001 + @crlf
+set @sql1 = @sql1 + 'FROM ' + @source_qualified_name + ' src' + @crlf
+
+
+if @sat_link_hub_flag = 'H'
+        set @sql1 = @sql1 + 'LEFT JOIN ' + @hub_qualified_name + ' hub' + ' ON ' + @surrogate_key_match + @crlf
+
+if @sat_link_hub_flag = 'L'
+        set @sql1 = @sql1 + @link_lookup_joins
+set @sql1 = @sql1 + ')' + @crlf +
+            'SELECT * ' + ' INTO ' + @temp_table_name_001 + ' FROM wBaseSet;'
+
+if (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y')
+        begin
+        set @sql1 = @sql1 + @crlf + 'UPDATE tmp ' + @crlf
+        set @sql1 = @sql1 + 'SET tmp.' + quotename(@link_surrogate_keyname) + ' = isnull(link.' + quotename(@link_surrogate_keyname) + ', ' + cast(@def_global_failed_lookup_key as varchar(50)) + ')' + @crlf
+        set @sql1 = @sql1 + 'FROM ' + @temp_table_name_001 + ' tmp' + @crlf
+        set @sql1 = @sql1 + 'LEFT JOIN ' + @link_qualified_name + ' link ' + @crlf + ' ON ' + @wrk_link_keys + ';'
+        end
+
+/****************************************************************************************************************************************/
+-- Duplicate Checking
+set @sql1 = @sql1 + @crlf
+
+if (@sat_link_hub_flag = 'H' or (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y'))
+        begin
+        if @sat_duplicate_removal_threshold > 0
+        begin
+        set @sql1 = @sql1 + 'select ''' + @temp_table_name_001 + ''' as global_temp_table_name, * into #t1 from ' + @temp_table_name_001 + ' where ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' in( ' + @crlf
+        set @sql1 = @sql1 + '        select top ' + cast(@sat_duplicate_removal_threshold + 1 as varchar) + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' from '
+                          + @temp_table_name_001 + ' group by ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' having count(*) > 1)'  + @crlf
+        set @sql1 = @sql1 + 'IF (select count(*) from #t1) > 0 ' + @crlf
+        set @sql1 = @sql1 + '    begin' + @crlf
+        set @sql1 = @sql1 + '    declare @xml1 varchar(max);' + @crlf
+        set @sql1 = @sql1 + '    select  @xml1 = (select * from #t1 order by 2 for xml auto);' + @crlf
+        set @sql1 = @sql1 + '    EXECUTE [log4].[JournalWriter]  @FunctionName = ''' + @_FunctionName + ''''
+                                                            + ', @MessageText = ''Duplicate Keys Removed while Loading - ' + @source_qualified_name + ' - See [log4].[JournalDetail] for details'''
+                                                            + ', @ExtraInfo = @xml1'
+                                                            + ', @DatabaseName = ''' + @source_database + ''''
+                                                            + ', @Task = ''Key Lookup before Loading Source Table'''
+                                                            + ', @StepInFunction = ''Remove Duplicates before Loading Source Table'''
+                                                            + ', @Severity = 256'
+                                                            + ', @ExceptionId = 3601;' + @crlf
+
+        set @sql1 = @sql1 + '    IF (select count(*) from #t1) >  ' + cast(@sat_duplicate_removal_threshold as varchar) + @crlf
+        set @sql1 = @sql1 + '        raiserror (''Duplicate Keys Detected while Loading ' + @source_qualified_name + '''' + ', 16, 1)' + @crlf
+        set @sql1 = @sql1 + '    else' + @crlf
+        set @sql1 = @sql1 + '    DELETE FROM ' + @temp_table_name_001 + ' WHERE ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' IN(' + @crlf
+        set @sql1 = @sql1 + '           select distinct ' +  case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' FROM #t1); ' + @crlf
+        set @sql1 = @sql1 + '    end' + @crlf
+
+        end
+        else
+                set @sql1 = @sql1 + 'if exists (select 1 from ' + @temp_table_name_001 + ' group by ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' having count(*) > 1)' + @crlf + '    raiserror (''Duplicate Keys Detected while Loading ' + @source_qualified_name + '''' + ', 16, 1)' + @crlf + @crlf
+        end
+/****************************************************************************************************************************************/
+
+set @vault_sql_statement        = @sql1
+select @vault_temp_table_name   = @temp_table_name_001
+IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @crlf
+/*--------------------------------------------------------------------------------------------------------------*/
+--SET @_Step = 'Load The ' + case when @sat_link_hub_flag = 'H' then 'Hub' else 'Link' end
+--IF @_JournalOnOff = 'ON'
+--      SET @_ProgressText += @sql
+--print @vault_sql_statement
+--EXECUTE sp_executesql @SQL;
+/*--------------------------------------------------------------------------------------------------------------*/
+
+SET @_ProgressText  = @_ProgressText + @NEW_LINE
+                                + 'Step: [' + @_Step + '] completed '
+
+IF @@TRANCOUNT > 0 COMMIT TRAN;
+
+SET @_Message   = 'Successfully Loaded Keys For: ' + @source_qualified_name
+
+END TRY
+BEGIN CATCH
+SET @_ErrorContext      = 'Failed to Load Keys For: ' + @source_qualified_name
+IF (XACT_STATE() = -1) -- uncommitable transaction
+OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
+        BEGIN
+                ROLLBACK TRAN;
+                SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
+        END
+
+EXEC log4.ExceptionHandler
+                  @ErrorContext  = @_ErrorContext
+                , @ErrorNumber   = @_Error OUT
+                , @ReturnMessage = @_Message OUT
+                , @ExceptionId   = @_ExceptionId OUT
+;
+END CATCH
+
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+OnComplete:
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+
+        --! Clean up
+
+        --!
+        --! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
+        --! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
+        --!
+        IF @_Error = 0
+                BEGIN
+                        SET @_Step                      = 'OnComplete'
+                        SET @_Severity          = @SEVERITY_SUCCESS
+                        SET @_Message           = COALESCE(@_Message, @_Step)
+                                                                + ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+                        SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+                END
+        ELSE
+                BEGIN
+                        SET @_Step                      = COALESCE(@_Step, 'OnError')
+                        SET @_Severity          = @SEVERITY_SEVERE
+                        SET @_Message           = COALESCE(@_Message, @_Step)
+                                                                + ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+                        SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+                END
+
+        IF @_JournalOnOff = 'ON'
+                EXEC log4.JournalWriter
+                                  @Task                         = @_FunctionName
+                                , @FunctionName         = @_FunctionName
+                                , @StepInFunction       = @_Step
+                                , @MessageText          = @_Message
+                                , @Severity                     = @_Severity
+                                , @ExceptionId          = @_ExceptionId
+                                --! Supply all the progress info after we've gone to such trouble to collect it
+                                , @ExtraInfo        = @_ProgressText
+
+        --! Finally, throw an exception that will be detected by the caller
+        IF @DoThrowError = 1 AND @_Error > 0
+                RAISERROR(@_Message, 16, 99);
+
+        SET NOCOUNT OFF;
+
+        --! Return the value of @@ERROR (which will be zero on success)
+        RETURN (@_Error);
+END
+GO
 PRINT N'Creating [dbo].[dv_create_sat_table]...';
 
 
@@ -11286,25 +10578,23 @@ select top 1 k.[column_name]
 select @hub_link_surrogate_key = [column_name] from @payload_columns
 
 insert @payload_columns
-select  c.[column_name]
-       ,c.[column_type]
-       ,c.[column_length]
-	   ,c.[column_precision]
-	   ,c.[column_scale]
-	   ,c.[collation_Name]
-	   ,c.[bk_ordinal_position]
-       ,c.[source_ordinal_position]
-	   ,c.[satellite_ordinal_position]
+select  sc.[column_name]
+       ,sc.[column_type]
+       ,sc.[column_length]
+	   ,sc.[column_precision]
+	   ,sc.[column_scale]
+	   ,sc.[collation_Name]
+	   ,''
+	   ,''
+	   ,sc.[satellite_ordinal_position]
 	   ,''
 	   ,''
   FROM [dbo].[dv_satellite] s
-  inner join [dbo].[dv_satellite_column] hc
-  on s.satellite_key = hc.satellite_key
-  inner join [dbo].[dv_column] c
-  on hc.column_key = c.column_key
+  inner join [dbo].[dv_satellite_column] sc
+  on s.satellite_key = sc.satellite_key
   where 1=1
-  and s.[satellite_key] = @sat_config_key
-  and isnull(c.discard_flag, 0) <> 1 
+  and s.[satellite_key] = 1
+  --and isnull(c.discard_flag, 0) <> 1 
 
  /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Sat'
@@ -11322,7 +10612,7 @@ EXECUTE [dbo].[dv_create_DV_table]
   ,@dothrowerror
 
 /*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Index the Sat on the Surrogate Key Plus Row End Date'
+SET @_Step = 'Index the Sat on the Surrogate Key Plus Row Start Date'
 select @SQL = ''
 if @sat_is_columnstore = 0
 	begin
@@ -15766,6 +15056,1114 @@ OnComplete:
 	RETURN (@_Error);
 END
 GO
+PRINT N'Creating [dbo].[dv_load_link_table]...';
+
+
+GO
+CREATE PROCEDURE [dbo].[dv_load_link_table]
+(
+  @vault_source_system_name             varchar(256)    = NULL
+, @vault_source_table_schema			varchar(256)    = NULL
+, @vault_source_table_name              varchar(256)    = NULL
+, @vault_database                       varchar(256)    = NULL
+, @vault_link_name                      varchar(256)    = NULL
+, @dogenerateerror                      bit             = 0
+, @dothrowerror                         bit             = 1
+
+)
+AS
+BEGIN
+SET NOCOUNT ON
+
+-- To Do - add Logging for the Payload Parameter
+--         validate Parameters properly
+--declare @sat_name varchar(100) =  'AdventureWorks2014_production_productinventory'
+
+-- System Wide Defaults
+-- Local Defaults Values
+DECLARE @crlf	char(2)	= CHAR(13) + CHAR(10)
+-- Global Defaults
+DECLARE
+         @def_global_lowdate									datetime
+		,@def_global_highdate									datetime
+        ,@def_global_default_load_date_time						varchar(128)
+        ,@dv_load_date_time_column								varchar(128)
+        ,@def_global_failed_lookup_key							int
+-- Hub Defaults
+        ,@def_hub_prefix                                        varchar(128)
+        ,@def_hub_schema                                        varchar(128)
+        ,@def_hub_filegroup                                     varchar(128)
+--Link Defaults
+        ,@def_link_prefix                                       varchar(128)
+        ,@def_link_schema                                       varchar(128)
+        ,@def_link_filegroup									varchar(128)
+--Sat Defaults
+        ,@def_sat_prefix                                        varchar(128)
+        ,@def_sat_schema                                        varchar(128)
+        ,@def_sat_filegroup                                     varchar(128)
+        ,@sat_start_date_col									varchar(128)
+        ,@sat_end_date_col                                      varchar(128)
+
+-- Object Specific Settings
+-- Source Table
+        ,@source_system                                         varchar(128)
+        ,@source_database                                       varchar(128)
+        ,@source_schema                                         varchar(128)
+        ,@source_table                                          varchar(128)
+        ,@source_table_config_key								int
+        ,@source_qualified_name									varchar(512)
+        ,@source_load_date_time									varchar(128)
+        ,@source_payload                                        varchar(max)
+-- Hub Table
+        ,@hub_database                                          varchar(128)
+        ,@hub_schema                                            varchar(128)
+        ,@hub_table                                              varchar(128)
+        ,@hub_surrogate_keyname									varchar(128)
+        ,@hub_config_key                                        int
+        ,@hub_qualified_name									varchar(512)
+        ,@hub_technical_columns									varchar(max)
+-- Link Table
+        ,@link_database                                         varchar(128)
+        ,@link_schema                                           varchar(128)
+        ,@link_table                                            varchar(128)
+        ,@link_surrogate_keyname								varchar(128)
+        ,@link_config_key                                       int
+        ,@link_qualified_name									varchar(512)
+        ,@link_technical_columns								nvarchar(max)
+        --,@link_lookup_joins                                   nvarchar(max)
+        ,@link_hub_keys                                         nvarchar(max)
+-- Sat Table
+        ,@sat_database                                          varchar(128)
+        ,@sat_schema                                            varchar(128)
+        ,@sat_table                                             varchar(128)
+        ,@sat_surrogate_keyname									varchar(128)
+        ,@sat_config_key                                        int
+        ,@sat_link_hub_flag                                     char(1)
+        ,@sat_qualified_name									varchar(512)
+        ,@sat_technical_columns									nvarchar(max)
+        ,@sat_payload                                           nvarchar(max)
+
+
+
+
+
+--  Working Storage
+DECLARE @sat_insert_count									int
+       ,@temp_table_name									varchar(116)
+       ,@sql                                                nvarchar(max)
+       ,@sql1                                               nvarchar(max)
+       ,@sql2                                               nvarchar(max)
+       ,@surrogate_key_match								nvarchar(max)
+DECLARE @declare											nvarchar(512)   = ''
+DECLARE @count_rows											nvarchar(256)   = ''
+DECLARE @match_list											nvarchar(max)   = ''
+DECLARE @value_list											nvarchar(max)   = ''
+DECLARE @sat_column_list									nvarchar(max)   = ''
+DECLARE @hub_column_list									nvarchar(max)   = ''
+
+DECLARE @ParmDefinition										nvarchar(500);
+DECLARE @insert_count										int;
+
+DECLARE @wrk_hub_joins										varchar(max)
+DECLARE @wrk_link_keys										varchar(max)
+DECLARE @wrk_link_match										varchar(max)
+-- Log4TSQL Journal Constants
+DECLARE @SEVERITY_CRITICAL									smallint = 1;
+DECLARE @SEVERITY_SEVERE									smallint = 2;
+DECLARE @SEVERITY_MAJOR										smallint = 4;
+DECLARE @SEVERITY_MODERATE									smallint = 8;
+DECLARE @SEVERITY_MINOR										smallint = 16;
+DECLARE @SEVERITY_CONCURRENCY								smallint = 32;
+DECLARE @SEVERITY_INFORMATION								smallint = 256;
+DECLARE @SEVERITY_SUCCESS									smallint = 512;
+DECLARE @SEVERITY_DEBUG										smallint = 1024;
+DECLARE @NEW_LINE											char(1)  = CHAR(10);
+
+-- Log4TSQL Standard/ExceptionHandler variables
+DECLARE   @_Error											int
+        , @_RowCount										int
+        , @_Step											varchar(128)
+        , @_Message											nvarchar(512)
+        , @_ErrorContext									nvarchar(512)
+
+-- Log4TSQL JournalWriter variables
+DECLARE   @_FunctionName									varchar(255)
+        , @_SprocStartTime									datetime
+        , @_JournalOnOff									varchar(3)
+        , @_Severity										smallint
+        , @_ExceptionId										int
+        , @_StepStartTime									datetime
+        , @_ProgressText									nvarchar(max)
+
+SET @_Error             = 0;
+SET @_FunctionName      = OBJECT_NAME(@@PROCID);
+SET @_Severity          = @SEVERITY_INFORMATION;
+SET @_SprocStartTime    = sysdatetimeoffset();
+SET @_ProgressText      = ''
+SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
+
+
+-- set Log4TSQL Parameters for Logging:
+SET @_ProgressText              = @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
+                                                + @NEW_LINE + '    @vault_source_system          : ' + COALESCE(@source_system, 'NULL')
+                                                + @NEW_LINE + '    @vault_source_table           : ' + COALESCE(@source_schema, 'NULL')
+                                                + @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
+                                                + @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
+                                                + @NEW_LINE
+
+BEGIN TRY
+SET @_Step = 'Generate any required error';
+IF @DoGenerateError = 1
+   select 1 / 0
+SET @_Step = 'Validate inputs';
+
+--IF (select count(*) from [dbo].[dv_sat] where sat_name = @sat_name) <> 1
+--                      RAISERROR('Invalid sat Name: %s', 16, 1, @sat_name);
+--IF isnull(@recreate_flag, '') not in ('Y', 'N')
+--                      RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
+/*--------------------------------------------------------------------------------------------------------------*/
+SET @_Step = 'Get Defaults'
+
+--select @declare = 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf
+--select @count_rows = 'OUTPUT $action into @rowcounts;' + @crlf + 'select @insertcount = count(*) from @rowcounts;'
+
+-- System Wide Defaults
+select
+-- Global Defaults
+ @def_global_lowdate                            = cast([dbo].[fn_get_default_value] ('LowDate','Global')							as datetime)
+,@def_global_highdate                           = cast([dbo].[fn_get_default_value] ('HighDate','Global')							as datetime)
+,@def_global_default_load_date_time				= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')				as varchar(128))
+,@def_global_failed_lookup_key					= cast([dbo].[fn_get_default_value] ('FailedLookupKey', 'Global')					as integer)
+
+-- Hub Defaults
+,@def_hub_prefix                                = cast([dbo].[fn_get_default_value] ('prefix','hub')                                as varchar(128))
+,@def_hub_schema                                = cast([dbo].[fn_get_default_value] ('schema','hub')                                as varchar(128))
+,@def_hub_filegroup                             = cast([dbo].[fn_get_default_value] ('filegroup','hub')								as varchar(128))
+-- Link Defaults
+,@def_link_prefix                               = cast([dbo].[fn_get_default_value] ('prefix','lnk')                                as varchar(128))
+,@def_link_schema                               = cast([dbo].[fn_get_default_value] ('schema','lnk')                                as varchar(128))
+,@def_link_filegroup							= cast([dbo].[fn_get_default_value] ('filegroup','lnk')								as varchar(128))
+-- Sat Defaults
+,@def_sat_prefix                                = cast([dbo].[fn_get_default_value] ('prefix','sat')                                as varchar(128))
+,@def_sat_schema                                = cast([dbo].[fn_get_default_value] ('schema','sat')                                as varchar(128))
+,@def_sat_filegroup                             = cast([dbo].[fn_get_default_value] ('filegroup','sat')								as varchar(128))
+
+select @sat_start_date_col = quotename(column_name)
+from [dbo].[dv_default_column]
+where 1=1
+and object_type = 'sat'
+and object_column_type = 'Version_Start_Date'
+select @sat_end_date_col = quotename(column_name)
+from [dbo].[dv_default_column]
+where 1=1
+and object_type = 'sat'
+and object_column_type = 'Version_End_Date'
+
+-- Object Specific Settings
+-- Source Table
+select   @source_system                         = s.[source_system_name]
+        ,@source_database                       = s.[timevault_name]
+        ,@source_schema                         = t.[source_table_schema]
+        ,@source_table                          = t.[source_table_name]
+        ,@source_table_config_key				= t.[source_table_key]
+        ,@source_qualified_name					= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
+from [dbo].[dv_source_system] s
+inner join [dbo].[dv_source_table] t
+on t.system_key = s.[source_system_key]
+where 1=1
+and s.[source_system_name]						= @vault_source_system_name
+and t.[source_table_schema]						= @vault_source_table_schema
+and t.[source_table_name]						= @vault_source_table_name
+
+-- Get the Type Of Load - Hub or Link, together with Any Related Sat Key, for identifying the Surrogate Key Manager (Hub or Link).
+-- The join goes via Column. Should be a direct relationship between source table and Sat - For RI Purposes, Plus for direct navigation , rather than inferring by Column.
+select
+           @sat_config_key = sat.[satellite_key]
+          ,@sat_link_hub_flag = sat.[link_hub_satellite_flag]
+from [dbo].[dv_source_table] t
+inner join [dbo].[dv_column] c
+on c.table_key = t.[source_table_key]
+inner join [dbo].[dv_satellite_column] sc
+on sc.column_key = c.column_key
+inner join [dbo].[dv_satellite] sat
+on sat.satellite_key = sc.satellite_key
+where 1=1
+and t.[source_table_key] = @source_table_config_key
+
+-- Owner Hub Table
+if @sat_link_hub_flag = 'H'
+        select   @hub_database                  = h.[hub_database]
+                ,@hub_schema                    = coalesce([hub_schema], @def_hub_schema, 'dbo')
+                ,@hub_table                     = h.[hub_name]
+ --               ,@hub_surrogate_keyname			= [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
+				,@hub_surrogate_keyname			= (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub'))
+                ,@hub_config_key                = h.[hub_key]
+                ,@hub_qualified_name			= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))
+        from [dbo].[dv_satellite] s
+        inner join [dbo].[dv_hub] h
+        on s.hub_key = h.hub_key
+where 1=1
+and s.[satellite_key] = @sat_config_key
+
+-- Owner Link Table
+if @sat_link_hub_flag = 'L'
+begin
+        select   @link_database                 = l.[link_database]
+                ,@link_schema                   = coalesce(l.[link_schema], @def_link_schema, 'dbo')
+                ,@link_table                    = l.[link_name]
+                --,@link_surrogate_keyname		= [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
+				,@link_surrogate_keyname		= (select column_name from [dbo].[fn_get_key_definition]([link_name], 'lnk'))
+                ,@link_config_key               = l.[link_key]
+                ,@link_qualified_name			= quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([link_name], 'lnk')))
+        from [dbo].[dv_satellite] s
+        inner join [dbo].[dv_link] l
+        on s.link_key = l.link_key
+    where 1=1
+    and s.[satellite_key] = @sat_config_key
+--set @link_hub_keys = ''
+
+declare @c_hub_key							int
+		,@c_hub_name                        varchar(128)
+        ,@c_hub_schema						varchar(128)
+        ,@c_hub_database					varchar(128)
+        ,@c_hub_abbreviation				varchar(4)
+
+
+set @link_hub_keys	= ''
+set @wrk_link_keys	= ''
+set @wrk_link_match = '' 
+set @wrk_hub_joins	= ''
+
+DECLARE c_hub_key CURSOR FOR
+select h.[hub_key]
+      ,h.[hub_name]
+      ,h.[hub_schema]
+      ,h.[hub_database]
+      ,h.[hub_abbreviation]
+
+  FROM [dbo].[dv_link] l
+  inner join [dbo].[dv_hub_link] hl
+  on hl.[link_key] = l.[link_key]
+  inner join [dbo].[dv_hub] h
+  on h.[hub_key] = hl.[hub_key]
+  where 1=1
+  and l.[link_key] = @link_config_key
+  order by hl.hub_link_key
+OPEN c_hub_key
+FETCH NEXT FROM c_hub_key
+INTO @c_hub_key
+    ,@c_hub_name
+    ,@c_hub_schema
+    ,@c_hub_database
+    ,@c_hub_abbreviation
+
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+ 
+      --  select  @wrk_hub_joins   += quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')) + ', '
+      --         ,@wrk_link_keys   += ' tmp.' + quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')) + ' = link.' + quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')) + @crlf + ' AND '
+			   --,@wrk_link_match  += quotename([dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate'))  + ' , '
+        select  @wrk_hub_joins   += (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ', '
+               ,@wrk_link_keys   += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ' = link.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + @crlf + ' AND '
+			   ,@wrk_link_match  += (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub'))  + ' , '
+
+
+         from (
+        select distinct
+            h.hub_name
+           --,hkc.hub_key_ordinal_position
+        from [dbo].[dv_hub] h
+        inner join [dbo].[dv_hub_key_column] hkc
+        on h.hub_key = hkc.hub_key
+        inner join [dbo].[dv_hub_column] hc
+        on hc.hub_key_column_key = hkc.hub_key_column_key
+        inner join [dbo].[dv_column] c
+        on c.column_key = hc.column_key
+        inner join [dbo].[dv_source_table] st
+        on c.[table_key] = st.[source_table_key]
+        where 1=1
+        and h.hub_key = @c_hub_key
+        and st.[source_table_key] = @source_table_config_key
+        and c.discard_flag <> 1) hkc
+       -- ORDER BY hkc.hub_key_ordinal_position
+        set @link_hub_keys = @link_hub_keys + @wrk_link_keys
+        FETCH NEXT FROM c_hub_key
+        INTO @c_hub_key
+                ,@c_hub_name
+                ,@c_hub_schema
+                ,@c_hub_database
+                ,@c_hub_abbreviation
+END
+
+CLOSE c_hub_key
+DEALLOCATE c_hub_key
+select @wrk_link_keys	= left(@wrk_link_keys, len(@wrk_link_keys) - 4)
+select @wrk_hub_joins	= left(@wrk_hub_joins, len(@wrk_hub_joins) - 1)
+select @wrk_link_match	= left(@wrk_link_match, len(@wrk_link_match) -2)
+end
+
+
+---- Use either a date time from the source or the default
+select @source_load_date_time = [column_name]
+from [dbo].[dv_source_table] st
+inner join [dbo].[dv_column] c
+on st.[source_table_key] = c.table_key
+where 1=1
+and st.[source_table_key] = @source_table_config_key
+and c.[is_source_date] = 1
+--NB do not check Discard Flag here as the Date Column may not be included in the Sat.
+if @@rowcount > 1 RAISERROR ('Source Table has Multiple Source Dates Defined',16,1);
+select @source_load_date_time = isnull(@source_load_date_time, @def_global_default_load_date_time)
+
+-- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
+set @sql = ''
+select @sql += 'src.' +quotename([column_name]) + @crlf +', '
+from [dbo].[dv_column]
+where 1=1
+and [discard_flag] <> 1
+and [table_key] = @source_table_config_key
+order by source_ordinal_position
+select @source_payload = left(@sql, len(@sql) -1)
+
+---- Build the Link Payload
+set @sql = ''
+select @sql += quotename([column_name]) +', '
+from [dbo].[dv_default_column]
+where 1=1
+and object_column_type <> 'Object_Key'
+and [object_type] = 'Lnk'
+order by [ordinal_position]
+set @link_technical_columns = @sql
+-- Build the SQL to obtain Surrogate Keys, before Merging the Sat.
+-- HUB based
+
+-- Get the Key Match
+if @sat_link_hub_flag = 'H'
+begin
+        select @sql = ''
+        select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
+        from [dbo].[dv_hub] h
+        inner join [dbo].[dv_hub_key_column] hkc
+        on h.hub_key = hkc.hub_key
+        inner join [dbo].[dv_hub_column] hc
+        on hc.hub_key_column_key = hkc.hub_key_column_key
+        inner join [dbo].[dv_column] c
+        on c.column_key = hc.column_key
+        inner join [dbo].[dv_source_table] st
+        on c.[table_key] = st.[source_table_key]
+        where 1=1
+        and h.hub_key = @hub_config_key
+        and st.[source_table_key] = @source_table_config_key
+        and c.discard_flag <> 1
+        ORDER BY hkc.hub_key_ordinal_position
+        select @surrogate_key_match =  left(@sql, len(@sql) - 4)
+        --select '@surrogate_key_match', @surrogate_key_match
+end
+-- Compile the SQL
+--SQL to do the look up the hub keys that make up the link
+EXECUTE [dbo].[dv_load_source_table_key_lookup] @source_system , @source_schema, @source_table, 'Y', @temp_table_name OUTPUT, @sql OUTPUT
+
+set @sql1 = @sql
+set @sql1 = @sql1 + 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf
+set @sql1 = @sql1 + 'WITH wBaseSet AS (SELECT DISTINCT ' + @wrk_link_match + ' FROM ' + quotename(@temp_table_name) + ')' + @crlf
+set @sql1 = @sql1 + 'MERGE ' + @link_qualified_name + ' WITH (HOLDLOCK) AS link' + @crlf
+--set @sql1 = @sql1 + 'USING ' + @temp_table_name + ' AS tmp' + @crlf
+set @sql1 = @sql1 + 'USING wBaseSet AS tmp' + @crlf
+set @sql1 = @sql1 + 'ON' + @wrk_link_keys
+set @sql1 = @sql1 + 'WHEN NOT MATCHED BY TARGET THEN ' + @crlf
+set @sql1 = @sql1 + 'INSERT(' + @link_technical_columns + @wrk_hub_joins +  ')' + @crlf
+set @sql1 = @sql1 + 'VALUES(sysdatetimeoffset(), ''' + cast(@source_table_config_key as varchar(20)) + ''',' + @wrk_hub_joins + ')OUTPUT $action into @rowcounts;' + @crlf
+set @sql1 = @sql1 + 'select @insertcount = count(*) from @rowcounts;' + @crlf
+set @sql = @sql1
+
+/*--------------------------------------------------------------------------------------------------------------*/
+SET @_Step = 'Load The Hub'
+IF @_JournalOnOff = 'ON'
+        SET @_ProgressText += @SQL
+SET @ParmDefinition = N'@insertcount int OUTPUT';
+
+--print 'link'
+--print @SQL  
+EXECUTE sp_executesql @SQL, @ParmDefinition, @insertcount = @insert_count OUTPUT;
+
+/*--------------------------------------------------------------------------------------------------------------*/
+
+SET @_ProgressText  = @_ProgressText + @NEW_LINE
+                                + 'Step: [' + @_Step + '] completed '
+
+IF @@TRANCOUNT > 0 COMMIT TRAN;
+
+SET @_Message   = 'Successfully Loaded Object: ' + @link_qualified_name
+
+END TRY
+BEGIN CATCH
+SET @_ErrorContext      = 'Failed to Load Object: ' + @link_qualified_name
+
+
+IF (XACT_STATE() = -1) -- uncommitable transaction
+OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
+        BEGIN
+                ROLLBACK TRAN;
+                SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
+        END
+
+EXEC log4.ExceptionHandler
+                  @ErrorContext  = @_ErrorContext
+                , @ErrorNumber   = @_Error OUT
+                , @ReturnMessage = @_Message OUT
+                , @ExceptionId   = @_ExceptionId OUT
+;
+END CATCH
+
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+OnComplete:
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+
+        --! Clean up
+
+        --!
+        --! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
+        --! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
+        --!
+        IF @_Error = 0
+                BEGIN
+                        SET @_Step                      = 'OnComplete'
+                        SET @_Severity          = @SEVERITY_SUCCESS
+                        SET @_Message           = COALESCE(@_Message, @_Step)
+                                                                + ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+                        SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+                END
+        ELSE
+                BEGIN
+                        SET @_Step                      = COALESCE(@_Step, 'OnError')
+                        SET @_Severity          = @SEVERITY_SEVERE
+                        SET @_Message           = COALESCE(@_Message, @_Step)
+                                                                + ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+                        SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+                END
+
+        IF @_JournalOnOff = 'ON'
+                EXEC log4.JournalWriter
+                                  @Task                         = @_FunctionName
+                                , @FunctionName         = @_FunctionName
+                                , @StepInFunction       = @_Step
+                                , @MessageText          = @_Message
+                                , @Severity                     = @_Severity
+                                , @ExceptionId          = @_ExceptionId
+                                --! Supply all the progress info after we've gone to such trouble to collect it
+                                , @ExtraInfo        = @_ProgressText
+
+        --! Finally, throw an exception that will be detected by the caller
+        IF @DoThrowError = 1 AND @_Error > 0
+                RAISERROR(@_Message, 16, 99);
+
+        SET NOCOUNT OFF;
+
+        --! Return the value of @@ERROR (which will be zero on success)
+        RETURN (@_Error);
+END
+GO
+PRINT N'Creating [dbo].[dv_load_sats_for_source_table]...';
+
+
+GO
+
+CREATE PROCEDURE [dbo].[dv_load_sats_for_source_table]
+(
+  @vault_source_system_name		varchar(128) = NULL
+, @vault_source_table_schema	varchar(128) = NULL
+, @vault_source_table_name		varchar(128) = NULL
+, @vault_source_load_type		varchar(50)  = NULL
+, @dogenerateerror				bit				= 0
+, @dothrowerror					bit				= 1
+)
+AS
+BEGIN
+SET NOCOUNT ON
+
+-- To Do - add Logging for the Payload Parameter
+--         validate Parameters properly
+--         Add Transactionality for Multi Sat Loads
+--         Pick a single sat to load (from a multi sat)
+-- System Wide Defaults
+-- Local Defaults Values
+DECLARE @crlf								char(2)			= CHAR(13) + CHAR(10)
+-- Global Defaults
+DECLARE  
+		 @def_global_lowdate				datetime
+        ,@def_global_highdate				datetime
+        ,@def_global_default_load_date_time	varchar(128)
+		,@def_global_failed_lookup_key		int
+-- Hub Defaults									
+        ,@def_hub_prefix					varchar(128)
+		,@def_hub_schema					varchar(128)
+		,@def_hub_filegroup					varchar(128)
+--Link Defaults									
+		,@def_link_prefix					varchar(128)
+		,@def_link_schema					varchar(128)
+		,@def_link_filegroup				varchar(128)
+--Sat Defaults									
+		,@def_sat_prefix					varchar(128)
+		,@def_sat_schema					varchar(128)
+		,@def_sat_filegroup					varchar(128)
+		,@sat_start_date_col				varchar(128)
+		,@sat_end_date_col					varchar(128)				
+
+-- Object Specific Settings
+-- Source Table
+		,@source_system						varchar(128)
+        ,@source_database					varchar(128)
+		,@source_schema						varchar(128)
+		,@source_table						varchar(128)
+		,@source_table_config_key			int
+		,@source_qualified_name				varchar(512)
+		,@source_load_date_time				varchar(128)
+		,@source_payload					nvarchar(max)
+-- Hub Table
+		,@hub_database						varchar(128)
+		,@hub_schema						varchar(128)
+		,@hub_table							varchar(128)
+		,@hub_surrogate_keyname				varchar(128)
+		,@hub_config_key					int
+		,@hub_qualified_name				varchar(512)
+		,@hubt_technical_columns			nvarchar(max)
+-- Link Table
+		,@link_database						varchar(128)
+		,@link_schema						varchar(128)
+		,@link_table						varchar(128)
+		,@link_surrogate_keyname			varchar(128)
+		,@link_config_key					int
+		,@link_qualified_name				varchar(512)
+		,@link_technical_columns			nvarchar(max)
+		,@link_lookup_joins					nvarchar(max)
+		,@link_hub_keys						nvarchar(max)
+-- Sat Table
+		,@sat_database						varchar(128)
+		,@sat_schema						varchar(128)
+		,@sat_table							varchar(128)
+		,@sat_surrogate_keyname				varchar(128)
+		,@sat_config_key					int
+		,@sat_link_hub_flag					char(1)
+		,@sat_qualified_name				varchar(512)
+		,@sat_technical_columns				nvarchar(max)
+		,@sat_payload						nvarchar(max)
+
+--  Working Storage
+DECLARE @sat_insert_count			int
+       ,@temp_table_name			varchar(116)
+	   ,@sql						nvarchar(max)
+	   ,@sql1						nvarchar(max)
+	   ,@sql2						nvarchar(max)
+	   ,@surrogate_key_match        varchar(1000)
+DECLARE @declare					nvarchar(512)	= ''
+DECLARE @count_rows					nvarchar(256)	= ''
+DECLARE @match_list					nvarchar(max)	= ''
+DECLARE @value_list					nvarchar(max)	= ''
+DECLARE @sat_column_list			nvarchar(max)	= ''
+DECLARE @hub_column_list			nvarchar(max)	= ''
+
+DECLARE @ParmDefinition				nvarchar(500);
+
+DECLARE @satellite_list				table (sat_database				varchar(128)				
+										  ,sat_schema				varchar(128)			
+										  ,sat_table				varchar(128)
+										  ,sat_surrogate_keyname    varchar(128)
+										  ,sat_config_key			int
+										  ,sat_link_hub_flag		char(1)
+										  ,sat_qualified_name		varchar(512)
+										  )
+
+DECLARE @wrk_link_joins			nvarchar(max)
+DECLARE @wrk_link__keys			nvarchar(max)
+-- Log4TSQL Journal Constants 										
+DECLARE @SEVERITY_CRITICAL      smallint = 1;
+DECLARE @SEVERITY_SEVERE        smallint = 2;
+DECLARE @SEVERITY_MAJOR         smallint = 4;
+DECLARE @SEVERITY_MODERATE      smallint = 8;
+DECLARE @SEVERITY_MINOR         smallint = 16;
+DECLARE @SEVERITY_CONCURRENCY   smallint = 32;
+DECLARE @SEVERITY_INFORMATION   smallint = 256;
+DECLARE @SEVERITY_SUCCESS       smallint = 512;
+DECLARE @SEVERITY_DEBUG         smallint = 1024;
+DECLARE @NEW_LINE               char(1)  = CHAR(10);
+
+-- Log4TSQL Standard/ExceptionHandler variables
+DECLARE	  @_Error         int
+		, @_RowCount      int
+		, @_Step          varchar(128)
+		, @_Message       nvarchar(512)
+		, @_ErrorContext  nvarchar(512)
+
+-- Log4TSQL JournalWriter variables
+DECLARE   @_FunctionName			varchar(255)
+		, @_SprocStartTime			datetime
+		, @_JournalOnOff			varchar(3)
+		, @_Severity				smallint
+		, @_ExceptionId				int
+		, @_StepStartTime			datetime
+		, @_ProgressText			nvarchar(max)
+
+SET @_Error             = 0;
+SET @_FunctionName      = OBJECT_NAME(@@PROCID);
+SET @_Severity          = @SEVERITY_INFORMATION;
+SET @_SprocStartTime    = sysdatetimeoffset();
+SET @_ProgressText      = '' 
+SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
+
+
+-- set Log4TSQL Parameters for Logging:
+SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
+						+ @NEW_LINE + '    @vault_source_system_name     : ' + COALESCE(@vault_source_system_name, 'NULL')
+						+ @NEW_LINE + '    @vault_source_table_schema    : ' + COALESCE(@vault_source_table_schema, 'NULL')
+						+ @NEW_LINE + '    @vault_source_table_name      : ' + COALESCE(@vault_source_table_name, 'NULL')
+						+ @NEW_LINE + '    @vault_source_load_type       : ' + COALESCE(@vault_source_load_type, 'NULL')
+						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
+						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
+						+ @NEW_LINE
+
+BEGIN TRY
+
+SET @_Step = 'Generate any required error';
+IF @DoGenerateError = 1
+   select 1 / 0
+SET @_Step = 'Validate inputs';
+
+IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
+			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
+--IF isnull(@recreate_flag, '') not in ('Y', 'N') 
+--			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
+/*--------------------------------------------------------------------------------------------------------------*/
+SET @_Step = 'Get Defaults'
+-- System Wide Defaults
+select
+-- Global Defaults
+ @def_global_lowdate				= cast([dbo].[fn_get_default_value] ('LowDate','Global')				as datetime)			
+,@def_global_highdate				= cast([dbo].[fn_get_default_value] ('HighDate','Global')				as datetime)	
+,@def_global_default_load_date_time	= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')	as varchar(128))
+,@def_global_failed_lookup_key		= cast([dbo].[fn_get_default_value] ('FailedLookupKey', 'Global')     as integer)
+-- Hub Defaults								
+,@def_hub_prefix					= cast([dbo].[fn_get_default_value] ('prefix','hub')					as varchar(128))	
+,@def_hub_schema					= cast([dbo].[fn_get_default_value] ('schema','hub')					as varchar(128))	
+,@def_hub_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','hub')				as varchar(128))	
+-- Link Defaults																						
+,@def_link_prefix					= cast([dbo].[fn_get_default_value] ('prefix','lnk')					as varchar(128))	
+,@def_link_schema					= cast([dbo].[fn_get_default_value] ('schema','lnk')					as varchar(128))	
+,@def_link_filegroup				= cast([dbo].[fn_get_default_value] ('filegroup','lnk')				as varchar(128))	
+-- Sat Defaults																							
+,@def_sat_prefix					= cast([dbo].[fn_get_default_value] ('prefix','sat')					as varchar(128))	
+,@def_sat_schema					= cast([dbo].[fn_get_default_value] ('schema','sat')					as varchar(128))	
+,@def_sat_filegroup					= cast([dbo].[fn_get_default_value] ('filegroup','sat')				as varchar(128))
+
+select @sat_start_date_col = quotename(column_name)
+from [dbo].[dv_default_column]
+where 1=1
+and object_type	= 'sat'
+and object_column_type = 'Version_Start_Date'
+select @sat_end_date_col = quotename(column_name)
+from [dbo].[dv_default_column]
+where 1=1
+and object_type	= 'sat'
+and object_column_type = 'Version_End_Date'
+
+-- Object Specific Settings
+-- Source Table
+select 	 @source_system				= s.[source_system_name]	
+        ,@source_database			= s.[timevault_name]
+		,@source_schema				= t.[source_table_schema]
+		,@source_table				= t.[source_table_name]
+		,@source_table_config_key	= t.[source_table_key]
+		,@source_qualified_name		= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
+from [dbo].[dv_source_system] s
+inner join [dbo].[dv_source_table] t
+on t.system_key = s.[source_system_key]
+where 1=1
+and s.[source_system_name]		= @vault_source_system_name
+and t.[source_table_schema]		= @vault_source_table_schema
+and t.[source_table_name]		= @vault_source_table_name
+
+-- Get a list of Satellites
+insert @satellite_list
+select distinct 
+       sat.[satellite_database]
+      ,coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')
+	  ,sat.[satellite_name]
+	  ,[dbo].[fn_get_object_name] (sat.[satellite_name],'SatSurrogate') 
+	  ,sat.[satellite_key] 
+	  ,sat.[link_hub_satellite_flag]
+	  ,quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat')))       
+from [dbo].[dv_source_table] t
+inner join [dbo].[dv_column] c
+on c.table_key = t.[source_table_key]
+inner join [dbo].[dv_satellite_column] sc
+on sc.column_key = c.column_key
+inner join [dbo].[dv_satellite] sat
+on sat.satellite_key = sc.satellite_key
+where 1=1
+and t.[source_table_key] = @source_table_config_key
+
+-- Note that split satellites can only be of 1 type - Link or Hub
+select @sat_link_hub_flag = [sat_link_hub_flag] from @satellite_list 
+
+-- Owner Hub Table
+
+if @sat_link_hub_flag = 'H' 
+	select   @hub_database			= h.[hub_database]
+	        ,@hub_schema			= coalesce([hub_schema], @def_hub_schema, 'dbo')				
+			,@hub_table				= h.[hub_name]
+			,@hub_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
+			,@hub_config_key		= h.[hub_key]
+			,@hub_qualified_name	= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))	
+	from [dbo].[dv_satellite] s
+	inner join [dbo].[dv_hub] h
+	on s.hub_key = h.hub_key
+where 1=1
+and s.[satellite_key] = (select top 1 sat_config_key from @satellite_list) 	
+		
+-- Owner Link Table
+if @sat_link_hub_flag = 'L' 
+	select   @link_database			= l.[link_database]
+	        ,@link_schema			= coalesce(l.[link_schema], @def_link_schema, 'dbo')				
+			,@link_table			= l.[link_name]
+			,@link_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
+			,@link_config_key		= l.[link_key]
+			,@link_qualified_name	= quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([link_name], 'lnk')))
+	from [dbo].[dv_satellite] s
+	inner join [dbo].[dv_link] l
+	on s.link_key = l.link_key
+    where 1=1
+    and s.[satellite_key] = (select top 1 sat_config_key from @satellite_list)
+ 
+ -- Get the SQL for the Key Lookup   
+
+EXECUTE [dbo].[dv_load_source_table_key_lookup] @source_system,@source_schema,@source_table, 'N', @temp_table_name OUTPUT, @sql1 OUTPUT
+
+-- Now Get the Satellite Update SQL
+
+set @sql2 =			'DECLARE @version_date_char VARCHAR(20)' + @crlf
+set @sql2 = @sql2 + 'DECLARE @version_date datetimeoffset(7)' + @crlf
+set @sql2 = @sql2 + 'select @version_date = sysdatetimeoffset()'  + @crlf 
+set @sql2 = @sql2 + 'select @version_date_char = CONVERT(varchar(50), @version_date) '  + @crlf 
+DECLARE c_sat_list CURSOR FOR 
+select sat_table
+  FROM @satellite_list
+
+OPEN c_sat_list   
+FETCH NEXT FROM c_sat_list 
+INTO @sat_table		 
+
+WHILE @@FETCH_STATUS = 0   
+BEGIN
+EXECUTE [dbo].[dv_load_sat_table] @source_system,@source_schema,@source_table, @sat_table, @temp_table_name, @vault_source_load_type, @sql OUTPUT
+set @sql2 += @sql
+FETCH NEXT FROM c_sat_list 
+INTO @sat_table	
+END   
+
+CLOSE c_sat_list   
+DEALLOCATE c_sat_list
+	
+set @sql = @sql1 + @sql2
+
+--/*--------------------------------------------------------------------------------------------------------------*/
+SET @_Step = 'Load The Source into Sat(s)'
+IF @_JournalOnOff = 'ON' SET @_ProgressText += @SQL
+--select @SQL
+EXECUTE(@SQL);
+/*--------------------------------------------------------------------------------------------------------------*/
+
+SET @_ProgressText  = @_ProgressText + @NEW_LINE
+				+ 'Step: [' + @_Step + '] completed ' 
+
+IF @@TRANCOUNT > 0 COMMIT TRAN;
+
+SET @_Message   = 'Successfully Loaded Object: ' + @sat_qualified_name
+
+END TRY
+BEGIN CATCH
+SET @_ErrorContext	= 'Failed to Load Object: ' + @sat_qualified_name
+IF (XACT_STATE() = -1) -- uncommitable transaction
+OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
+	BEGIN
+		ROLLBACK TRAN;
+		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
+	END
+	
+EXEC log4.ExceptionHandler
+		  @ErrorContext  = @_ErrorContext
+		, @ErrorNumber   = @_Error OUT
+		, @ReturnMessage = @_Message OUT
+		, @ExceptionId   = @_ExceptionId OUT
+;
+END CATCH
+
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+OnComplete:
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+
+	--! Clean up
+
+	--!
+	--! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
+	--! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
+	--!
+	IF @_Error = 0
+		BEGIN
+			SET @_Step			= 'OnComplete'
+			SET @_Severity		= @SEVERITY_SUCCESS
+			SET @_Message		= COALESCE(@_Message, @_Step)
+								+ ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+		END
+	ELSE
+		BEGIN
+			SET @_Step			= COALESCE(@_Step, 'OnError')
+			SET @_Severity		= @SEVERITY_SEVERE
+			SET @_Message		= COALESCE(@_Message, @_Step)
+								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+		END
+
+	IF @_JournalOnOff = 'ON'
+		EXEC log4.JournalWriter
+				  @Task				= @_FunctionName
+				, @FunctionName		= @_FunctionName
+				, @StepInFunction	= @_Step
+				, @MessageText		= @_Message
+				, @Severity			= @_Severity
+				, @ExceptionId		= @_ExceptionId
+				--! Supply all the progress info after we've gone to such trouble to collect it
+				, @ExtraInfo        = @_ProgressText
+
+	--! Finally, throw an exception that will be detected by the caller
+	IF @DoThrowError = 1 AND @_Error > 0
+		RAISERROR(@_Message, 16, 99);
+
+	SET NOCOUNT OFF;
+
+	--! Return the value of @@ERROR (which will be zero on success)
+	RETURN (@_Error);
+END
+GO
+PRINT N'Creating [dv_release].[dv_build_release_config]...';
+
+
+GO
+CREATE PROCEDURE [dv_release].[dv_build_release_config]
+(
+  @vault_release_number			int			 = NULL
+, @vault_return_change_script	bit          = 0
+, @DoGenerateError              bit          = 0
+, @DoThrowError                 bit			 = 1
+)
+
+AS
+BEGIN
+SET NOCOUNT ON
+
+-- Internal use variables
+DECLARE @IncludeTables table(dv_schema_name sysname, dv_table_name sysname, dv_load_order int)
+insert @IncludeTables 
+SELECT dv_schema_name	
+      ,dv_table_name	
+	  ,dv_load_order
+FROM [dv_release].[fn_config_table_list] ()
+
+
+DECLARE
+    @vault_statement		nvarchar(max),
+	@vault_change_count		int,
+	@release_key			int,
+	@release_number			int,
+	@change_count			int = 0,
+	@currtable				SYSNAME,
+	@currschema				SYSNAME,
+	@dv_schema_name			sysname,
+	@dv_table_name			sysname
+
+
+-- Log4TSQL Journal Constants 
+DECLARE @SEVERITY_CRITICAL      smallint = 1;
+DECLARE @SEVERITY_SEVERE        smallint = 2;
+DECLARE @SEVERITY_MAJOR         smallint = 4;
+DECLARE @SEVERITY_MODERATE      smallint = 8;
+DECLARE @SEVERITY_MINOR         smallint = 16;
+DECLARE @SEVERITY_CONCURRENCY   smallint = 32;
+DECLARE @SEVERITY_INFORMATION   smallint = 256;
+DECLARE @SEVERITY_SUCCESS       smallint = 512;
+DECLARE @SEVERITY_DEBUG         smallint = 1024;
+DECLARE @NEW_LINE               char(1)  = CHAR(10);
+
+-- Log4TSQL Standard/ExceptionHandler variables
+DECLARE	  @_Error         int
+		, @_RowCount      int
+		, @_Step          varchar(128)
+		, @_Message       nvarchar(512)
+		, @_ErrorContext  nvarchar(512)
+
+-- Log4TSQL JournalWriter variables
+DECLARE   @_FunctionName			varchar(255)
+		, @_SprocStartTime			datetime
+		, @_JournalOnOff			varchar(3)
+		, @_Severity				smallint
+		, @_ExceptionId				int
+		, @_StepStartTime			datetime
+		, @_ProgressText			nvarchar(max)
+
+SET @_Error             = 0;
+SET @_FunctionName      = OBJECT_NAME(@@PROCID);
+SET @_Severity          = @SEVERITY_INFORMATION;
+SET @_SprocStartTime    = sysdatetimeoffset();
+SET @_ProgressText      = '' 
+SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
+			
+	
+-- set the Parameters for logging:
+SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
+						+ @NEW_LINE + '    @vault_return_change_script   : ' + COALESCE(cast(@vault_return_change_script as varchar(20)), '<NULL>')
+						+ @NEW_LINE + '    @vault_release_number         : ' + COALESCE(cast(@vault_release_number as varchar(20)), '<NULL>')
+						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
+						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
+						+ @NEW_LINE
+
+BEGIN TRY
+SET @_Step = 'Generate any required error';
+IF @DoGenerateError = 1
+   select 1 / 0
+SET @_Step = 'Validate Inputs';
+
+SET @_Step = 'Initialise Variables';
+
+CREATE TABLE #dv_release_build(
+	[release_build_key]				[int] NOT NULL,
+	[release_statement_sequence]	[int] identity(1,1) not null,
+	[release_number]				[int] not null,
+	[release_statement_type]		[varchar](10),
+	[release_statement]				[varchar](max) NULL,
+	[affected_row_count]			[int] NOT NULL)
+			
+SET @_Step = 'Get Release Header';
+select @release_key = release_key from [dv_release].[dv_release_master] where release_number = @vault_release_number
+
+SET @_Step = 'Initialise Release';
+
+update [dv_release].[dv_release_master]
+set [build_number]		= [build_number] + 1,
+    [build_date]		= SYSDATETIMEOFFSET(),
+	[build_server]		= @@SERVERNAME,
+	[release_built_by]	= user_name()
+where [release_key] = @release_key
+
+-- Extract the Release Master Details
+EXECUTE [dv_release].[dv_build_release_config_table] 'dv_release', 'dv_release_master', @vault_release_number, 'release_start_datetime,release_complete_datetime,release_count', @vault_statement OUTPUT, @vault_change_count OUTPUT
+insert #dv_release_build([release_build_key], [release_number], [release_statement_type], [release_statement], [affected_row_count])values(@release_key, @vault_release_number, 'Header', @vault_statement, @vault_change_count)
+
+-- Extract the Changes per Table
+DECLARE dv_table_cursor CURSOR FOR  
+SELECT dv_schema_name, dv_table_name
+FROM @IncludeTables 
+order by dv_load_order
+
+OPEN dv_table_cursor
+FETCH NEXT FROM dv_table_cursor INTO @dv_schema_name, @dv_table_name
+
+WHILE @@FETCH_STATUS = 0   
+BEGIN   
+ --      print @dv_table_name
+	   EXECUTE [dv_release].[dv_build_release_config_table] @dv_schema_name, @dv_table_name, @vault_release_number, '', @vault_statement OUTPUT, @vault_change_count OUTPUT
+	   if isnull(@vault_change_count, 0) > 0
+			insert #dv_release_build([release_build_key], [release_number], [release_statement_type], [release_statement], [affected_row_count]) values(@release_key, @vault_release_number, 'Table', @vault_statement, @vault_change_count)
+       FETCH NEXT FROM dv_table_cursor INTO @dv_schema_name, @dv_table_name   
+END   
+
+CLOSE dv_table_cursor   
+DEALLOCATE dv_table_cursor
+
+
+delete from [dv_release].[dv_release_build] where [release_build_key] = @release_key
+insert [dv_release].[dv_release_build]
+SELECT [release_build_key]
+      ,[release_statement_sequence]
+	  ,[release_number]
+	  ,[release_statement_type]
+      ,[release_statement]
+      ,[affected_row_count]
+  FROM #dv_release_build
+
+if @vault_return_change_script = 1
+	select * from #dv_release_build
+
+/*--------------------------------------------------------------------------------------------------------------*/
+IF @@TRANCOUNT > 0 COMMIT TRAN;
+
+SET @_Message   = 'Successfully Created Release for: ' 
+
+END TRY
+BEGIN CATCH
+SET @_ErrorContext	= 'Failed to Create Release for: ' 
+IF (XACT_STATE() = -1) -- uncommitable transaction
+OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
+	BEGIN
+		ROLLBACK TRAN;
+		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
+	END
+	
+EXEC log4.ExceptionHandler
+		  @ErrorContext  = @_ErrorContext
+		, @ErrorNumber   = @_Error OUT
+		, @ReturnMessage = @_Message OUT
+		, @ExceptionId   = @_ExceptionId OUT
+;
+END CATCH
+
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+OnComplete:
+--/////////////////////////////////////////////////////////////////////////////////////////////////
+
+	--! Clean up
+
+	--!
+	--! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
+	--! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
+	--!
+	IF @_Error = 0
+		BEGIN
+			SET @_Step			= 'OnComplete'
+			SET @_Severity		= @SEVERITY_SUCCESS
+			SET @_Message		= COALESCE(@_Message, @_Step)
+								+ ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+		END
+	ELSE
+		BEGIN
+			SET @_Step			= COALESCE(@_Step, 'OnError')
+			SET @_Severity		= @SEVERITY_SEVERE
+			SET @_Message		= COALESCE(@_Message, @_Step)
+								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
+			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
+		END
+
+	IF @_JournalOnOff = 'ON'
+		EXEC log4.JournalWriter
+				  @Task				= @_FunctionName
+				, @FunctionName		= @_FunctionName
+				, @StepInFunction	= @_Step
+				, @MessageText		= @_Message
+				, @Severity			= @_Severity
+				, @ExceptionId		= @_ExceptionId
+				--! Supply all the progress info after we've gone to such trouble to collect it
+				, @ExtraInfo        = @_ProgressText
+
+	--! Finally, throw an exception that will be detected by the caller
+	IF @DoThrowError = 1 AND @_Error > 0
+		RAISERROR(@_Message, 16, 99);
+
+	SET NOCOUNT OFF;
+
+	--! Return the value of @@ERROR (which will be zero on success)
+	RETURN (@_Error);
+END
+GO
 PRINT N'Creating [dbo].[dv_load_source_table]...';
 
 
@@ -16025,225 +16423,6 @@ SET @_Message   = 'Successfully Loaded Object: ' + @source_qualified_name
 END TRY
 BEGIN CATCH
 SET @_ErrorContext	= 'Failed to Load Object: ' + @source_qualified_name
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
-	BEGIN
-		ROLLBACK TRAN;
-		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
-	END
-	
-EXEC log4.ExceptionHandler
-		  @ErrorContext  = @_ErrorContext
-		, @ErrorNumber   = @_Error OUT
-		, @ReturnMessage = @_Message OUT
-		, @ExceptionId   = @_ExceptionId OUT
-;
-END CATCH
-
---/////////////////////////////////////////////////////////////////////////////////////////////////
-OnComplete:
---/////////////////////////////////////////////////////////////////////////////////////////////////
-
-	--! Clean up
-
-	--!
-	--! Use dbo.udf_FormatElapsedTime() to get a nicely formatted run time string e.g.
-	--! "0 hr(s) 1 min(s) and 22 sec(s)" or "1345 milliseconds"
-	--!
-	IF @_Error = 0
-		BEGIN
-			SET @_Step			= 'OnComplete'
-			SET @_Severity		= @SEVERITY_SUCCESS
-			SET @_Message		= COALESCE(@_Message, @_Step)
-								+ ' in a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-		END
-	ELSE
-		BEGIN
-			SET @_Step			= COALESCE(@_Step, 'OnError')
-			SET @_Severity		= @SEVERITY_SEVERE
-			SET @_Message		= COALESCE(@_Message, @_Step)
-								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
-			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
-		END
-
-	IF @_JournalOnOff = 'ON'
-		EXEC log4.JournalWriter
-				  @Task				= @_FunctionName
-				, @FunctionName		= @_FunctionName
-				, @StepInFunction	= @_Step
-				, @MessageText		= @_Message
-				, @Severity			= @_Severity
-				, @ExceptionId		= @_ExceptionId
-				--! Supply all the progress info after we've gone to such trouble to collect it
-				, @ExtraInfo        = @_ProgressText
-
-	--! Finally, throw an exception that will be detected by the caller
-	IF @DoThrowError = 1 AND @_Error > 0
-		RAISERROR(@_Message, 16, 99);
-
-	SET NOCOUNT OFF;
-
-	--! Return the value of @@ERROR (which will be zero on success)
-	RETURN (@_Error);
-END
-GO
-PRINT N'Creating [dv_release].[dv_build_release_config]...';
-
-
-GO
-CREATE PROCEDURE [dv_release].[dv_build_release_config]
-(
-  @vault_release_number			int			 = NULL
-, @vault_return_change_script	bit          = 0
-, @DoGenerateError              bit          = 0
-, @DoThrowError                 bit			 = 1
-)
-
-AS
-BEGIN
-SET NOCOUNT ON
-
--- Internal use variables
-DECLARE @IncludeTables table(dv_schema_name sysname, dv_table_name sysname, dv_load_order int)
-insert @IncludeTables 
-SELECT dv_schema_name	
-      ,dv_table_name	
-	  ,dv_load_order
-FROM [dv_release].[fn_config_table_list] ()
-
-
-DECLARE
-    @vault_statement		nvarchar(max),
-	@vault_change_count		int,
-	@release_key			int,
-	@release_number			int,
-	@change_count			int = 0,
-	@currtable				SYSNAME,
-	@currschema				SYSNAME,
-	@dv_schema_name			sysname,
-	@dv_table_name			sysname
-
-
--- Log4TSQL Journal Constants 
-DECLARE @SEVERITY_CRITICAL      smallint = 1;
-DECLARE @SEVERITY_SEVERE        smallint = 2;
-DECLARE @SEVERITY_MAJOR         smallint = 4;
-DECLARE @SEVERITY_MODERATE      smallint = 8;
-DECLARE @SEVERITY_MINOR         smallint = 16;
-DECLARE @SEVERITY_CONCURRENCY   smallint = 32;
-DECLARE @SEVERITY_INFORMATION   smallint = 256;
-DECLARE @SEVERITY_SUCCESS       smallint = 512;
-DECLARE @SEVERITY_DEBUG         smallint = 1024;
-DECLARE @NEW_LINE               char(1)  = CHAR(10);
-
--- Log4TSQL Standard/ExceptionHandler variables
-DECLARE	  @_Error         int
-		, @_RowCount      int
-		, @_Step          varchar(128)
-		, @_Message       nvarchar(512)
-		, @_ErrorContext  nvarchar(512)
-
--- Log4TSQL JournalWriter variables
-DECLARE   @_FunctionName			varchar(255)
-		, @_SprocStartTime			datetime
-		, @_JournalOnOff			varchar(3)
-		, @_Severity				smallint
-		, @_ExceptionId				int
-		, @_StepStartTime			datetime
-		, @_ProgressText			nvarchar(max)
-
-SET @_Error             = 0;
-SET @_FunctionName      = OBJECT_NAME(@@PROCID);
-SET @_Severity          = @SEVERITY_INFORMATION;
-SET @_SprocStartTime    = sysdatetimeoffset();
-SET @_ProgressText      = '' 
-SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
-			
-	
--- set the Parameters for logging:
-SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_return_change_script   : ' + COALESCE(cast(@vault_return_change_script as varchar(20)), '<NULL>')
-						+ @NEW_LINE + '    @vault_release_number         : ' + COALESCE(cast(@vault_release_number as varchar(20)), '<NULL>')
-						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
-						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
-						+ @NEW_LINE
-
-BEGIN TRY
-SET @_Step = 'Generate any required error';
-IF @DoGenerateError = 1
-   select 1 / 0
-SET @_Step = 'Validate Inputs';
-
-SET @_Step = 'Initialise Variables';
-
-CREATE TABLE #dv_release_build(
-	[release_build_key]				[int] NOT NULL,
-	[release_statement_sequence]	[int] identity(1,1) not null,
-	[release_number]				[int] not null,
-	[release_statement_type]		[varchar](10),
-	[release_statement]				[varchar](max) NULL,
-	[affected_row_count]			[int] NOT NULL)
-			
-SET @_Step = 'Get Release Header';
-select @release_key = release_key from [dv_release].[dv_release_master] where release_number = @vault_release_number
-
-SET @_Step = 'Initialise Release';
-
-update [dv_release].[dv_release_master]
-set [build_number]		= [build_number] + 1,
-    [build_date]		= SYSDATETIMEOFFSET(),
-	[build_server]		= @@SERVERNAME,
-	[release_built_by]	= user_name()
-where [release_key] = @release_key
-
--- Extract the Release Master Details
-EXECUTE [dv_release].[dv_build_release_config_table] 'dv_release', 'dv_release_master', @vault_release_number, 'release_start_datetime,release_complete_datetime,release_count', @vault_statement OUTPUT, @vault_change_count OUTPUT
-insert #dv_release_build([release_build_key], [release_number], [release_statement_type], [release_statement], [affected_row_count])values(@release_key, @vault_release_number, 'Header', @vault_statement, @vault_change_count)
-
--- Extract the Changes per Table
-DECLARE dv_table_cursor CURSOR FOR  
-SELECT dv_schema_name, dv_table_name
-FROM @IncludeTables 
-order by dv_load_order
-
-OPEN dv_table_cursor
-FETCH NEXT FROM dv_table_cursor INTO @dv_schema_name, @dv_table_name
-
-WHILE @@FETCH_STATUS = 0   
-BEGIN   
- --      print @dv_table_name
-	   EXECUTE [dv_release].[dv_build_release_config_table] @dv_schema_name, @dv_table_name, @vault_release_number, '', @vault_statement OUTPUT, @vault_change_count OUTPUT
-	   if isnull(@vault_change_count, 0) > 0
-			insert #dv_release_build([release_build_key], [release_number], [release_statement_type], [release_statement], [affected_row_count]) values(@release_key, @vault_release_number, 'Table', @vault_statement, @vault_change_count)
-       FETCH NEXT FROM dv_table_cursor INTO @dv_schema_name, @dv_table_name   
-END   
-
-CLOSE dv_table_cursor   
-DEALLOCATE dv_table_cursor
-
-
-delete from [dv_release].[dv_release_build] where [release_build_key] = @release_key
-insert [dv_release].[dv_release_build]
-SELECT [release_build_key]
-      ,[release_statement_sequence]
-	  ,[release_number]
-	  ,[release_statement_type]
-      ,[release_statement]
-      ,[affected_row_count]
-  FROM #dv_release_build
-
-if @vault_return_change_script = 1
-	select * from #dv_release_build
-
-/*--------------------------------------------------------------------------------------------------------------*/
-IF @@TRANCOUNT > 0 COMMIT TRAN;
-
-SET @_Message   = 'Successfully Created Release for: ' 
-
-END TRY
-BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Create Release for: ' 
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
@@ -17564,7 +17743,98 @@ GO
 
 SET IDENTITY_INSERT [dv_release].[dv_release_master] OFF;
 GO
+/*  Default Ref Function  */
+SET IDENTITY_INSERT [dbo].[dv_ref_function] ON;
+GO
 
+MERGE INTO [dbo].[dv_ref_function] AS trgt 
+USING	(VALUES (0,'Default_Ref_Function', 'Default','Default',0)) AS src([ref_function_key],[ref_function_name],[ref_function],[ref_function_arguments],[release_key])
+	ON
+		trgt.[ref_function_key] = src.[ref_function_key]
+	WHEN MATCHED THEN
+		UPDATE SET
+		  [ref_function_name]		= src.[ref_function_name]
+		, [ref_function]			= src.[ref_function]
+		, [ref_function_arguments]	= src.[ref_function_arguments]
+		, [release_key]			    = src.[release_key]
+	WHEN NOT MATCHED BY TARGET THEN
+		INSERT ([ref_function_key],[ref_function_name],[ref_function],[ref_function_arguments],[release_key])
+		VALUES ([ref_function_key],[ref_function_name],[ref_function],[ref_function_arguments],[release_key])
+;
+GO
+
+SET IDENTITY_INSERT [dbo].[dv_ref_function] OFF;
+GO
+
+
+/*  Default SourceSystem  */
+SET IDENTITY_INSERT [dbo].[dv_source_system] ON;
+GO
+
+MERGE INTO [dbo].[dv_source_system] AS trgt 
+USING	(VALUES (0,'Default_Source_System',0)) AS src([source_system_key],[source_system_name],[release_key])
+	ON
+		trgt.[source_system_key] = src.[source_system_key]
+	WHEN MATCHED THEN
+		UPDATE SET
+		  [source_system_name] = src.[source_system_name]
+		, [release_key] = src.[release_key]
+	WHEN NOT MATCHED BY TARGET THEN
+		INSERT ([source_system_key],[source_system_name],[release_key])
+		VALUES ([source_system_key],[source_system_name],[release_key])
+;
+GO
+
+SET IDENTITY_INSERT [dbo].[dv_source_system] OFF;
+GO
+
+/*  Default SourceTable  */
+SET IDENTITY_INSERT [dbo].[dv_source_table] ON;
+GO
+
+MERGE INTO [dbo].[dv_source_table] AS trgt 
+USING	(VALUES (0,0,'Default_Source_Table_Schema','Default_Source_Table_Name', 'Full',0)) AS src([source_table_key],[system_key],[source_table_schema],[source_table_name],[source_table_load_type],[release_key])
+	ON
+		trgt.[source_table_key] = src.[source_table_key]
+	WHEN MATCHED THEN
+		UPDATE SET
+		 [system_key]			   = src.[system_key]
+		,[source_table_schema]	   = src.[source_table_schema]
+		,[source_table_name]	   = src.[source_table_name]
+		,[source_table_load_type]  = src.[source_table_load_type]
+		,[release_key]			   = src.[release_key]
+	WHEN NOT MATCHED BY TARGET THEN
+		INSERT ([source_table_key],[system_key],[source_table_schema],[source_table_name],[source_table_load_type],[release_key])
+		VALUES ([source_table_key],[system_key],[source_table_schema],[source_table_name],[source_table_load_type],[release_key])
+;
+GO
+
+SET IDENTITY_INSERT [dbo].[dv_source_table] OFF;
+GO
+
+/*  Default Column  */
+SET IDENTITY_INSERT [dbo].[dv_column] ON;
+GO
+
+MERGE INTO [dbo].[dv_column] AS trgt 
+USING	(VALUES (0,0,'Default_Column_Name', 'Default',0,0)) AS src([column_key],[table_key],[column_name],[column_type],[source_ordinal_position],[release_key])
+	ON
+		trgt.[column_key] = src.[column_key]
+	WHEN MATCHED THEN
+		UPDATE SET
+		 [table_key]					= src.[table_key]
+		,[column_name]					= src.[column_name]
+		,[column_type]					= src.[column_type]
+		,[source_ordinal_position]		= src.[source_ordinal_position]
+		,[release_key]					= src.[release_key]
+	WHEN NOT MATCHED BY TARGET THEN
+		INSERT ([column_key],[table_key],[column_name],[column_type],[source_ordinal_position],[release_key])
+		VALUES ([column_key],[table_key],[column_name],[column_type],[source_ordinal_position],[release_key])
+;
+GO
+
+SET IDENTITY_INSERT [dbo].[dv_column] OFF;
+GO
 /*  Default Hub  */
 SET IDENTITY_INSERT [dbo].[dv_hub] ON;
 GO
