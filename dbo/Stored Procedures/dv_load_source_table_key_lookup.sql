@@ -391,7 +391,8 @@ select @source_load_date_time = isnull(@source_load_date_time, @def_global_defau
 -- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
 set @sql = ''
 select @sql += quotename(sc.column_name) + ' = ' + 
-           case when  replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
+           case when c.[discard_flag] = 1 then 'NULL'
+		        when  replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
 		            = replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '')
 				then 'src.' + quotename(c.[column_name])
 				else 'cast(src.' + quotename(c.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '')
@@ -591,7 +592,7 @@ IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @cr
 --SET @_Step = 'Load The ' + case when @sat_link_hub_flag = 'H' then 'Hub' else 'Link' end
 --IF @_JournalOnOff = 'ON'
 --      SET @_ProgressText += @sql
---print @vault_sql_statement
+print @vault_sql_statement
 --EXECUTE sp_executesql @SQL;
 /*--------------------------------------------------------------------------------------------------------------*/
 
