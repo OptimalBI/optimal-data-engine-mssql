@@ -308,12 +308,8 @@
     <Build Include="Security\SBLogin_Login.sql" />
     <Build Include="ODE_Release\Tables\dv_release_002_002_001.sql" />
     <Build Include="dbo\Tables\dv_ref_function.sql" />
-    <Build Include="dbo\Tables\dv_satellite_column_keep.sql" />
-    <Build Include="dbo\Tables\dv_ref_function_param.sql" />
     <Build Include="dv_scripting\Functions\dv_int_to_string.sql" />
     <Build Include="dv_scripting\Functions\dv_concat.sql" />
-    <Build Include="dv_scripting\Functions\fn_parseref_function.sql" />
-    <Build Include="dv_scripting\Functions\fn_function_name_list.sql" />
     <Build Include="dv_scripting\Stored Procedures\dv_build_snippet.sql" />
     <Build Include="Security\dv_scripting.sql" />
   </ItemGroup>

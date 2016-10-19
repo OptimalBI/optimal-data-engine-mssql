@@ -451,7 +451,6 @@ begin
         ORDER BY hkc.hub_key_ordinal_position
         select @surrogate_key_match =  left(@sql, len(@sql) - 4)
 end
---print @SQL
 -- Compile the SQL
 -- If it is a link, create the temp table with all Hub keys plus a dummy for the Link Keys.
 
@@ -525,7 +524,7 @@ BEGIN
 		@input_string
 	   ,@output_string OUTPUT
 	
-    select @output_string = ', w' + cast(@ref_function_seq as varchar(10)) + ' as (select *, '  + @output_string + ' as ' + @column_name + ' from w' + 
+    select @output_string = ', w' + cast(@ref_function_seq as varchar(10)) + ' as (select *, '  + @output_string + ' as ' + quotename(@column_name) + ' from w' + 
 							case when @ref_function_seq = 1 then 'BaseSet' else cast(@ref_function_seq -1 as varchar(10)) end + ')' + @crlf
 	update @ref_function_list set with_statement = @output_string where ref_function_seq = @ref_function_seq
 	fetch next from curFunc into @ref_function_seq,@column_name, @ref_function, @func_arguments
