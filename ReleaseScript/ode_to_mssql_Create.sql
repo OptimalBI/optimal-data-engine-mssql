@@ -329,6 +329,15 @@ CREATE SCHEMA [ODE_Release]
 
 
 GO
+PRINT N'Creating [dv_scripting]...';
+
+
+GO
+CREATE SCHEMA [dv_scripting]
+    AUTHORIZATION [dbo];
+
+
+GO
 PRINT N'Creating [dbo].[dv_column_type]...';
 
 
@@ -628,8 +637,8 @@ GO
 CREATE TABLE [dbo].[dv_ref_function] (
     [ref_function_key]       INT                IDENTITY (1, 1) NOT NULL,
     [ref_function_name]      VARCHAR (128)      NOT NULL,
-    [ref_function]           VARCHAR (4096)     NOT NULL,
-    [ref_function_arguments] VARCHAR (512)      NOT NULL,
+    [ref_function]           NVARCHAR (4000)    NOT NULL,
+    [ref_function_arguments] NVARCHAR (512)     NOT NULL,
     [is_retired]             BIT                NOT NULL,
     [release_key]            INT                NOT NULL,
     [version_number]         INT                NOT NULL,
@@ -649,6 +658,48 @@ CREATE UNIQUE NONCLUSTERED INDEX [dv_ref_function_name_unique]
 
 
 GO
+PRINT N'Creating [dbo].[dv_satellite_column_keep]...';
+
+
+GO
+CREATE TABLE [dbo].[dv_satellite_column_keep] (
+    [satellite_col_key] INT                IDENTITY (1, 1) NOT NULL,
+    [satellite_key]     INT                NOT NULL,
+    [column_key]        INT                NOT NULL,
+    [release_key]       INT                NOT NULL,
+    [version_number]    INT                NOT NULL,
+    [updated_by]        VARCHAR (30)       NULL,
+    [updated_datetime]  DATETIMEOFFSET (7) NULL
+);
+
+
+GO
+PRINT N'Creating [dbo].[dv_ref_function_param]...';
+
+
+GO
+CREATE TABLE [dbo].[dv_ref_function_param] (
+    [ref_function_param_key] INT                IDENTITY (1, 1) NOT NULL,
+    [ref_function_key]       INT                NOT NULL,
+    [param_name]             VARCHAR (128)      NOT NULL,
+    [param_type]             VARCHAR (30)       NOT NULL,
+    [param_length]           INT                NULL,
+    [param_precision]        INT                NULL,
+    [param_scale]            INT                NULL,
+    [collation_name]         [sysname]          NULL,
+    [default_value]          VARCHAR (512)      NULL,
+    [param_ordinal_position] INT                NOT NULL,
+    [is_retired]             BIT                NOT NULL,
+    [release_key]            INT                NOT NULL,
+    [version_number]         INT                NOT NULL,
+    [updated_by]             VARCHAR (30)       NULL,
+    [update_date_time]       DATETIMEOFFSET (7) NULL,
+    CONSTRAINT [PK__dv_ref_function_param] PRIMARY KEY CLUSTERED ([ref_function_param_key] ASC),
+    CONSTRAINT [dv_ref_function_param_unique] UNIQUE NONCLUSTERED ([param_name] ASC)
+);
+
+
+GO
 PRINT N'Creating [dbo].[dv_satellite_column]...';
 
 
@@ -662,9 +713,10 @@ CREATE TABLE [dbo].[dv_satellite_column] (
     [column_length]              INT                NULL,
     [column_precision]           INT                NULL,
     [column_scale]               INT                NULL,
-    [Collation_Name]             [sysname]          NULL,
+    [collation_name]             [sysname]          NULL,
     [satellite_ordinal_position] INT                NOT NULL,
     [ref_function_key]           INT                NOT NULL,
+    [func_arguments]             NVARCHAR (512)     NULL,
     [func_ordinal_position]      INT                NOT NULL,
     [release_key]                INT                NOT NULL,
     [version_number]             INT                NOT NULL,
@@ -1728,6 +1780,60 @@ ALTER TABLE [dbo].[dv_ref_function]
 
 
 GO
+PRINT N'Creating [dbo].[DF_ref_function_param_param_ordinal_position]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function_param]
+    ADD CONSTRAINT [DF_ref_function_param_param_ordinal_position] DEFAULT ((0)) FOR [param_ordinal_position];
+
+
+GO
+PRINT N'Creating [dbo].[DF_ref_function_param_]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function_param]
+    ADD CONSTRAINT [DF_ref_function_param_] DEFAULT ((0)) FOR [is_retired];
+
+
+GO
+PRINT N'Creating [dbo].[DF_ref_function_param_release_key]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function_param]
+    ADD CONSTRAINT [DF_ref_function_param_release_key] DEFAULT ((0)) FOR [release_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF_ref_function_param_version_number]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function_param]
+    ADD CONSTRAINT [DF_ref_function_param_version_number] DEFAULT ((1)) FOR [version_number];
+
+
+GO
+PRINT N'Creating [dbo].[DF_ref_function_param_updated_by]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function_param]
+    ADD CONSTRAINT [DF_ref_function_param_updated_by] DEFAULT (suser_name()) FOR [updated_by];
+
+
+GO
+PRINT N'Creating [dbo].[DF_ref_function_param_update_date_time]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function_param]
+    ADD CONSTRAINT [DF_ref_function_param_update_date_time] DEFAULT (sysdatetimeoffset()) FOR [update_date_time];
+
+
+GO
 PRINT N'Creating [dbo].[DF_dv_satellite_column_column_key]...';
 
 
@@ -2427,6 +2533,15 @@ PRINT N'Creating [dbo].[FK_dv_ref_function_dv_release_master]...';
 GO
 ALTER TABLE [dbo].[dv_ref_function]
     ADD CONSTRAINT [FK_dv_ref_function_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK__dv_ref_function]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_ref_function_param]
+    ADD CONSTRAINT [FK__dv_ref_function] FOREIGN KEY ([ref_function_key]) REFERENCES [dbo].[dv_ref_function] ([ref_function_key]);
 
 
 GO
@@ -3499,6 +3614,32 @@ BEGIN
 	RETURN @Duration
 END
 GO
+PRINT N'Creating [dv_scripting].[dv_int_to_string]...';
+
+
+GO
+
+CREATE FUNCTION [dv_scripting].[dv_int_to_string](@int as sql_variant)
+returns varchar(4096)
+as
+begin
+return 'convert(varchar(256), '+  cast(@int as varchar(128)) + ')'
+
+end
+GO
+PRINT N'Creating [dv_scripting].[dv_concat]...';
+
+
+GO
+
+CREATE FUNCTION [dv_scripting].[dv_concat](@string as varchar(4096))
+returns varchar(4096)
+as
+begin
+return replace(replace(@string, '"', ''''), '||', '+') 
+
+end
+GO
 PRINT N'Creating [dbo].[fn_get_key_definition]...';
 
 
@@ -3563,7 +3704,8 @@ SET QUOTED_IDENTIFIER OFF;
 
 
 GO
-CREATE FUNCTION dbo.fn_split_strings
+
+CREATE FUNCTION [dbo].[fn_split_strings]
 (
 	@List VARCHAR(8000),
 	@Delimiter VARCHAR(255)
@@ -3580,9 +3722,9 @@ RETURN
 		E42(N)		AS (SELECT 1 FROM E4 a, E2 b),
 		cteTally(N) AS (SELECT TOP (ISNULL(DATALENGTH(@List),0)) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) FROM E4),
 		cteStart(N1) AS (SELECT 1 UNION ALL
-						 SELECT t.N+1 FROM cteTally t WHERE SUBSTRING(@List,t.N,1) = @Delimiter),
+						 SELECT t.N+len(@Delimiter) FROM cteTally t WHERE SUBSTRING(@List,t.N,len(@Delimiter)) = @Delimiter),
 		cteLen(N1,L1) AS(SELECT s.N1, ISNULL(NULLIF(CHARINDEX(@Delimiter,@List,s.N1),0)-s.N1,8000) FROM cteStart s)
-	SELECT --ItemNumber = ROW_NUMBER() OVER(ORDER BY l.N1), --item number is disabled
+	SELECT ItemNumber = ROW_NUMBER() OVER(ORDER BY l.N1), --item number is disabled
 		Item		= SUBSTRING(@List, l.N1, l.L1)
 	FROM cteLen l
 GO
@@ -3751,38 +3893,99 @@ select m.source_system_name
 
 )
 GO
-PRINT N'Creating [dbo].[vw_running_processes]...';
+PRINT N'Creating [dv_scripting].[fn_function_name_list]...';
 
 
 GO
-create view dbo.vw_running_processes 
-as
-SELECT spid
-      , CAST(((DATEDIFF(s,start_time,GetDate()))/3600) as varchar) + ' hour(s), '
-      + CAST((DATEDIFF(s,start_time,GetDate())%3600)/60 as varchar) + 'min, '
-      + CAST((DATEDIFF(s,start_time,GetDate())%60) as varchar) + ' sec' as running_time
-	  ,ER.command
-	  ,ER.blocking_session_id
-	  ,SP.dbid
-	  ,last_wait_type = LASTWAITTYPE
-	  ,db_name = DB_NAME(SP.DBID) 
-	  ,SUBSTRING(est.text, (ER.statement_start_offset/2)+1
-	  ,((CASE ER.statement_end_offset
-					 WHEN -1 THEN DATALENGTH(est.text)
-					 ELSE ER.statement_end_offset
-					 END - ER.statement_start_offset)/2) + 1) as query_text 
-	  ,cpu
-	  ,host_name = HOSTNAME
-	  ,login_time
-	  ,login_name = LOGINAME
-	  ,SP.status
-	  ,program_name
-	  ,NT_domain
-	  ,NT_username
-FROM SYSPROCESSES SP
-INNER JOIN sys.dm_exec_requests ER
-ON sp.spid = ER.session_id
-CROSS APPLY SYS.DM_EXEC_SQL_TEXT(er.sql_handle) EST
+
+
+
+CREATE FUNCTION [dv_scripting].[fn_function_name_list]()
+RETURNS TABLE 
+AS
+RETURN 
+(
+      SELECT dv_schema_name = cast('dv_scripting'	as sysname), dv_function_name = cast('dv_concat'				as sysname)
+union SELECT dv_schema_name = cast('dv_scripting'	as sysname), dv_function_name = cast('dv_int_to_string'			as sysname)
+)
+GO
+PRINT N'Creating [dv_scripting].[fn_parseref_function]...';
+
+
+GO
+CREATE FUNCTION [dv_scripting].[fn_parseref_function](
+    @string			varchar(max),
+    @start_char		char(1)='(',
+    @end_char		char(1)=')'
+)
+RETURNS @tbl TABLE ([id] integer NOT NULL,
+    parent         int NULL,
+    expression     varchar(max) NULL,
+	snippet        varchar(max) NULL,
+    PRIMARY KEY CLUSTERED ([id])
+)
+AS
+
+BEGIN;
+    DECLARE @xml xml
+	       ,@id int=1
+
+    --- "XML'ifying" the string by replacing the start character
+    --- with the <expr> element and the end character with the
+    --- corresponding </expr>. Because we're going to turn all
+    --- this into XML, we also need to encode special characters
+    --- used in the XML document, such as quotes, "<" and ">".
+    --- Finally, we're adding an ID attribute to each <expr>
+    --- element. This attribute is the same id that will be
+    --- returned in the output table.
+    SET @string='<expr id="0">'+@start_char+
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(@string,
+                '<', '&lt;'),
+                '>', '&gt;'),
+                '"', '&quot;'),
+                @start_char, '<expr id="*">'+@start_char),
+                @end_char, @end_char+'</expr>')
+            +@end_char+'</expr>';
+
+    --- Loop through the id attributes and replace them with
+    --- actual numbers.
+    WHILE (@string LIKE '%<expr id="*">%') BEGIN;
+        SET @string=STUFF(
+            @string,
+            CHARINDEX('<expr id="*">', @string)+10,
+            1,
+            CAST(@id AS varchar(max)));
+        SET @id=@id+1;
+    END;
+
+    --- Convert @string into a proper XML document.
+    SET @xml=CAST(@string AS xml);
+
+    --- Parse this XML document into the output table, @tbl:
+    --- * The id of each element goes into the "id" column.
+    --- * the id of the element's parent element goes into the
+    ---   "parent" column.
+    --- * The plaintext expression itself goes into the
+    ---   "expression" column.
+    WITH nodes ([id], parent, expression)
+    AS (
+        SELECT n.expression.value('@id[1]', 'int') AS [id],
+               n.expression.value('../@id[1]', 'int') AS parent,
+               n.expression.value('.', 'varchar(max)') AS expression
+        FROM @xml.nodes('//*') AS n(expression))
+
+    INSERT INTO @tbl ([id], parent, expression, snippet)
+    SELECT [id]
+	      ,parent
+        --- The SUBSTRING() is used to trim away the leading
+        --- and trailing @start_char and @end_char characters
+        --- from the expression.
+        ,SUBSTRING(expression, 2, LEN(expression)-2)
+		,''
+    FROM nodes;
+
+    RETURN;
+END;
 GO
 PRINT N'Creating [dv_scheduler].[vw_running_processes]...';
 
@@ -8262,6 +8465,100 @@ OnComplete:
 	SET NOCOUNT OFF;
 
 	RETURN (@_Error);
+END
+GO
+PRINT N'Creating [dv_scripting].[dv_build_snippet]...';
+
+
+GO
+
+CREATE Procedure [dv_scripting].[dv_build_snippet] 
+(@input_string nvarchar(4000)
+,@output_string nvarchar(4000) output
+)
+AS
+BEGIN
+declare @start_pos int,
+		@open_pos int,
+		@brcktcount int,
+		@string_pos int,
+		@current_row int,
+		@parent int,
+		@string nvarchar(4000),
+		@command nvarchar(4000),
+		@parm_definition nvarchar(500),
+		@commandstring nvarchar(4000),
+		@expression nvarchar(4000),
+		@snippet nvarchar(4000),
+		@resultvar nvarchar(4000)
+
+declare @snippet_table TABLE 
+       ([id] integer NOT NULL identity(1,1),
+		parent int NULL,
+		command	nvarchar(4000) NULL,
+		expression nvarchar(4000) NULL,
+		snippet nvarchar(4000) NULL)
+
+--Initialise outer loop - works through the input string,
+--						  writing each function call to a new row in the table variable.
+--                        continues until reduced to single function calls, which can be executed.
+
+insert @snippet_table select 0, '',  @input_string, ''
+select @current_row = SCOPE_IDENTITY()
+while @current_row <= (select max([id]) from @snippet_table)
+begin
+    -- Initialise second loop - works through a single row, pulling out each first level function call, into a new row in the table
+	select @string = expression from @snippet_table where [id] = @current_row
+	select @open_pos = 1
+	set @start_pos = charindex('[dv_scripting].[dv_', @string,@open_pos+1 )
+
+	while @start_pos > 0
+	begin
+		set @open_pos =  charindex('(', @string,@start_pos)
+		if @start_pos = 0 set @brcktcount = 0 else set @brcktcount = 1
+		while @brcktcount > 0
+		begin
+			set @open_pos += 1
+			if substring(@string,@open_pos, 1) = '(' set @brcktcount = @brcktcount + 1
+			if substring(@string,@open_pos, 1) = ')' set @brcktcount = @brcktcount - 1
+		end
+		select @snippet = substring(@string,@start_pos,@open_pos-@start_pos+ 1) 
+		insert @snippet_table select @current_row, '', right(@snippet, len(@snippet) - 4), ''
+		set @start_pos = charindex('[dv_scripting].[dv_', @string,@open_pos+1 )
+
+	end
+	set @current_row = @current_row + 1
+end
+update @snippet_table set expression = '[dv_'+ expression where parent <> 0
+update @snippet_table set expression = ltrim(rtrim(expression) )
+update @snippet_table set command = left(expression, charindex('(', expression, 1)-1)
+                         ,snippet = left(right(expression, len(expression) - charindex('(', expression, 1)), len(right(expression, len(expression) - charindex('(', expression, 1))) -1)
+update @snippet_table set expression = command + '(' + snippet + ')'
+
+-- Now work backwards through the table, replacing commands with code snippets
+set @parm_definition = N'@codesnippet nvarchar(4000) OUTPUT'
+select @commandstring = expression from @snippet_table where parent = 0
+select @current_row = max([id]) from @snippet_table
+select @parent = parent 
+      ,@command = 'SELECT @codesnippet = ' + command + '(' + snippet + ')'
+	  ,@expression = expression
+	  from @snippet_table where [id] = @current_row
+-- Loop through the scripts, replacing the snippets in the parent
+while @current_row > 0
+begin
+	EXECUTE sp_executesql @command, @parm_definition, @codesnippet = @snippet OUTPUT
+	--if its the master row, just replace the whole snippet
+	if @parent = 0
+    update @snippet_table set snippet = left(@snippet, len(@snippet) - charindex(')',reverse(@snippet), 1)) where [id] = @current_row
+	else
+	update @snippet_table set snippet = replace(snippet,@expression, @snippet) where [id] = @parent
+	set @current_row = @current_row -1
+	select @parent = parent
+	      ,@command = 'SELECT @codesnippet = ' + command + '(' + snippet + ')'
+		  ,@expression = expression
+		  from @snippet_table where [id] = @current_row
+end
+select @output_string = replace(snippet, '#', '''') from @snippet_table where parent = 0
 END
 GO
 PRINT N'Creating [dbo].[dv_load_hub_table]...';
@@ -17703,6 +18000,24 @@ PRINT N'Creating [log4].[JournalCleanup].[MS_Description]...';
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Deletes all Journal and Exception entries older than the specified days', @level0type = N'SCHEMA', @level0name = N'log4', @level1type = N'PROCEDURE', @level1name = N'JournalCleanup';
 
+
+GO
+-- Refactoring step to update target server with deployed transaction logs
+
+IF OBJECT_ID(N'dbo.__RefactorLog') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[__RefactorLog] (OperationKey UNIQUEIDENTIFIER NOT NULL PRIMARY KEY)
+    EXEC sp_addextendedproperty N'microsoft_database_tools_support', N'refactoring log', N'schema', N'dbo', N'table', N'__RefactorLog'
+END
+GO
+IF NOT EXISTS (SELECT OperationKey FROM [dbo].[__RefactorLog] WHERE OperationKey = '972c18cb-7d46-4b4d-9150-a33564d7ce04')
+INSERT INTO [dbo].[__RefactorLog] (OperationKey) values ('972c18cb-7d46-4b4d-9150-a33564d7ce04')
+IF NOT EXISTS (SELECT OperationKey FROM [dbo].[__RefactorLog] WHERE OperationKey = '5e8da4cc-9379-4576-a380-1b7d7a2dcc11')
+INSERT INTO [dbo].[__RefactorLog] (OperationKey) values ('5e8da4cc-9379-4576-a380-1b7d7a2dcc11')
+IF NOT EXISTS (SELECT OperationKey FROM [dbo].[__RefactorLog] WHERE OperationKey = '8b98b980-a88d-4cb7-82bd-4883bd920720')
+INSERT INTO [dbo].[__RefactorLog] (OperationKey) values ('8b98b980-a88d-4cb7-82bd-4883bd920720')
+
+GO
 
 GO
 /*

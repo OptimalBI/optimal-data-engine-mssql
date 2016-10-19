@@ -102,10 +102,31 @@ DECLARE @hub_column_list								nvarchar(max)   = ''
 
 DECLARE @ParmDefinition									nvarchar(500);
 
-
 DECLARE @wrk_link_joins									nvarchar(max)
 DECLARE @wrk_hub_joins									nvarchar(max)
 DECLARE @wrk_link_keys									nvarchar(max)
+
+
+DECLARE @ref_function_seq								int
+       ,@column_name									varchar(128)
+	   ,@ref_function_name								varchar(128)
+	   ,@ref_function									nvarchar(4000)
+	   ,@func_arguments									nvarchar(512)
+	   ,@func_ordinal_position							int
+declare @input_string									nvarchar(4000)
+       ,@output_string									nvarchar(4000)
+	   ,@param											nvarchar(512)
+	   ,@replace										nvarchar(512)
+	   ,@lastwith										varchar(100)
+declare @ref_function_list table (ref_function_seq		int identity(1,1)
+								 ,column_name			varchar(128)
+								 ,ref_function_name		varchar(128)
+								 ,ref_function			nvarchar(4000)
+								 ,[func_arguments]		nvarchar(512)
+								 ,func_ordinal_position int
+								 ,with_statement		nvarchar(4000))
+declare @source_arg_list table(ItemNumber				int
+                              ,arg						nvarchar(512))
 
 -- Log4TSQL Journal Constants
 DECLARE @SEVERITY_CRITICAL								smallint = 1;
@@ -381,6 +402,7 @@ from [dbo].[dv_column] c
 inner join [dbo].[dv_satellite_column] sc on sc.column_key = c.column_key
 where 1=1
    and c.[table_key] = @source_table_config_key
+   and sc.[column_key] <> 0
 order by c.source_ordinal_position
 select @source_payload = left(@sql, len(@sql) -1)
 
@@ -452,11 +474,70 @@ set @sql1 = @sql1 + 'FROM ' + @source_qualified_name + ' src' + @crlf
 
 if @sat_link_hub_flag = 'H'
         set @sql1 = @sql1 + 'LEFT JOIN ' + @hub_qualified_name + ' hub' + ' ON ' + @surrogate_key_match + @crlf
-
 if @sat_link_hub_flag = 'L'
         set @sql1 = @sql1 + @link_lookup_joins
-set @sql1 = @sql1 + ')' + @crlf +
-            'SELECT * ' + ' INTO ' + @temp_table_name_001 + ' FROM wBaseSet;'
+
+set @sql1 = @sql1 + ')' + @crlf
+----  Check for any functions and build the With code to add them onto the select
+
+insert @ref_function_list
+select sc.column_name
+      ,f.ref_function_name	
+	  ,f.ref_function
+	  ,sc.[func_arguments]
+	  ,sc.func_ordinal_position
+	  ,''  
+from [dbo].[dv_satellite_column] sc
+inner join [dbo].[dv_ref_function] f
+on f.[ref_function_key] = sc.[ref_function_key]
+where f.[ref_function_key] <> 0 
+and sc.satellite_key = @sat_config_key
+order by sc.func_ordinal_position
+        ,sc.column_name
+
+declare curFunc CURSOR LOCAL for
+select [ref_function_seq]
+      ,[column_name]
+	  ,[ref_function]
+	  ,[func_arguments]
+from @ref_function_list
+open curFunc
+fetch next from curFunc into  @ref_function_seq,@column_name, @ref_function, @func_arguments
+while @@FETCH_STATUS = 0 
+BEGIN
+    set @input_string = @ref_function
+	delete @source_arg_list
+	insert @source_arg_list select * from [dbo].[fn_split_strings] (@func_arguments, ',')
+	declare curPar CURSOR LOCAL for
+	select '##' + cast(ItemNumber as varchar(100)) as func_string
+		  ,arg as replace_string
+	from @source_arg_list
+	open curPar
+	fetch next from curPar into @param, @replace
+	while @@FETCH_STATUS = 0 
+		BEGIN
+		set @input_string = replace(@input_string,@param, @replace) 
+		fetch next from curPar into @param, @replace
+		END
+	close curPar
+	deallocate curPar
+	EXECUTE [dv_scripting].[dv_build_snippet] 
+		@input_string
+	   ,@output_string OUTPUT
+	
+    select @output_string = ', w' + cast(@ref_function_seq as varchar(10)) + ' as (select *, '  + @output_string + ' as ' + @column_name + ' from w' + 
+							case when @ref_function_seq = 1 then 'BaseSet' else cast(@ref_function_seq -1 as varchar(10)) end + ')' + @crlf
+	update @ref_function_list set with_statement = @output_string where ref_function_seq = @ref_function_seq
+	fetch next from curFunc into @ref_function_seq,@column_name, @ref_function, @func_arguments
+END
+close curFunc
+deallocate curFunc
+set @sql = ''
+select @sql += with_statement from @ref_function_list order by ref_function_seq
+select @lastwith = 'w' + isnull(cast(max(ref_function_seq) as varchar), 'BaseSet') from @ref_function_list
+set @sql1 += @sql
+
+set @sql1 = @sql1 +'SELECT * ' + ' INTO ' + @temp_table_name_001 + ' FROM ' + @lastwith + ';'
 
 if (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y')
         begin
@@ -465,6 +546,7 @@ if (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y')
         set @sql1 = @sql1 + 'FROM ' + @temp_table_name_001 + ' tmp' + @crlf
         set @sql1 = @sql1 + 'LEFT JOIN ' + @link_qualified_name + ' link ' + @crlf + ' ON ' + @wrk_link_keys + ';'
         end
+
 
 /****************************************************************************************************************************************/
 -- Duplicate Checking

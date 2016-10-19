@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Operations Version="1.0" xmlns="http://schemas.microsoft.com/sqlserver/dac/Serialization/2012/02">
+  <Operation Name="Rename Refactor" Key="972c18cb-7d46-4b4d-9150-a33564d7ce04" ChangeDateTime="10/18/2016 01:24:19">
+    <Property Name="ElementName" Value="[dbo].[dv_satellite_column].[Collation_Name]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[dv_satellite_column]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="collation_came" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="5e8da4cc-9379-4576-a380-1b7d7a2dcc11" ChangeDateTime="10/18/2016 01:24:45">
+    <Property Name="ElementName" Value="[dbo].[dv_satellite_column].[func_]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[dv_satellite_column]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="func_arguments" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="8b98b980-a88d-4cb7-82bd-4883bd920720" ChangeDateTime="10/18/2016 01:27:51">
+    <Property Name="ElementName" Value="[dbo].[dv_satellite_column].[collation_came]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[dv_satellite_column]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="collation_name" />
+  </Operation>
+</Operations>
