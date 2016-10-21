@@ -222,7 +222,7 @@ from [dbo].[dv_source_table] t
 inner join [dbo].[dv_column] c
 on c.table_key = t.[source_table_key]
 inner join [dbo].[dv_satellite_column] sc
-on sc.column_key = c.column_key
+on sc.satellite_col_key = c.satellite_col_key
 inner join [dbo].[dv_satellite] sat
 on sat.satellite_key = sc.satellite_key
 where 1=1
@@ -323,7 +323,7 @@ BEGIN
         where 1=1
         and h.hub_key = @c_hub_key
         and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1) hkc
+        and c.is_retired <> 1) hkc
        -- ORDER BY hkc.hub_key_ordinal_position
         set @link_hub_keys = @link_hub_keys + @wrk_link_keys
         FETCH NEXT FROM c_hub_key
@@ -359,7 +359,7 @@ set @sql = ''
 select @sql += 'src.' +quotename([column_name]) + @crlf +', '
 from [dbo].[dv_column]
 where 1=1
-and [discard_flag] <> 1
+and [is_retired] <> 1
 and [table_key] = @source_table_config_key
 order by source_ordinal_position
 select @source_payload = left(@sql, len(@sql) -1)
@@ -393,7 +393,7 @@ begin
         where 1=1
         and h.hub_key = @hub_config_key
         and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1
+        and c.is_retired <> 1
         ORDER BY hkc.hub_key_ordinal_position
         select @surrogate_key_match =  left(@sql, len(@sql) - 4)
         --select '@surrogate_key_match', @surrogate_key_match

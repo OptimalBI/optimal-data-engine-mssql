@@ -117,6 +117,7 @@ if @@ROWCOUNT = 0  -- Table doesn't exist in Config.
 	begin
 	if @vault_rerun_column_insert = 1
 	    begin
+		delete from [dbo].[dv_hub_column] where [column_key] in (select [column_key] from [dbo].[dv_column] where [table_key] = @source_table_key)
 		delete from [dbo].[dv_column] where [table_key] = @source_table_key
 		EXECUTE [dbo].[dv_source_table_update] 
 			@table_key					= @source_table_key					
@@ -160,7 +161,6 @@ select [column_name]				= c.[name]
       ,[column_scale]				= c.[scale]
       ,[collation_Name]				= c.collation_name
       ,[source_ordinal_position]    = row_number() over (order by c.column_id)
-	  ,[satellite_ordinal_position] = row_number() over (order by c.name)
 from            [' + @vault_stage_database + '].sys.columns c
 inner join      [' + @vault_stage_database + '].sys.objects o
 on c.object_id = o.object_id
@@ -185,15 +185,14 @@ declare
 @Collation_Name				nvarchar(128) = NULL,
 @bk_ordinal_position		int,
 @source_ordinal_position	int,
-@satellite_ordinal_position	int,
 @is_source_date				bit,
-@discard_flag				bit,
 @is_retired					bit
 
 --print @sql
 if @_JournalOnOff = 'ON'
 	set @_ProgressText  = @_ProgressText + @NEW_LINE + @sql + @NEW_LINE;
 exec sp_executesql @sql, @parm_definition, @schema_name = @vault_source_schema, @table_name = @vault_source_table, @column_list_OUT=@column_list_xml output;
+select @column_list_xml
 declare Col_Cursor cursor forward_only for 
 SELECT  
  --      Tbl.Col.value('@table_key', 'int')					table_key,
@@ -205,12 +204,10 @@ SELECT
 	   Tbl.Col.value('@Collation_Name', 'nvarchar(128)')	collation_name,
 	   cast(0 as int)										bk_ordinal_position,
 	   Tbl.Col.value('@source_ordinal_position', 'int')		source_ordinal_position,
-	   Tbl.Col.value('@satellite_ordinal_position', 'int')	satellite_ordinal_position,
 	   cast(0 as bit)										is_source_date,
-	   cast(0 as bit)										discard_flag,
 	   cast(0 as bit)										is_retired
 FROM @column_list_xml.nodes('//row') Tbl(Col)
-order by satellite_ordinal_position
+order by column_name
 open Col_Cursor
 fetch next from Col_Cursor into  @column_name				
 								,@column_type				
@@ -220,28 +217,15 @@ fetch next from Col_Cursor into  @column_name
 								,@Collation_Name				
 								,@bk_ordinal_position		
 								,@source_ordinal_position	
-								,@satellite_ordinal_position	
-								,@is_source_date				
-								,@discard_flag				
+								,@is_source_date
 								,@is_retired	
 
 while @@FETCH_STATUS = 0
 begin								
-select  @column_name					
-	   ,@column_type				
-	   ,@column_length				
-	   ,@column_precision			
-	   ,@column_scale				
-	   ,@Collation_Name				
-	   ,@bk_ordinal_position		
-	   ,@source_ordinal_position	
-	   ,@satellite_ordinal_position	
-	   ,@is_source_date				
-	   ,@discard_flag				
-	   ,@is_retired
 
 EXECUTE [dbo].[dv_column_insert] 
 	    @table_key					= @source_table_key
+	   ,@satellite_col_key          = NULL
 	   ,@release_number				= @vault_release_number
 	   ,@column_name				= @column_name					
 	   ,@column_type				= @column_type				
@@ -251,9 +235,7 @@ EXECUTE [dbo].[dv_column_insert]
 	   ,@Collation_Name				= @Collation_Name				
 	   ,@bk_ordinal_position		= @bk_ordinal_position		
 	   ,@source_ordinal_position	= @source_ordinal_position	
-	   ,@satellite_ordinal_position	= @satellite_ordinal_position	
-	   ,@is_source_date				= @is_source_date				
-	   ,@discard_flag				= @discard_flag				
+	   ,@is_source_date				= @is_source_date	
 	   ,@is_retired			        = @is_retired
 
 fetch next from Col_Cursor into  @column_name				
@@ -264,9 +246,7 @@ fetch next from Col_Cursor into  @column_name
 								,@Collation_Name				
 								,@bk_ordinal_position		
 								,@source_ordinal_position	
-								,@satellite_ordinal_position	
-								,@is_source_date				
-								,@discard_flag				
+								,@is_source_date			
 								,@is_retired
 end
 close Col_Cursor

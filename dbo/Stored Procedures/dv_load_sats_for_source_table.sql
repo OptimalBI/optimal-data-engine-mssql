@@ -226,7 +226,7 @@ from [dbo].[dv_source_table] t
 inner join [dbo].[dv_column] c
 on c.table_key = t.[source_table_key]
 inner join [dbo].[dv_satellite_column] sc
-on sc.column_key = c.column_key
+on sc.satellite_col_key = c.satellite_col_key
 inner join [dbo].[dv_satellite] sat
 on sat.satellite_key = sc.satellite_key
 where 1=1

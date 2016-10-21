@@ -21,4 +21,11 @@
     <Property Name="ParentElementType" Value="SqlTable" />
     <Property Name="NewName" Value="collation_name" />
   </Operation>
+  <Operation Name="Rename Refactor" Key="cb848bf6-aa3e-4cd8-a241-558fb1fc263f" ChangeDateTime="10/19/2016 22:01:18">
+    <Property Name="ElementName" Value="[dbo].[dv_column].[discard_flag]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[dv_column]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="is_retired" />
+  </Operation>
 </Operations>

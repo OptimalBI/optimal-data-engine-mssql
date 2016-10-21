@@ -240,7 +240,7 @@ from [dbo].[dv_source_table] t
 inner join [dbo].[dv_column] c
 on c.table_key = t.[source_table_key]
 inner join [dbo].[dv_satellite_column] sc
-on sc.column_key = c.column_key
+on sc.satellite_col_key = c.satellite_col_key
 inner join [dbo].[dv_satellite] sat
 on sat.satellite_key = sc.satellite_key
 where 1=1
@@ -336,7 +336,7 @@ BEGIN
         where 1=1
         and h.hub_key = @c_hub_key
         and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1
+        and c.is_retired <> 1
         ORDER BY hkc.hub_key_ordinal_position
 
 		select  @wrk_hub_joins += ', ' + @c_hub_abbreviation + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub'))  + @crlf
@@ -354,7 +354,7 @@ BEGIN
         where 1=1
         and h.hub_key = @c_hub_key
         and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1) hkc
+        and c.[is_retired] <> 1) hkc
         --ORDER BY hkc.hub_key_ordinal_position
 
         set @link_hub_keys = @link_hub_keys + @wrk_link_keys
@@ -391,7 +391,7 @@ select @source_load_date_time = isnull(@source_load_date_time, @def_global_defau
 -- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
 set @sql = ''
 select @sql += quotename(sc.column_name) + ' = ' + 
-           case when c.[discard_flag] = 1 then 'NULL'
+           case when c.[is_retired] = 1 then 'NULL'
 		        when  replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
 		            = replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '')
 				then 'src.' + quotename(c.[column_name])
@@ -400,10 +400,11 @@ select @sql += quotename(sc.column_name) + ' = ' +
 				end 
 			+ @crlf +', '
 from [dbo].[dv_column] c
-inner join [dbo].[dv_satellite_column] sc on sc.column_key = c.column_key
+inner join [dbo].[dv_satellite_column] sc on sc.satellite_col_key = c.satellite_col_key
 where 1=1
    and c.[table_key] = @source_table_config_key
-   and sc.[column_key] <> 0
+   --and sc.[satellite_col_key] <> 0
+   and sc.[satellite_col_key] is not null
 order by c.source_ordinal_position
 select @source_payload = left(@sql, len(@sql) -1)
 
@@ -448,7 +449,7 @@ begin
         where 1=1
         and h.hub_key = @hub_config_key
         and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1
+        and c.[is_retired] <> 1
         ORDER BY hkc.hub_key_ordinal_position
         select @surrogate_key_match =  left(@sql, len(@sql) - 4)
 end

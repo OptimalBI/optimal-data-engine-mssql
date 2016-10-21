@@ -1,6 +1,7 @@
 ﻿CREATE PROC [dbo].[dv_column_insert] 
     @table_key int,
-	@release_number int,
+	@release_number int ,
+    @satellite_col_key int NULL,
     @column_name varchar(128),
     @column_type varchar(30),
     @column_length int = NULL,
@@ -10,12 +11,11 @@
     @bk_ordinal_position int,
     @source_ordinal_position int,
     @is_source_date bit,
-    @discard_flag bit,
     @is_retired bit
 AS 
 	SET NOCOUNT ON 
 	SET XACT_ABORT ON  
-	
+
 	BEGIN TRAN
 		declare @release_key int
 	       ,@rc int
@@ -23,11 +23,11 @@ AS
 	set @rc = @@rowcount
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
-	INSERT INTO [dbo].[dv_column] ([table_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [is_source_date], [discard_flag], [is_retired],[release_key])
-	SELECT @table_key, @column_name, @column_type, @column_length, @column_precision, @column_scale, @Collation_Name, @bk_ordinal_position, @source_ordinal_position, @is_source_date, @discard_flag, @is_retired, @release_key
+	INSERT INTO [dbo].[dv_column] ([table_key], [satellite_col_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [is_source_date], [is_retired],[release_key])
+	SELECT @table_key, @satellite_col_key, @column_name, @column_type, @column_length, @column_precision, @column_scale, @Collation_Name, @bk_ordinal_position, @source_ordinal_position, @is_source_date, @is_retired, @release_key
 	
 	-- Begin Return Select <- do not remove
-	SELECT [column_key], [table_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [is_source_date], [discard_flag], [is_retired],[release_key],[version_number], [updated_by], [update_date_time]
+	SELECT [column_key], [table_key], [satellite_col_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [is_source_date], [is_retired],[release_key],[version_number], [updated_by], [update_date_time]
 	FROM   [dbo].[dv_column]
 	WHERE  [column_key] = SCOPE_IDENTITY()
 	-- End Return Select <- do not remove

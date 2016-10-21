@@ -153,7 +153,7 @@ and h.hub_database			= @vault_database
 and s.source_system_name	= @vault_source_system
 and st.source_table_schema	= @vault_source_schema
 and st.source_table_name	= @vault_source_table
-and isnull(c.discard_flag, 0) <> 1
+and isnull(c.is_retired, 0) <> 1
 ORDER BY hkc.hub_key_ordinal_position 
 
 /*--------------------------------------------------------------------------------------------------------------*/
