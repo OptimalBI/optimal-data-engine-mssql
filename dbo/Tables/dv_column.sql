@@ -28,6 +28,8 @@
 
 
 
+
+
 GO
 
 
@@ -48,6 +50,5 @@ join inserted as b
 on a.[column_key] = b.[column_key]; 
 end
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [idx_dv_column_sat_unique]
-    ON [dbo].[dv_column]([satellite_col_key] ASC) WHERE ([satellite_col_key] IS NOT NULL);
+
 

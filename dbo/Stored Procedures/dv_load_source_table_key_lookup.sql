@@ -491,7 +491,7 @@ select sc.column_name
 from [dbo].[dv_satellite_column] sc
 inner join [dbo].[dv_ref_function] f
 on f.[ref_function_key] = sc.[ref_function_key]
-where f.[ref_function_key] <> 0 
+where f.[ref_function_key] is not null 
 and sc.satellite_key = @sat_config_key
 order by sc.func_ordinal_position
         ,sc.column_name

@@ -235,7 +235,7 @@
     <Build Include="dbo\Stored Procedures\dv_create_DV_table.sql" />
     <Build Include="dbo\Stored Procedures\dv_column_update.sql" />
     <Build Include="dbo\Stored Procedures\dv_column_insert.sql">
-      <QuotedIdentifier>Off</QuotedIdentifier>
+      <QuotedIdentifier>On</QuotedIdentifier>
     </Build>
     <Build Include="dbo\Stored Procedures\dv_column_delete.sql" />
     <Build Include="log4\Stored Procedures\JournalCleanup.sql" />
@@ -313,6 +313,7 @@
     <Build Include="dv_scripting\Stored Procedures\dv_build_snippet.sql" />
     <Build Include="Security\dv_scripting.sql" />
     <Build Include="dbo\Tables\dv_satellite_column_keep.sql" />
+    <Build Include="dv_scripting\Functions\dv_int_to_datetime.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment1.sql" />
@@ -328,8 +329,5 @@
       <SuppressMissingDependenciesErrors>False</SuppressMissingDependenciesErrors>
       <DatabaseVariableLiteralValue>msdb</DatabaseVariableLiteralValue>
     </ArtifactReference>
-  </ItemGroup>
-  <ItemGroup>
-    <RefactorLog Include="ode_to_mssql.refactorlog" />
   </ItemGroup>
 </Project>

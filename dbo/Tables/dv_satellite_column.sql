@@ -1,4 +1,4 @@
-CREATE TABLE [dbo].[dv_satellite_column] (
+﻿CREATE TABLE [dbo].[dv_satellite_column] (
     [satellite_col_key]          INT                IDENTITY (1, 1) NOT NULL,
     [satellite_key]              INT                NOT NULL,
     [column_name]                VARCHAR (128)      NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE [dbo].[dv_satellite_column] (
     [column_scale]               INT                NULL,
     [collation_name]             [sysname]          NULL,
     [satellite_ordinal_position] INT                NOT NULL,
-    [ref_function_key]           INT                CONSTRAINT [DF_dv_satellite_column_ref_function_key] DEFAULT ((0)) NOT NULL,
+    [ref_function_key]           INT                NULL,
     [func_arguments]             NVARCHAR (512)     NULL,
     [func_ordinal_position]      INT                CONSTRAINT [DF_dv_satellite_column_func_ordinal_position] DEFAULT ((0)) NOT NULL,
     [release_key]                INT                CONSTRAINT [DF_dv_satellite_column_release_key] DEFAULT ((0)) NOT NULL,
@@ -21,6 +21,8 @@ CREATE TABLE [dbo].[dv_satellite_column] (
     CONSTRAINT [FK_dv_satellite_column_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),
     CONSTRAINT [dv_satellite_column_unique] UNIQUE NONCLUSTERED ([satellite_key] ASC, [column_name] ASC)
 );
+
+
 
 
 
