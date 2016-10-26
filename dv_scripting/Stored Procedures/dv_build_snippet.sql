@@ -1,6 +1,7 @@
 ﻿
 CREATE Procedure [dv_scripting].[dv_build_snippet] 
 (@input_string nvarchar(4000)
+,@argument_list nvarchar(512)
 ,@output_string nvarchar(4000) output
 ,@dogenerateerror				bit				= 0
 ,@dothrowerror					bit				= 1
@@ -22,7 +23,9 @@ declare @start_pos int,
 		@commandstring nvarchar(4000),
 		@expression nvarchar(4000),
 		@snippet nvarchar(4000),
-		@resultvar nvarchar(4000)
+		@resultvar nvarchar(4000),
+		@param nvarchar(512)
+	   ,@replace nvarchar(512)
 
 declare @snippet_table TABLE 
        ([id] integer NOT NULL identity(1,1),
@@ -30,7 +33,9 @@ declare @snippet_table TABLE
 		command	nvarchar(4000) NULL,
 		expression nvarchar(4000) NULL,
 		snippet nvarchar(4000) NULL)
-
+declare @source_arg_list TABLE
+       (ItemNumber int
+       ,arg nvarchar(512))
 -- Log4TSQL Journal Constants 										
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
 DECLARE @SEVERITY_SEVERE        smallint = 2;
@@ -87,9 +92,28 @@ IF isnull(@input_string, '') = ''
 --Initialise outer loop - works through the input string,
 --						  writing each function call to a new row in the table variable.
 --                        continues until reduced to single function calls, which can be executed.
-SET @_Step = 'Initialise Outer Loop'
+
+SET @_Step = 'Replace Arguments in the string by ##number'
+
 set @string = ltrim(rtrim(@input_string))
-set @string = right(@string, len(@string) - charindex('[dv_scripting].[dv_', @string,1)+1) --trim off any superfluous stuff from the head of the command - command muct start with a function!
+set @string = right(@string, len(@string) - charindex('[dv_scripting].[dv_', @string,1)+1) --trim off any superfluous stuff from the head of the command - command must start with a function!
+insert @source_arg_list select * from [dbo].[fn_split_strings] (@argument_list, ',')
+declare curPar CURSOR LOCAL for
+select '##' + cast(ItemNumber as varchar(100)) as func_string
+		,arg as replace_string
+from @source_arg_list
+open curPar
+fetch next from curPar into @param, @replace
+while @@FETCH_STATUS = 0 
+	BEGIN
+	set @string = replace(@string,@param, @replace) 
+	fetch next from curPar into @param, @replace
+	END
+close curPar
+deallocate curPar
+
+SET @_Step = 'Initialise Outer Loop'
+
 set @start_pos = charindex('(', @string,1)
 set @command = left(@string, @start_pos-1)
 set @snippet = @string
@@ -136,10 +160,12 @@ select @parent = parent
 -- Loop through the scripts, replacing the snippets in the parent
 while @current_row > 1
 begin
+    
 	EXECUTE sp_executesql @command, @parm_definition, @codesnippet = @snippet OUTPUT
 	--if its the master row, just replace the whole snippet
 	update @snippet_table set snippet = replace(snippet,@expression, @snippet) where [id] = case when @parent = 0 then @current_row else @parent end
 	set @current_row = @current_row -1
+	
 	select @parent = parent
 	      ,@command = 'SELECT @codesnippet = ' + command + '(' + snippet + ')'
 		  ,@expression = expression
@@ -157,7 +183,7 @@ SET @_Message   = 'Successfully Created Code Snippet '
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Created Code Snippet' 
+SET @_ErrorContext	= 'Failed to Create Code Snippet' 
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN

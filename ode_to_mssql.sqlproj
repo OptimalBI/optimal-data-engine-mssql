@@ -312,8 +312,14 @@
     <Build Include="dv_scripting\Functions\dv_concat.sql" />
     <Build Include="dv_scripting\Stored Procedures\dv_build_snippet.sql" />
     <Build Include="Security\dv_scripting.sql" />
-    <Build Include="dbo\Tables\dv_satellite_column_keep.sql" />
     <Build Include="dv_scripting\Functions\dv_int_to_datetime.sql" />
+    <Build Include="dbo\Stored Procedures\dv_ref_function_update.sql" />
+    <Build Include="dbo\Stored Procedures\dv_ref_function_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_ref_function_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment1.sql" />

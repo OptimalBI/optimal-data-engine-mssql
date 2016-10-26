@@ -115,8 +115,6 @@ DECLARE @ref_function_seq								int
 	   ,@func_ordinal_position							int
 declare @input_string									nvarchar(4000)
        ,@output_string									nvarchar(4000)
-	   ,@param											nvarchar(512)
-	   ,@replace										nvarchar(512)
 	   ,@lastwith										varchar(100)
 declare @ref_function_list table (ref_function_seq		int identity(1,1)
 								 ,column_name			varchar(128)
@@ -125,8 +123,6 @@ declare @ref_function_list table (ref_function_seq		int identity(1,1)
 								 ,[func_arguments]		nvarchar(512)
 								 ,func_ordinal_position int
 								 ,with_statement		nvarchar(4000))
-declare @source_arg_list table(ItemNumber				int
-                              ,arg						nvarchar(512))
 
 -- Log4TSQL Journal Constants
 DECLARE @SEVERITY_CRITICAL								smallint = 1;
@@ -507,23 +503,9 @@ fetch next from curFunc into  @ref_function_seq,@column_name, @ref_function, @fu
 while @@FETCH_STATUS = 0 
 BEGIN
     set @input_string = @ref_function
-	delete @source_arg_list
-	insert @source_arg_list select * from [dbo].[fn_split_strings] (@func_arguments, ',')
-	declare curPar CURSOR LOCAL for
-	select '##' + cast(ItemNumber as varchar(100)) as func_string
-		  ,arg as replace_string
-	from @source_arg_list
-	open curPar
-	fetch next from curPar into @param, @replace
-	while @@FETCH_STATUS = 0 
-		BEGIN
-		set @input_string = replace(@input_string,@param, @replace) 
-		fetch next from curPar into @param, @replace
-		END
-	close curPar
-	deallocate curPar
 	EXECUTE [dv_scripting].[dv_build_snippet] 
 		@input_string
+	   ,@func_arguments
 	   ,@output_string OUTPUT
 	
     select @output_string = ', w' + cast(@ref_function_seq as varchar(10)) + ' as (select *, '  + @output_string + ' as ' + quotename(@column_name) + ' from w' + 
@@ -593,7 +575,7 @@ IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @cr
 --SET @_Step = 'Load The ' + case when @sat_link_hub_flag = 'H' then 'Hub' else 'Link' end
 --IF @_JournalOnOff = 'ON'
 --      SET @_ProgressText += @sql
-print @vault_sql_statement
+--print @vault_sql_statement
 --EXECUTE sp_executesql @SQL;
 /*--------------------------------------------------------------------------------------------------------------*/
 
