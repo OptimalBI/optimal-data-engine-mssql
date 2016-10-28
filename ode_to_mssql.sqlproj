@@ -320,6 +320,7 @@
     <Build Include="dbo\Stored Procedures\dv_ref_function_delete.sql">
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
+    <Build Include="ODE_Release\Tables\dv_release_003_001_001_1.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment1.sql" />

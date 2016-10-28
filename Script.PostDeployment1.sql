@@ -61,49 +61,49 @@ GO
 
 
 /*  Default SourceSystem  */
-SET IDENTITY_INSERT [dbo].[dv_source_system] ON;
-GO
+--SET IDENTITY_INSERT [dbo].[dv_source_system] ON;
+--GO
 
-MERGE INTO [dbo].[dv_source_system] AS trgt 
-USING	(VALUES (0,'Default_Source_System',0)) AS src([source_system_key],[source_system_name],[release_key])
-	ON
-		trgt.[source_system_key] = src.[source_system_key]
-	WHEN MATCHED THEN
-		UPDATE SET
-		  [source_system_name] = src.[source_system_name]
-		, [release_key] = src.[release_key]
-	WHEN NOT MATCHED BY TARGET THEN
-		INSERT ([source_system_key],[source_system_name],[release_key])
-		VALUES ([source_system_key],[source_system_name],[release_key])
-;
-GO
+--MERGE INTO [dbo].[dv_source_system] AS trgt 
+--USING	(VALUES (0,'Default_Source_System',0)) AS src([source_system_key],[source_system_name],[release_key])
+--	ON
+--		trgt.[source_system_key] = src.[source_system_key]
+--	WHEN MATCHED THEN
+--		UPDATE SET
+--		  [source_system_name] = src.[source_system_name]
+--		, [release_key] = src.[release_key]
+--	WHEN NOT MATCHED BY TARGET THEN
+--		INSERT ([source_system_key],[source_system_name],[release_key])
+--		VALUES ([source_system_key],[source_system_name],[release_key])
+--;
+--GO
 
-SET IDENTITY_INSERT [dbo].[dv_source_system] OFF;
-GO
+--SET IDENTITY_INSERT [dbo].[dv_source_system] OFF;
+--GO
 
-/*  Default SourceTable  */
-SET IDENTITY_INSERT [dbo].[dv_source_table] ON;
-GO
+--/*  Default SourceTable  */
+--SET IDENTITY_INSERT [dbo].[dv_source_table] ON;
+--GO
 
-MERGE INTO [dbo].[dv_source_table] AS trgt 
-USING	(VALUES (0,0,'Default_Source_Table_Schema','Default_Source_Table_Name', 'Full',0)) AS src([source_table_key],[system_key],[source_table_schema],[source_table_name],[source_table_load_type],[release_key])
-	ON
-		trgt.[source_table_key] = src.[source_table_key]
-	WHEN MATCHED THEN
-		UPDATE SET
-		 [system_key]			   = src.[system_key]
-		,[source_table_schema]	   = src.[source_table_schema]
-		,[source_table_name]	   = src.[source_table_name]
-		,[source_table_load_type]  = src.[source_table_load_type]
-		,[release_key]			   = src.[release_key]
-	WHEN NOT MATCHED BY TARGET THEN
-		INSERT ([source_table_key],[system_key],[source_table_schema],[source_table_name],[source_table_load_type],[release_key])
-		VALUES ([source_table_key],[system_key],[source_table_schema],[source_table_name],[source_table_load_type],[release_key])
-;
-GO
+--MERGE INTO [dbo].[dv_source_table] AS trgt 
+--USING	(VALUES (0,0,'Default_Source_Table_Schema','Default_Source_Table_Name', 'Full',0)) AS src([source_table_key],[system_key],[source_table_schema],[source_table_name],[source_table_load_type],[release_key])
+--	ON
+--		trgt.[source_table_key] = src.[source_table_key]
+--	WHEN MATCHED THEN
+--		UPDATE SET
+--		 [system_key]			   = src.[system_key]
+--		,[source_table_schema]	   = src.[source_table_schema]
+--		,[source_table_name]	   = src.[source_table_name]
+--		,[source_table_load_type]  = src.[source_table_load_type]
+--		,[release_key]			   = src.[release_key]
+--	WHEN NOT MATCHED BY TARGET THEN
+--		INSERT ([source_table_key],[system_key],[source_table_schema],[source_table_name],[source_table_load_type],[release_key])
+--		VALUES ([source_table_key],[system_key],[source_table_schema],[source_table_name],[source_table_load_type],[release_key])
+--;
+--GO
 
-SET IDENTITY_INSERT [dbo].[dv_source_table] OFF;
-GO
+--SET IDENTITY_INSERT [dbo].[dv_source_table] OFF;
+--GO
 
 /*  Default Column  */
 --SET IDENTITY_INSERT [dbo].[dv_column] ON;
