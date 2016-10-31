@@ -245,8 +245,24 @@ insert @tests values('minlength', 'minlength'	, 'bit'		, 'cast(0 as bigint) as [
 SET @_Step = 'If Exists then Drop Existing Table'
 
 BEGIN
-	select @sql = 'IF EXISTS (select 1 from ' + quotename(@stage_database) + '.INFORMATION_SCHEMA.TABLES where TABLE_TYPE = ''BASE TABLE'' and TABLE_SCHEMA = ''' + @stage_schema + ''' and TABLE_NAME = ''' + @stage_table + ''')' + @crlf + ' '
-	select @sql += 'DROP TABLE ' + @stage_qualified_name + @crlf + ' '
+       select @sql = 'IF EXISTS (select 1 from ' + quotename(@stage_database) + '.INFORMATION_SCHEMA.TABLES where TABLE_TYPE = ''BASE TABLE'' and TABLE_SCHEMA = ''' + @stage_schema + ''' and TABLE_NAME = ''' + @stage_table + ''')' + @crlf + ' '
+	   select @sql += 'DROP TABLE ' + @stage_qualified_name + @crlf + ' '
+       select @sql += 'CREATE TABLE ' + @stage_qualified_name + '(
+       [runtime] [varchar](34) NOT NULL,
+       [sat_key] [int] NOT NULL,
+       [sat_name] [varchar](128) NOT NULL,
+       [column_name] [varchar](128) NOT NULL,
+       [column_key] [varchar](128) NOT NULL,
+	   [min_value] [varchar](max) NULL,
+
+       [max_value] [varchar](max) NULL,
+       [domain_count] [bigint] NULL,
+       [null_count] [bigint] NULL,
+       [blank_count] [bigint] NULL,
+       [minlength] [bigint] NULL
+       )'
+       execute sp_executesql @sql
+       set @sql = ''
 END
 /*--------------------------------------------------------------------------------------------------------------*/
 -- Build the test SQL
@@ -317,10 +333,14 @@ begin
 			end
 			set @sql2 = left(@sql2, len(@sql2) - 7)
 			set @sql1 = @sql + @sql1 + @sql2 
-			set @sql1 = @sql1 + ')' + @crlf + 'select * into ' + @stage_qualified_name + @crlf + 'from w2'
-			execute sp_executesql @sql1
+			--set @sql1 = @sql1 + ')' + @crlf + 'select * into ' + @stage_qualified_name + @crlf + 'from w2'
+			--execute sp_executesql @sql1
+			set @sql1 = @sql1 + ')' + @crlf
+             + 'insert ' + @stage_qualified_name + @crlf
+             + 'select * from w2'
+            execute sp_executesql @sql1
 			IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @sql1 + @crlf
-			select @sql1
+			--select @sql1
 		end
 	end
 	select @sat_loop_key = max(satellite_key) from [dbo].[dv_satellite]

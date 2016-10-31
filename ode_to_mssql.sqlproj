@@ -306,7 +306,6 @@
     <Build Include="Service Broker\dv_scheduler_s002.sql" />
     <Build Include="Service Broker\dv_scheduler_s001.sql" />
     <Build Include="Security\SBLogin_Login.sql" />
-    <Build Include="ODE_Release\Tables\dv_release_002_002_001.sql" />
     <Build Include="dbo\Tables\dv_ref_function.sql" />
     <Build Include="dv_scripting\Functions\dv_int_to_string.sql" />
     <Build Include="dv_scripting\Functions\dv_concat.sql" />
