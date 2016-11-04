@@ -39,6 +39,7 @@ declare @Columns	table (satellite_key bigint,satellite_name varchar(256),table_n
 declare  @stage_qualified_name				varchar(512)
 
 --  Working Storage
+declare @sql								nvarchar(max) = ''
 declare @sql1								nvarchar(max) = ''
 declare @sql2								nvarchar(max) = ''
 declare @run_time							varchar(50)
@@ -257,9 +258,31 @@ insert @tests values('maxlength', 'maxlength'	, 'real'	, 'cast(0 as bigint) as [
 insert @tests values('maxlength', 'maxlength'	, 'bit'		, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
 
 -- Truncate the Stage Table
-set @sql1 = 'truncate table ' + @stage_qualified_name
-exec(@sql1)
+/*--------------------------------------------------------------------------------------------------------------*/
+SET @_Step = 'If Exists then Drop Existing Table'
 
+BEGIN
+       select @sql = 'IF EXISTS (select 1 from ' + quotename(@stage_database) + '.INFORMATION_SCHEMA.TABLES where TABLE_TYPE = ''BASE TABLE'' and TABLE_SCHEMA = ''' + @stage_schema + ''' and TABLE_NAME = ''' + @stage_table + ''')' + @crlf + ' '
+	   select @sql += 'DROP TABLE ' + @stage_qualified_name + @crlf + ' '
+       select @sql += 'CREATE TABLE ' + @stage_qualified_name + '(
+       [runtime] [varchar](34) NOT NULL,
+       [sat_key] [int] NOT NULL,
+       [sat_name] [varchar](128) NOT NULL,
+       [column_name] [varchar](128) NOT NULL,
+       [column_key] [varchar](128) NOT NULL,
+	   [min_value] [varchar](max) NULL,
+
+       [max_value] [varchar](max) NULL,
+       [domain_count] [bigint] NULL,
+       [null_count] [bigint] NULL,
+       [blank_count] [bigint] NULL,
+       [minlength] [bigint] NULL,
+	   [maxlength] [bigint] NULL
+       )'
+       execute sp_executesql @sql
+       set @sql = ''
+END
+/*--------------------------------------------------------------------------------------------------------------*/
 -- Build the test SQL
 
 select @sat_loop_key = case when isnull(@satellite_key, 0) = 0 then max(satellite_key) else @satellite_key end 
@@ -277,43 +300,39 @@ begin
 		  select s.satellite_key
 				,s.satellite_name
 				,table_name = quotename(s.[satellite_database]) + '.' + quotename(s.[satellite_schema]) + '.' + quotename([dbo].[fn_get_object_name] (s.satellite_name, 'sat'))
-				,c.column_key
-				,c.column_name
+				,sc.satellite_col_key
+				,sc.column_name
 				,t.test_name
-				,replace(t.test_template,'<column_name>', c.column_name) as  test_script
-				,replace(t.test_column,'<column_name>', c.column_name) as  test_column
+				,replace(t.test_template,'<column_name>', sc.column_name) as  test_script
+				,replace(t.test_column,'<column_name>', sc.column_name) as  test_column
 
 		  from [dbo].[dv_satellite] s
 		  inner join [dbo].[dv_satellite_column] sc
 		  on sc.[satellite_key] = s.[satellite_key]
-		  inner join [dbo].[dv_column] c
-		  on c.column_key = sc.column_key
 		  inner join @tests t
-		  on c.[column_type] = t.[test_type]
+		  on sc.[column_type] = t.[test_type]
 		  where 1=1
-			and c.discard_flag = 0 
-			and c.is_retired = 0
 			and s.satellite_key = @sat_loop_key
-			and c.column_length >= 0
+			and sc.column_length >= 0
     
 		if @@rowcount > 0
 		begin
-			select @sql1 = 'with w1 as ('
+			select @sql1 = ';with w1 as ('
 						 + 'select ''' + @run_time + ''' as [runtime]' + @crlf +
 						 + ',' + cast(satellite_key as varchar(20)) + ' as [sat_key]' + @crlf 
 						 + ',''' + satellite_name + ''' as [sat_name]' + @crlf
 						 + ',''Sat'' as [object_type]' + @crlf
 			from @Columns
 			select @sql1 += ',' + test_script
-						 -- + ',''' + test_name + '''as test_name' 
 						 + @crlf
 			from @Columns
 			order by satellite_name, column_name
 			select @sql2 = 'from ' + table_name + @crlf from @Columns
 			set @sql2 += 'where ' + @def_global_default_load_date_time + ' >= ' + @sat_start_date_col + ' and ' +  @def_global_default_load_date_time + ' < ' + @sat_end_date_col + @crlf
 					   + 'and ' + @sat_tombstone_col + '= 0)' + @crlf
-					   + 'insert ' + @stage_qualified_name + @crlf 
-
+--					   + 'insert ' + @stage_qualified_name + @crlf
+--					   + 'into ' + @stage_qualified_name  + @crlf 
+					   + ',w2 as (' + @crlf
 			select @col_loop_key  = min(column_name) from @Columns
 			while @col_loop_key is not null
 			begin 
@@ -331,8 +350,13 @@ begin
 				select @col_loop_key = min(column_name) from @Columns where column_name > @col_loop_key
 			end
 			set @sql2 = left(@sql2, len(@sql2) - 7)
-			set @sql1 = @sql1 + @sql2
-			execute sp_executesql @sql1
+			set @sql1 = @sql + @sql1 + @sql2 
+			--set @sql1 = @sql1 + ')' + @crlf + 'select * into ' + @stage_qualified_name + @crlf + 'from w2'
+			--execute sp_executesql @sql1
+			set @sql1 = @sql1 + ')' + @crlf
+             + 'insert ' + @stage_qualified_name + @crlf
+             + 'select * from w2'
+            execute sp_executesql @sql1
 			IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @sql1 + @crlf
 			--select @sql1
 		end

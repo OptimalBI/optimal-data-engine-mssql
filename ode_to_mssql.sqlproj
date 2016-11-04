@@ -93,6 +93,9 @@
     <Folder Include="dv_config\Stored Procedures\" />
     <Folder Include="dbo\User Defined Types\" />
     <Folder Include="Service Broker\" />
+    <Folder Include="dv_scripting\" />
+    <Folder Include="dv_scripting\Functions\" />
+    <Folder Include="dv_scripting\Stored Procedures\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\dv_source_table.sql" />
@@ -124,7 +127,6 @@
     <Build Include="dv_log\Tables\dv_execution.sql" />
     <Build Include="dv_log\Tables\dv_load_state.sql" />
     <Build Include="dv_log\Tables\dv_load_state_history.sql" />
-    <Build Include="dbo\Views\vw_running_processes.sql" />
     <Build Include="dv_scheduler\Views\vw_dv_schedule_current.sql" />
     <Build Include="dv_scheduler\Views\vw_dv_schedule_source_table_current.sql" />
     <Build Include="dv_scheduler\Views\vw_dv_source_table_hierarchy_current.sql" />
@@ -227,7 +229,7 @@
     <Build Include="dbo\Stored Procedures\dv_create_DV_table.sql" />
     <Build Include="dbo\Stored Procedures\dv_column_update.sql" />
     <Build Include="dbo\Stored Procedures\dv_column_insert.sql">
-      <QuotedIdentifier>Off</QuotedIdentifier>
+      <QuotedIdentifier>On</QuotedIdentifier>
     </Build>
     <Build Include="dbo\Stored Procedures\dv_column_delete.sql" />
     <Build Include="log4\Stored Procedures\JournalCleanup.sql" />
@@ -298,7 +300,6 @@
     <Build Include="Service Broker\dv_scheduler_s002.sql" />
     <Build Include="Service Broker\dv_scheduler_s001.sql" />
     <Build Include="Security\SBLogin_Login.sql" />
-    <Build Include="ODE_Release\Tables\dv_release_002_002_001.sql" />
     <Build Include="dbo\Tables\dv_link_key_column.sql" />
     <Build Include="dbo\Tables\dv_hub_link_to_be_removed.sql" />
     <Build Include="dbo\Stored Procedures\dv_link_key_update.sql">
@@ -310,6 +311,20 @@
     <Build Include="dbo\Stored Procedures\dv_link_key_delete.sql">
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
+    <Build Include="ODE_Release\Tables\dv_release_003_001_001.sql" />
+    <Build Include="dbo\Tables\dv_ref_function.sql" />
+    <Build Include="dv_scripting\Functions\dv_int_to_string.sql" />
+    <Build Include="dv_scripting\Functions\dv_concat.sql" />
+    <Build Include="dv_scripting\Functions\dv_int_to_datetime.sql" />
+    <Build Include="dbo\Stored Procedures\dv_ref_function_update.sql" />
+    <Build Include="dbo\Stored Procedures\dv_ref_function_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_ref_function_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dv_scripting\Stored Procedures\dv_build_snippet.sql" />
+    <Build Include="Security\dv_scripting.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac">

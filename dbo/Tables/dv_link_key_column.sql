@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [dbo].[dv_link_key_column] (
     [link_key_column_key]  INT                IDENTITY (1, 1) NOT NULL,
     [link_key]             INT                NOT NULL,
-    [link_key_column_name] VARCHAR (128)      CONSTRAINT [DF_dv_link_key_column_link_key_column_name] DEFAULT ('Default') NOT NULL,
+    [link_key_column_name] VARCHAR (128)      NULL,
     [release_key]          INT                CONSTRAINT [DF_dv_link_key_column_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]       INT                CONSTRAINT [DF__dv_link_key_column__version] DEFAULT ((1)) NOT NULL,
     [updated_by]           VARCHAR (30)       CONSTRAINT [DF__dv_link_key_column__updated_by] DEFAULT (suser_name()) NULL,
@@ -11,6 +11,8 @@
     CONSTRAINT [FK_dv_link_key_column_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),
     CONSTRAINT [dv_link_column_key_unique] UNIQUE NONCLUSTERED ([link_key] ASC, [link_key_column_name] ASC)
 );
+
+
 
 
 
@@ -28,3 +30,7 @@ AS
 									   JOIN [inserted] AS [b]
 									   ON [a].[link_key_column_key] = [b].[link_key_column_key];
 	END;
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [UX_link_key_column_name]
+    ON [dbo].[dv_link_key_column]([link_key_column_name] ASC) WHERE ([link_key_column_name] IS NOT NULL);
+

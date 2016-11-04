@@ -226,7 +226,7 @@ from [dbo].[dv_source_table] t
 inner join [dbo].[dv_column] c
 on c.table_key = t.[source_table_key]
 inner join [dbo].[dv_satellite_column] sc
-on sc.column_key = c.column_key
+on sc.satellite_col_key = c.satellite_col_key
 inner join [dbo].[dv_satellite] sat
 on sat.satellite_key = sc.satellite_key
 where 1=1
@@ -283,7 +283,7 @@ FETCH NEXT FROM c_sat_list
 INTO @sat_table		 
 
 WHILE @@FETCH_STATUS = 0   
-BEGIN   
+BEGIN
 EXECUTE [dbo].[dv_load_sat_table] @source_system,@source_schema,@source_table, @sat_table, @temp_table_name, @vault_source_load_type, @sql OUTPUT
 set @sql2 += @sql
 FETCH NEXT FROM c_sat_list 
@@ -298,7 +298,7 @@ set @sql = @sql1 + @sql2
 --/*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Load The Source into Sat(s)'
 IF @_JournalOnOff = 'ON' SET @_ProgressText += @SQL
---select @SQL2
+--select @SQL
 EXECUTE(@SQL);
 /*--------------------------------------------------------------------------------------------------------------*/
 

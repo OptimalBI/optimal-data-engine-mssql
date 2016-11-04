@@ -88,7 +88,7 @@ where 1=1
 
 insert @payload_columns
 select  DISTINCT 
-        column_name = case when lkc.link_key_column_name = 'Default' then hd.[column_name] else hd1.[column_name] end
+        column_name = case when lkc.link_key_column_name is null then hd.[column_name] else hd1.[column_name] end
        ,hd.[column_type]
        ,hd.[column_length]
 	   ,hd.[column_precision]

@@ -95,6 +95,7 @@ if @@ROWCOUNT > 0  -- Satellite already has Columns attached
 	if @vault_rerun_satellite_column_insert = 1
 	    begin
 		delete from [dbo].[dv_satellite_column] where [satellite_key] = @satellite_key
+		update [dbo].[dv_column] set [satellite_col_key] = NULL where [table_key] = @source_table_key
 		end
 	else
 		begin
@@ -102,22 +103,67 @@ if @@ROWCOUNT > 0  -- Satellite already has Columns attached
 		end
 	end
 		
-declare @column_key int
+declare @column_key					[int]
+	   ,@column_name				[varchar](128)
+	   ,@column_type				[varchar](30)
+	   ,@column_length				[int]
+	   ,@column_precision			[int]
+	   ,@column_scale				[int]
+	   ,@Collation_Name				[sysname]
+	   ,@satellite_ordinal_position [int]
+	   ,@satellite_col_key			[int]
+
 declare Col_Cursor cursor forward_only for 
-SELECT  column_key from [dbo].[dv_column]	
- where [table_key] = @source_table_key
+select [column_key]
+      ,[column_name]
+	  ,[column_type]
+	  ,[column_length]
+	  ,[column_precision]
+	  ,[column_scale]
+	  ,[Collation_Name]
+	  ,[satellite_ordinal_position] = row_number() over (order by case when [column_name] like 'dv_%' then '___' + [column_name] else [column_name] end)	
+from [dbo].[dv_column]	
+ where [table_key] = @source_table_key 
 open Col_Cursor
-fetch next from Col_Cursor into  @column_key				
+fetch next from Col_Cursor 
+	into   @column_key					
+		  ,@column_name				
+		  ,@column_type				
+		  ,@column_length				
+		  ,@column_precision			
+		  ,@column_scale				
+		  ,@Collation_Name				
+		  ,@satellite_ordinal_position	
 
 while @@FETCH_STATUS = 0
 begin								
-select @satellite_key, @column_key,@vault_release_number 
-EXECUTE [dbo].[dv_satellite_column_insert] 
-   @satellite_key
-  ,@column_key
-  ,@vault_release_number
 
-fetch next from Col_Cursor into  @column_key
+EXECUTE @satellite_col_key = [dbo].[dv_satellite_column_insert] 
+   @satellite_key				= @satellite_key
+  ,@column_name					= @column_name
+  ,@column_type					= @column_type
+  ,@column_length				= @column_length
+  ,@column_precision			= @column_precision
+  ,@column_scale				= @column_scale
+  ,@Collation_Name				= @Collation_Name
+  ,@satellite_ordinal_position	= @satellite_ordinal_position
+  ,@ref_function_key			= NULL
+  ,@func_arguments              = NULL
+  ,@func_ordinal_position       = 0
+  ,@release_number			    = @vault_release_number
+
+update [dbo].[dv_column] set [satellite_col_key] = @satellite_col_key
+	where [column_key]			= @column_key
+
+fetch next from Col_Cursor 
+	into   @column_key					
+		  ,@column_name				
+		  ,@column_type				
+		  ,@column_length				
+		  ,@column_precision			
+		  ,@column_scale				
+		  ,@Collation_Name				
+		  ,@satellite_ordinal_position
 end
 close Col_Cursor
 deallocate Col_Cursor

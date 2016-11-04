@@ -102,10 +102,27 @@ DECLARE @hub_column_list								nvarchar(max)   = ''
 
 DECLARE @ParmDefinition									nvarchar(500);
 
-
 DECLARE @wrk_link_joins									nvarchar(max)
 DECLARE @wrk_hub_joins									nvarchar(max)
 DECLARE @wrk_link_keys									nvarchar(max)
+
+
+DECLARE @ref_function_seq								int
+       ,@column_name									varchar(128)
+	   ,@ref_function_name								varchar(128)
+	   ,@ref_function									nvarchar(4000)
+	   ,@func_arguments									nvarchar(512)
+	   ,@func_ordinal_position							int
+declare @input_string									nvarchar(4000)
+       ,@output_string									nvarchar(4000)
+	   ,@lastwith										varchar(100)
+declare @ref_function_list table (ref_function_seq		int identity(1,1)
+								 ,column_name			varchar(128)
+								 ,ref_function_name		varchar(128)
+								 ,ref_function			nvarchar(4000)
+								 ,[func_arguments]		nvarchar(512)
+								 ,func_ordinal_position int
+								 ,with_statement		nvarchar(4000))
 
 -- Log4TSQL Journal Constants
 DECLARE @SEVERITY_CRITICAL								smallint = 1;
@@ -219,7 +236,7 @@ from [dbo].[dv_source_table] t
 inner join [dbo].[dv_column] c
 on c.table_key = t.[source_table_key]
 inner join [dbo].[dv_satellite_column] sc
-on sc.column_key = c.column_key
+on sc.satellite_col_key = c.satellite_col_key
 inner join [dbo].[dv_satellite] sat
 on sat.satellite_key = sc.satellite_key
 where 1=1
@@ -230,7 +247,6 @@ if @sat_link_hub_flag = 'H'
         select   @hub_database                  = h.[hub_database]
                 ,@hub_schema                    = coalesce([hub_schema], @def_hub_schema, 'dbo')
                 ,@hub_table                     = h.[hub_name]
-                --,@hub_surrogate_keyname			= [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
 				,@hub_surrogate_keyname			= (select replace(replace(column_name, '[', ''), ']', '') from [dbo].[fn_get_key_definition](h.[hub_name], 'hub'))
                 ,@hub_config_key                = h.[hub_key]
                 ,@hub_qualified_name			= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))
@@ -241,8 +257,6 @@ where 1=1
 and s.[satellite_key] = @sat_config_key
 
 -- Owner Link Table
-print 'hello'
-select '@sat_config_key', @sat_config_key, '@source_table_config_key', @source_table_config_key
 if @sat_link_hub_flag = 'L'
 begin
         select   @link_database                 = l.[link_database]
@@ -260,13 +274,12 @@ begin
         set @link_lookup_joins = ''
         set @link_hub_keys = ''
 
-print 'bye'
+
 declare @c_hub_key                      int
     ,@c_hub_name                        varchar(128)
-	,@c_hub_link_key_name				varchar(128)  
     ,@c_hub_schema						varchar(128)
     ,@c_hub_database					varchar(128)
-    ,@c_hub_abbreviation				varchar(128)
+    ,@c_link_key_name					varchar(128)
 
 
 set @link_hub_keys		= ''
@@ -275,39 +288,37 @@ set @link_lookup_joins	= ''
 set @wrk_hub_joins		= ''
 
 DECLARE c_hub_key CURSOR FOR
-select distinct
-       h.[hub_key]
-      ,h.[hub_name]
-	  ,hub_link_key_name  = case when lkc.[link_key_column_name] = 'Default' then h.[hub_name] else lkc.[link_key_column_name] end
+select h.[hub_key]
+      ,h.[hub_name]  
       ,h.[hub_schema]
       ,h.[hub_database]
-	  ,[hub_abbreviation] = case when lkc.link_key_column_name = 'Default' then (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) else (select column_name from [dbo].[fn_get_key_definition](lkc.link_key_column_name, 'hub')) end
-
-  FROM [dbo].[dv_link] l
-  inner join [dbo].[dv_link_key_column] lkc on lkc.link_key = l.link_key
-  inner join [dbo].[dv_hub_column] hc on hc.link_key_column_key = lkc.link_key_column_key
-  inner join [dbo].[dv_hub_key_column] hkc on hkc.hub_key_column_key = hc.hub_key_column_key
-  inner join [dbo].[dv_hub] h on h.[hub_key] = hkc.[hub_key]
-  where 1=1
+	  ,[link_key_name] = isnull(lkc.[link_key_column_name],h.[hub_name]) 
+FROM [dbo].[dv_link] l
+inner join [dbo].[dv_link_key_column] lkc on lkc.link_key = l.link_key
+inner join [dbo].[dv_hub_column] hc on hc.link_key_column_key = lkc.link_key_column_key
+inner join [dbo].[dv_hub_key_column] hkc on hkc.hub_key_column_key = hc.hub_key_column_key
+inner join [dbo].[dv_hub] h on h.hub_key = hkc.hub_key
+inner join [dbo].[dv_column] c on c.column_key = hc.column_key
+inner join [dbo].[dv_source_table] st on st.source_table_key = c.table_key
+where 1=1
   and l.[link_key] = @link_config_key
-  order by hub_link_key_name
+  order by lkc.link_key_column_key
 OPEN c_hub_key
 FETCH NEXT FROM c_hub_key
 INTO @c_hub_key
     ,@c_hub_name
-	,@c_hub_link_key_name
     ,@c_hub_schema
     ,@c_hub_database
-    ,@c_hub_abbreviation
+    ,@c_link_key_name
 
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
-	    select @wrk_link_joins  = 'LEFT JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + @c_hub_abbreviation + @crlf + ' ON  '
+	    select @wrk_link_joins  = 'LEFT JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + @c_link_key_name + @crlf + ' ON  '
         select @wrk_link_keys  += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + 
 				     		      ' = link.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + @crlf + ' AND '
-              ,@wrk_link_joins += @c_hub_abbreviation + '.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
-
+              ,@wrk_link_joins += @c_link_key_name + '.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) +
+			    ' as ' + replace([dbo].[fn_build_column_definition] (hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0), ' NOT NULL', '') + ')' + @crlf + ' AND '
         from [dbo].[dv_hub] h
         inner join [dbo].[dv_hub_key_column] hkc
         on h.hub_key = hkc.hub_key
@@ -320,37 +331,40 @@ BEGIN
         where 1=1
         and h.hub_key = @c_hub_key
         and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1
+        and c.is_retired <> 1
         ORDER BY hkc.hub_key_ordinal_position
 
-		select @wrk_hub_joins += ', ' + link_key_column_name + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub'))  + ' as ' + link_key_column_name + ' '+ @crlf
+		select  @wrk_hub_joins += ', ' + @c_link_key_name + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ' as ' + 
+		   (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub'))  
+		   + @crlf
         from(
-        select distinct hub_name, link_key_column_name = case when lkc.link_key_column_name = 'Default' then (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) else (select column_name from [dbo].[fn_get_key_definition](lkc.link_key_column_name, 'hub')) end
+        select distinct hub_name--, hub_key_ordinal_position
         from [dbo].[dv_hub] h
-        inner join [dbo].[dv_hub_key_column] hkc on h.hub_key = hkc.hub_key
-        inner join [dbo].[dv_hub_column] hc on hc.hub_key_column_key = hkc.hub_key_column_key
-		inner join [dbo].[dv_link_key_column] lkc on lkc.link_key_column_key = hc.link_key_column_key
-        inner join [dbo].[dv_column] c on c.column_key = hc.column_key
-        inner join [dbo].[dv_source_table] st on c.[table_key] = st.[source_table_key]
-		
+        inner join [dbo].[dv_hub_key_column] hkc
+        on h.hub_key = hkc.hub_key
+        inner join [dbo].[dv_hub_column] hc
+        on hc.hub_key_column_key = hkc.hub_key_column_key
+        inner join [dbo].[dv_column] c
+        on c.column_key = hc.column_key
+        inner join [dbo].[dv_source_table] st
+        on c.[table_key] = st.[source_table_key]
         where 1=1
         and h.hub_key = @c_hub_key
         and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1) hkc
+        and c.[is_retired] <> 1) hkc
         --ORDER BY hkc.hub_key_ordinal_position
-print @wrk_hub_joins
+
         set @link_hub_keys = @link_hub_keys + @wrk_link_keys
-print @link_hub_keys
+
 		-------------------
 
         set @link_lookup_joins = @link_lookup_joins + left(@wrk_link_joins, len(@wrk_link_joins) - 4)
         FETCH NEXT FROM c_hub_key
         INTO @c_hub_key
                 ,@c_hub_name
-				,@c_hub_link_key_name
                 ,@c_hub_schema
                 ,@c_hub_database
-                ,@c_hub_abbreviation
+                ,@c_link_key_name
 END
 
 CLOSE c_hub_key
@@ -373,12 +387,22 @@ select @source_load_date_time = isnull(@source_load_date_time, @def_global_defau
 
 -- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
 set @sql = ''
-select @sql += 'src.' +quotename([column_name]) + @crlf +', '
-from [dbo].[dv_column]
+select @sql += quotename(sc.column_name) + ' = ' + 
+           case when c.[is_retired] = 1 then 'NULL'
+		        when  replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
+		            = replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '')
+				then 'src.' + quotename(c.[column_name])
+				else 'cast(src.' + quotename(c.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '')
+				    + ')'
+				end 
+			+ @crlf +', '
+from [dbo].[dv_column] c
+inner join [dbo].[dv_satellite_column] sc on sc.satellite_col_key = c.satellite_col_key
 where 1=1
-and [discard_flag] <> 1
-and [table_key] = @source_table_config_key
-order by source_ordinal_position
+   and c.[table_key] = @source_table_config_key
+   --and sc.[satellite_col_key] <> 0
+   and sc.[satellite_col_key] is not null
+order by c.source_ordinal_position
 select @source_payload = left(@sql, len(@sql) -1)
 
 ---- Build the Sat Payload
@@ -402,7 +426,14 @@ select @temp_table_name_001 = '##temp_001_' + replace(cast(newid() as varchar(50
 if @sat_link_hub_flag = 'H'
 begin
         select @sql = ''
-        select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + @crlf + ' AND '
+        select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = ' +
+		       case when  replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
+		            = replace([dbo].[fn_build_column_definition] ([hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0), ' NOT NULL', '')
+				then 'src.' + quotename(c.[column_name])
+				else 'cast(src.' + quotename(c.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] ([hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0), ' NOT NULL', '')
+				    + ')'
+				end  
+		        + @crlf + ' AND '
         from [dbo].[dv_hub] h
         inner join [dbo].[dv_hub_key_column] hkc
         on h.hub_key = hkc.hub_key
@@ -415,37 +446,86 @@ begin
         where 1=1
         and h.hub_key = @hub_config_key
         and st.[source_table_key] = @source_table_config_key
-        and c.discard_flag <> 1
+        and c.[is_retired] <> 1
         ORDER BY hkc.hub_key_ordinal_position
         select @surrogate_key_match =  left(@sql, len(@sql) - 4)
 end
-
 -- Compile the SQL
 -- If it is a link, create the temp table with all Hub keys plus a dummy for the Link Keys.
 
-set @sql1 = ''
+set @sql1 = 'WITH wBaseSet as (' + @crlf
 if @sat_link_hub_flag = 'H'
-        set @sql1 = 'SELECT ' + quotename(@hub_surrogate_keyname) + ' = isnull(hub.' + quotename(@hub_surrogate_keyname) + ', ' + cast(@def_global_failed_lookup_key as varchar(50)) + ')' + @crlf
+        set @sql1 += 'SELECT ' + quotename(@hub_surrogate_keyname) + ' = isnull(hub.' + quotename(@hub_surrogate_keyname) + ', ' + cast(@def_global_failed_lookup_key as varchar(50)) + ')' + @crlf
 
 if @sat_link_hub_flag = 'L'
     begin
-        set @sql1 = 'SELECT ' + quotename(@link_surrogate_keyname) + ' = cast(0 as integer) ' + @crlf
+        set @sql1 += 'SELECT ' + quotename(@link_surrogate_keyname) + ' = cast(0 as integer) ' + @crlf
         set @sql1 = @sql1 + @wrk_hub_joins
         end
---print @sql1
+
 if not (@link_load_only = 'Y' and @sat_link_hub_flag = 'L')
         set @sql1 = @sql1 + ', ' + @source_payload
 set @sql1 = @sql1 + ', [vault_load_time] = ' + @source_load_date_time + @crlf
-set @sql1 = @sql1 + ' INTO ' + @temp_table_name_001 + @crlf
 set @sql1 = @sql1 + 'FROM ' + @source_qualified_name + ' src' + @crlf
 
 
 if @sat_link_hub_flag = 'H'
         set @sql1 = @sql1 + 'LEFT JOIN ' + @hub_qualified_name + ' hub' + ' ON ' + @surrogate_key_match + @crlf
-
 if @sat_link_hub_flag = 'L'
         set @sql1 = @sql1 + @link_lookup_joins
-set @sql1 = @sql1 + ';' + @crlf
+
+set @sql1 = @sql1 + ')' + @crlf
+----  Check for any functions and build the With code to add them onto the select
+
+insert @ref_function_list
+select sc.column_name
+      ,f.ref_function_name
+         ,f.ref_function
+         ,sc.[func_arguments]
+         ,sc.func_ordinal_position
+         ,'' 
+from [dbo].[dv_satellite_column] sc
+inner join [dbo].[dv_ref_function] f
+on f.[ref_function_key] = sc.[ref_function_key]
+where f.[ref_function_key] is not null
+and sc.satellite_key in
+	(select distinct sc.[satellite_key]
+	from [dbo].[dv_source_table] st
+	inner join [dbo].[dv_column] c on c.table_key = st.source_table_key
+	inner join [dbo].[dv_satellite_column] sc on sc.[satellite_col_key] = c.[satellite_col_key]
+	and st.[source_table_key] = @source_table_config_key)
+order by sc.func_ordinal_position
+        ,sc.column_name
+
+declare curFunc CURSOR LOCAL for
+select [ref_function_seq]
+      ,[column_name]
+	  ,[ref_function]
+	  ,[func_arguments]
+from @ref_function_list
+open curFunc
+fetch next from curFunc into  @ref_function_seq,@column_name, @ref_function, @func_arguments
+while @@FETCH_STATUS = 0 
+BEGIN
+    set @input_string = @ref_function
+	EXECUTE [dv_scripting].[dv_build_snippet] 
+		@input_string
+	   ,@func_arguments
+	   ,@output_string OUTPUT
+	
+    select @output_string = ', w' + cast(@ref_function_seq as varchar(10)) + ' as (select *, '  + @output_string + ' as ' + quotename(@column_name) + ' from w' + 
+							case when @ref_function_seq = 1 then 'BaseSet' else cast(@ref_function_seq -1 as varchar(10)) end + ')' + @crlf
+	update @ref_function_list set with_statement = @output_string where ref_function_seq = @ref_function_seq
+	fetch next from curFunc into @ref_function_seq,@column_name, @ref_function, @func_arguments
+END
+close curFunc
+deallocate curFunc
+set @sql = ''
+select @sql += with_statement from @ref_function_list order by ref_function_seq
+select @lastwith = 'w' + isnull(cast(max(ref_function_seq) as varchar), 'BaseSet') from @ref_function_list
+set @sql1 += @sql
+
+set @sql1 = @sql1 +'SELECT * ' + ' INTO ' + @temp_table_name_001 + ' FROM ' + @lastwith + ';'
 
 if (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y')
         begin
@@ -454,6 +534,7 @@ if (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y')
         set @sql1 = @sql1 + 'FROM ' + @temp_table_name_001 + ' tmp' + @crlf
         set @sql1 = @sql1 + 'LEFT JOIN ' + @link_qualified_name + ' link ' + @crlf + ' ON ' + @wrk_link_keys + ';'
         end
+
 
 /****************************************************************************************************************************************/
 -- Duplicate Checking
@@ -554,7 +635,7 @@ OnComplete:
                                                                 + ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
                         SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
                 END
-
+--print @_ProgressText
         IF @_JournalOnOff = 'ON'
                 EXEC log4.JournalWriter
                                   @Task                         = @_FunctionName

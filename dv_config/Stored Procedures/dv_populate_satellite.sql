@@ -97,6 +97,8 @@ if @satellite_key is not null  -- Satellite Exists - keeping it simple for now -
 	begin
 	if @vault_rerun_satellite_insert = 1
 	    begin
+		update [dbo].[dv_column] set [satellite_col_key] = null 
+			where [satellite_col_key] in(select distinct [satellite_col_key] from [dbo].[dv_satellite_column] where [satellite_key] = @satellite_key)
 		delete from [dbo].[dv_satellite_column] where [satellite_key] = @satellite_key
 		delete from [dbo].[dv_satellite] where [satellite_key] = @satellite_key
 		end

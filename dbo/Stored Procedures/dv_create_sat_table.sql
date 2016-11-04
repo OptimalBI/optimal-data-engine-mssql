@@ -66,7 +66,7 @@ DECLARE
 		,@sat_schema						varchar(128)
 		,@sat_table							varchar(128)
 		,@sat_surrogate_keyname				varchar(128)
-		,@hub_link_surrogate_key			varchar(128)
+		,@sat_surrogate_key			varchar(128)
 		,@sat_config_key					int
 		,@sat_link_hub_flag					char(1)
 		,@sat_qualified_name				varchar(512)
@@ -193,15 +193,12 @@ select 	 @sat_database			= sat.[satellite_database]
 		,@sat_link_hub_flag		= sat.[link_hub_satellite_flag]
 		,@sat_is_columnstore	= sat.[is_columnstore]		
 		,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat')))       
-from [dbo].[dv_column] c
-inner join [dbo].[dv_satellite_column] sc
-on sc.column_key = c.column_key
-inner join [dbo].[dv_satellite] sat
-on sat.satellite_key = sc.satellite_key
+
+from [dbo].[dv_satellite] sat
 where 1=1
 and sat.[satellite_database] = @vault_database
 and sat.[satellite_name]	 = @vault_sat_name
-and isnull(c.discard_flag, 0) <> 1 
+--and isnull(c.discard_flag, 0) <> 1 
 
 
 if @sat_link_hub_flag = 'H'
@@ -220,8 +217,6 @@ select top 1 k.[column_name]
   FROM [dbo].[dv_satellite] s
   inner join [dbo].[dv_satellite_column] hc
   on s.satellite_key = hc.satellite_key
-  inner join [dbo].[dv_column] c
-  on hc.column_key = c.column_key
   inner join [dbo].[dv_hub] h
   on s.[hub_key] = h.[hub_key]
   cross apply [dbo].[fn_get_key_definition] (h.hub_name, 'hub') k
@@ -242,35 +237,31 @@ select top 1 k.[column_name]
   FROM [dbo].[dv_satellite] s
   inner join [dbo].[dv_satellite_column] hc
   on s.satellite_key = hc.satellite_key
-  inner join [dbo].[dv_column] c
-  on hc.column_key = c.column_key
   inner join [dbo].[dv_link] l
   on s.[link_key] = l.[link_key]
   cross apply [dbo].[fn_get_key_definition] (l.link_name, 'lnk') k
   where s.[satellite_key] = @sat_config_key
 
-select @hub_link_surrogate_key = [column_name] from @payload_columns
+select @sat_surrogate_key = [column_name] from @payload_columns
 
 insert @payload_columns
-select  c.[column_name]
-       ,c.[column_type]
-       ,c.[column_length]
-	   ,c.[column_precision]
-	   ,c.[column_scale]
-	   ,c.[collation_Name]
-	   ,c.[bk_ordinal_position]
-       ,c.[source_ordinal_position]
-	   ,c.[satellite_ordinal_position]
+select  sc.[column_name]
+       ,sc.[column_type]
+       ,sc.[column_length]
+	   ,sc.[column_precision]
+	   ,sc.[column_scale]
+	   ,sc.[collation_Name]
+	   ,''
+	   ,''
+	   ,sc.[satellite_ordinal_position]
 	   ,''
 	   ,''
   FROM [dbo].[dv_satellite] s
-  inner join [dbo].[dv_satellite_column] hc
-  on s.satellite_key = hc.satellite_key
-  inner join [dbo].[dv_column] c
-  on hc.column_key = c.column_key
+  inner join [dbo].[dv_satellite_column] sc
+  on s.satellite_key = sc.satellite_key
   where 1=1
   and s.[satellite_key] = @sat_config_key
-  and isnull(c.discard_flag, 0) <> 1 
+  --and isnull(c.discard_flag, 0) <> 1 
 
  /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Sat'
@@ -288,14 +279,13 @@ EXECUTE [dbo].[dv_create_DV_table]
   ,@dothrowerror
 
 /*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Index the Sat on the Surrogate Key Plus Row End Date'
+SET @_Step = 'Index the Sat on the Surrogate Key Plus Row Start Date'
 select @SQL = ''
 if @sat_is_columnstore = 0
 	begin
 	select @SQL += 'CREATE UNIQUE NONCLUSTERED INDEX ' + quotename('UX__' + @sat_table + cast(newid() as varchar(56))) 
 	select @SQL += ' ON ' + @sat_qualified_name + '(' + @crlf + ' '
-	--select @SQL = @SQL + @hub_link_surrogate_key + ',' + @sat_end_date_col +',' + @sat_current_row_col + ',' + @sat_tombstone_indicator	
-	select @SQL = @SQL + @hub_link_surrogate_key + ',' + @sat_start_date_col 	
+	select @SQL = @SQL + @sat_surrogate_key + ',' + @sat_start_date_col 	
 	select @SQL = @SQL + ') INCLUDE(' + @sat_current_row_col +',' + @sat_tombstone_indicator + ') ON ' + quotename(@def_sat_filegroup) + @crlf
 	end
 else
