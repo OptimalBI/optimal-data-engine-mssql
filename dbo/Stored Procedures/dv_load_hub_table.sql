@@ -155,7 +155,7 @@ and s.source_system_name	= @vault_source_system
 and st.source_table_schema	= @vault_source_schema
 and st.source_table_name	= @vault_source_table
 and isnull(c.is_retired, 0) <> 1
-order by hkc.hub_key_column_name, c.column_name
+order by link_key_column_key, c.column_name  --NB order is vital for the following loop to work!
 
 set @loop_count = 0
 set @SQL1 = 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf + 'WITH wBaseSet AS (' + @crlf

@@ -275,101 +275,125 @@ begin
         set @link_hub_keys = ''
 
 
-declare @c_hub_key                      int
-    ,@c_hub_name                        varchar(128)
-    ,@c_hub_schema						varchar(128)
-    ,@c_hub_database					varchar(128)
-    ,@c_link_key_name					varchar(128)
+	declare @c_hub_key                      int
+		,@c_hub_name                        varchar(128)
+		,@c_hub_schema						varchar(128)
+		,@c_hub_database					varchar(128)
+		,@c_link_key_name					varchar(128)
+		,@c_link_key_column_key				int
+		,@c_data_type						varchar(128)
 
 
-set @link_hub_keys		= ''
-set @wrk_link_keys		= ''
-set @link_lookup_joins	= ''
-set @wrk_hub_joins		= ''
+	set @link_hub_keys		= ''
+	set @wrk_link_keys		= ''
+	set @link_lookup_joins	= ''
+	set @wrk_hub_joins		= ''
 
-DECLARE c_hub_key CURSOR FOR
-select h.[hub_key]
-      ,h.[hub_name]  
-      ,h.[hub_schema]
-      ,h.[hub_database]
-	  ,[link_key_name] = isnull(lkc.[link_key_column_name],h.[hub_name]) 
-FROM [dbo].[dv_link] l
-inner join [dbo].[dv_link_key_column] lkc on lkc.link_key = l.link_key
-inner join [dbo].[dv_hub_column] hc on hc.link_key_column_key = lkc.link_key_column_key
-inner join [dbo].[dv_hub_key_column] hkc on hkc.hub_key_column_key = hc.hub_key_column_key
-inner join [dbo].[dv_hub] h on h.hub_key = hkc.hub_key
-inner join [dbo].[dv_column] c on c.column_key = hc.column_key
-inner join [dbo].[dv_source_table] st on st.source_table_key = c.table_key
-where 1=1
-  and l.[link_key] = @link_config_key
-  order by lkc.link_key_column_key
-OPEN c_hub_key
-FETCH NEXT FROM c_hub_key
-INTO @c_hub_key
-    ,@c_hub_name
-    ,@c_hub_schema
-    ,@c_hub_database
-    ,@c_link_key_name
+	DECLARE c_hub_key CURSOR FOR
+	select distinct 
+	       h.[hub_key]
+		  ,h.[hub_name]  
+		  ,h.[hub_schema]
+		  ,h.[hub_database]
+		  ,[link_key_name] = isnull(lkc.[link_key_column_name],h.[hub_name])
+		  ,lkc.link_key_column_key 
+		  ,data_type = replace([dbo].[fn_build_column_definition] (hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0), ' NOT NULL', '') 
+	FROM [dbo].[dv_link] l
+	inner join [dbo].[dv_link_key_column] lkc on lkc.link_key = l.link_key
+	inner join [dbo].[dv_hub_column] hc on hc.link_key_column_key = lkc.link_key_column_key
+	inner join [dbo].[dv_hub_key_column] hkc on hkc.hub_key_column_key = hc.hub_key_column_key
+	inner join [dbo].[dv_hub] h on h.hub_key = hkc.hub_key
+	--inner join [dbo].[dv_column] c on c.column_key = hc.column_key
+	--inner join [dbo].[dv_source_table] st on st.source_table_key = c.table_key
+	where 1=1
+	  and l.[link_key] = @link_config_key
+	  order by [link_key_name]
+	OPEN c_hub_key
+	FETCH NEXT FROM c_hub_key
+	INTO @c_hub_key
+		,@c_hub_name
+		,@c_hub_schema
+		,@c_hub_database
+		,@c_link_key_name
+		,@c_link_key_column_key
+		,@c_data_type
 
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+			select @wrk_link_joins  = 'LEFT JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + @c_link_key_name + @crlf + ' ON  '
+			select @wrk_link_keys  += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + 
+				     				  ' = link.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + @crlf + ' AND '
+			select @wrk_link_joins += @c_link_key_name + '.' + quotename(hkc.[hub_key_column_name]) +
+			                         case when  @c_data_type <> replace([dbo].[fn_build_column_definition] (hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0), ' NOT NULL', '')
+									      then ' = CAST(src.' + quotename(hkc.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] (hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0), ' NOT NULL', '') + ')' 
+										  else ' = src.' + quotename(hkc.[column_name])
+										  end
+										  + @crlf + ' AND '
+  
 
-WHILE @@FETCH_STATUS = 0
-BEGIN
-	    select @wrk_link_joins  = 'LEFT JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + @c_link_key_name + @crlf + ' ON  '
-        select @wrk_link_keys  += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + 
-				     		      ' = link.' + (select column_name from [dbo].[fn_get_key_definition](h.[hub_name], 'hub')) + @crlf + ' AND '
-              ,@wrk_link_joins += @c_link_key_name + '.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(src.' + quotename(c.[column_name]) +
-			    ' as ' + replace([dbo].[fn_build_column_definition] (hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0), ' NOT NULL', '') + ')' + @crlf + ' AND '
-        from [dbo].[dv_hub] h
-        inner join [dbo].[dv_hub_key_column] hkc
-        on h.hub_key = hkc.hub_key
-        inner join [dbo].[dv_hub_column] hc
-        on hc.hub_key_column_key = hkc.hub_key_column_key
-        inner join [dbo].[dv_column] c
-        on c.column_key = hc.column_key
-        inner join [dbo].[dv_source_table] st
-        on c.[table_key] = st.[source_table_key]
-        where 1=1
-        and h.hub_key = @c_hub_key
-        and st.[source_table_key] = @source_table_config_key
-        and c.is_retired <> 1
-        ORDER BY hkc.hub_key_ordinal_position
+			 from (
+			 select distinct 
+			 h.[hub_name]
+			,hkc.[hub_key_column_name]
+			,hkc.[hub_key_column_type]
+			,hkc.[hub_key_column_length]
+			,hkc.[hub_key_column_precision]
+			,hkc.[hub_key_column_scale]
+			,hkc.[hub_key_Collation_Name]
+			,hkc.hub_key_ordinal_position
+			,c.[column_name]
+			from [dbo].[dv_hub] h
+			inner join [dbo].[dv_hub_key_column] hkc
+			on h.hub_key = hkc.hub_key
+			inner join [dbo].[dv_hub_column] hc
+			on hc.hub_key_column_key = hkc.hub_key_column_key
+			inner join [dbo].[dv_column] c
+			on c.column_key = hc.column_key
+			inner join [dbo].[dv_source_table] st
+			on c.[table_key] = st.[source_table_key]
+			where 1=1
+			and h.hub_key = @c_hub_key
+			and hc.link_key_column_key = @c_link_key_column_key
+			and st.[source_table_key] = @source_table_config_key
+			and c.is_retired <> 1) hkc
+			ORDER BY hkc.hub_key_ordinal_position
 
-		select  @wrk_hub_joins += ', ' + @c_link_key_name + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ' as ' + 
-		   (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub'))  
-		   + @crlf
-        from(
-        select distinct hub_name--, hub_key_ordinal_position
-        from [dbo].[dv_hub] h
-        inner join [dbo].[dv_hub_key_column] hkc
-        on h.hub_key = hkc.hub_key
-        inner join [dbo].[dv_hub_column] hc
-        on hc.hub_key_column_key = hkc.hub_key_column_key
-        inner join [dbo].[dv_column] c
-        on c.column_key = hc.column_key
-        inner join [dbo].[dv_source_table] st
-        on c.[table_key] = st.[source_table_key]
-        where 1=1
-        and h.hub_key = @c_hub_key
-        and st.[source_table_key] = @source_table_config_key
-        and c.[is_retired] <> 1) hkc
-        --ORDER BY hkc.hub_key_ordinal_position
+			select  @wrk_hub_joins += ', ' + @c_link_key_name + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ' as ' + 
+									(select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + @crlf				   
+			from(
+			select distinct hub_name
+			from [dbo].[dv_hub] h
+			inner join [dbo].[dv_hub_key_column] hkc
+			on h.hub_key = hkc.hub_key
+			inner join [dbo].[dv_hub_column] hc
+			on hc.hub_key_column_key = hkc.hub_key_column_key
+			inner join [dbo].[dv_column] c
+			on c.column_key = hc.column_key
+			inner join [dbo].[dv_source_table] st
+			on c.[table_key] = st.[source_table_key]
+			where 1=1
+			and h.hub_key = @c_hub_key
+			and st.[source_table_key] = @source_table_config_key
+			and c.[is_retired] <> 1) hkc
 
-        set @link_hub_keys = @link_hub_keys + @wrk_link_keys
+			set @link_hub_keys = @link_hub_keys + @wrk_link_keys
 
-		-------------------
+			-------------------
 
-        set @link_lookup_joins = @link_lookup_joins + left(@wrk_link_joins, len(@wrk_link_joins) - 4)
-        FETCH NEXT FROM c_hub_key
-        INTO @c_hub_key
-                ,@c_hub_name
-                ,@c_hub_schema
-                ,@c_hub_database
-                ,@c_link_key_name
-END
+			set @link_lookup_joins = @link_lookup_joins + left(@wrk_link_joins, len(@wrk_link_joins) - 4)
+			FETCH NEXT FROM c_hub_key
+			INTO @c_hub_key
+					,@c_hub_name
+					,@c_hub_schema
+					,@c_hub_database
+					,@c_link_key_name
+					,@c_link_key_column_key
+					,@c_data_type
+	END
 
-CLOSE c_hub_key
-DEALLOCATE c_hub_key
-select @wrk_link_keys = left(@wrk_link_keys, len(@wrk_link_keys) - 4)
+	CLOSE c_hub_key
+	DEALLOCATE c_hub_key
+	select @wrk_link_keys = left(@wrk_link_keys, len(@wrk_link_keys) - 4)
 end
 
 

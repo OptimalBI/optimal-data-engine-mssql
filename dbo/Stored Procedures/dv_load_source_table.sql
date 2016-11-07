@@ -30,15 +30,16 @@ declare  @source_system						varchar(128)
 		,@source_qualified_name				varchar(512)
 		,@source_load_date_time				varchar(128)
 		,@source_payload					nvarchar(max)
+		,@error_message						varchar(256) 
 --  Working Storage
 declare @load_details table 
-       (source_database_name		varchar(128)
-       ,source_table_key		int
-	   ,source_table_schema     varchar(128)
-	   ,source_table_name		varchar(128)
-	   ,source_table_load_type  varchar(50)
-	   ,satellite_database      varchar(128)
-	   ,satellite_name			varchar(128)
+    --   (source_database_name		varchar(128)
+       (source_table_key		int
+	   --,source_table_schema     varchar(128)
+	   --,source_table_name		varchar(128)
+	   --,source_table_load_type  varchar(50)
+	   --,satellite_database      varchar(128)
+	   --,satellite_name			varchar(128)
 	   ,link_key				int
 	   ,link_name				varchar(128)
 	   ,link_database			varchar(128)
@@ -101,8 +102,7 @@ SET @_Step = 'Validate inputs';
 
 IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
 			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
---IF isnull(@recreate_flag, '') not in ('Y', 'N') 
---			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
+
 /*--------------------------------------------------------------------------------------------------------------*/	   
 SET @_Step = 'Get Defaults'
 -- Object Specific Settings
@@ -122,60 +122,95 @@ and t.[source_table_schema]		= @vault_source_table_schema
 and t.[source_table_name]		= @vault_source_table_name
 
 SET @_Step = 'Get All Components related to the Source Table'	    
-insert @load_details            
+          
+insert @load_details
+--select  distinct
+--        ss.timevault_name
+--       ,st.[source_table_key] as source_table_key
+--       ,st.source_table_schema	
+--	   ,st.source_table_name	
+--	   ,st.source_table_load_type
+--	   ,s.satellite_database
+--	   ,s.satellite_name
+--	   ,null,null,null,null,null,null
+--from
+--[dbo].[dv_source_system] ss
+--inner join [dbo].[dv_source_table] st
+--on st.system_key = ss.[source_system_key]
+--inner join [dbo].[dv_column] c
+--on c.table_key = st.[source_table_key]
+--inner join [dbo].[dv_satellite_column] sc
+--on sc.satellite_col_key = c.satellite_col_key
+--inner join [dbo].[dv_satellite] s
+--on s.satellite_key = sc.satellite_key
+--where st.source_table_key = @source_table_config_key
+
+--union 
+
 select  distinct
-        ss.timevault_name
-       ,st.[source_table_key] as source_table_key
-       ,st.source_table_schema	
-	   ,st.source_table_name	
-	   ,st.source_table_load_type
-	   ,s.satellite_database
-	   ,s.satellite_name
+    --    ss.timevault_name
+        st.[source_table_key] as source_table_key
+    --   ,st.source_table_schema	
+	   --,st.source_table_name	
+	   --,st.source_table_load_type
+	   --,null,null
 	   ,l.link_key
 	   ,l.link_name
 	   ,l.link_database
-	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_key		else linkhub.hub_key		end as hub_key
-	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_name		else linkhub.hub_name		end as hub_name
-	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_database	else linkhub.hub_database	end as hub_database 
+	   ,null,null,null
 from
 [dbo].[dv_source_system] ss
-inner join [dbo].[dv_source_table] st
-on st.system_key = ss.[source_system_key]
-inner join [dbo].[dv_column] c
-on c.table_key = st.[source_table_key]
-inner join [dbo].[dv_satellite_column] sc
-on sc.satellite_col_key = c.satellite_col_key
-inner join [dbo].[dv_satellite] s
-on s.satellite_key = sc.satellite_key
-left join [dbo].[dv_link] l
-on s.link_key = l.link_key
-and (l.link_key > 0 OR l.link_key < -100)
-left join [dbo].[dv_hub] h 
-on h.hub_key = s.hub_key
-and (h.hub_key > 0 OR h.hub_key < -100)
-left join [dbo].[dv_hub_link] hl
-on hl.link_key = l.link_key
-left join [dbo].[dv_hub] linkhub
-on linkhub.hub_key = hl.hub_key
-where ss.source_system_name		= @vault_source_system_name
-  and st.source_table_schema	= @vault_source_table_schema
-  and st.source_table_name		= @vault_source_table_name
+inner join [dbo].[dv_source_table] st		on st.system_key = ss.[source_system_key]
+inner join [dbo].[dv_column] c				on c.table_key = st.[source_table_key] 
+inner join [dbo].[dv_hub_column] hc			on hc.column_key = c.column_key
+inner join [dbo].[dv_link_key_column] lkc	on lkc.link_key_column_key = hc.link_key_column_key
+inner join [dbo].[dv_link] l				on l.link_key = lkc.link_key
+											and (l.link_key > 0 OR l.link_key < -100)
+where st.source_table_key = @source_table_config_key
+  
+union
 
-/*****************************************************************************************************************/
---Load the Source Table in stages:
---declare @source_database		varchar(128)
---       ,@source_table_schema	varchar(128)
---	   ,@source_table_name		varchar(128)
+select  distinct
+    --    ss.timevault_name
+       st.[source_table_key] as source_table_key
+    --   ,st.source_table_schema	
+	   --,st.source_table_name	
+	   --,st.source_table_load_type
+	   --,null,null
+	   ,null,null,null
+	   ,h.hub_key
+	   ,h.hub_name
+	   ,h.hub_database
+from
+[dbo].[dv_source_system] ss
+inner join [dbo].[dv_source_table] st		on st.system_key = ss.[source_system_key]
+inner join [dbo].[dv_column] c				on c.table_key = st.[source_table_key] 
+inner join [dbo].[dv_hub_column] hc			on hc.column_key = c.column_key
+inner join [dbo].[dv_hub_key_column] hkc	on hkc.hub_key_column_key = hc.hub_key_column_key
+inner join [dbo].[dv_hub] h					on h.hub_key = hkc.hub_key
+											and (h.hub_key > 0 OR h.hub_key < -100)
+where st.source_table_key = @source_table_config_key
 
---select @source_database		= source_database_name
---      ,@source_table_schema = source_table_schema
---	  ,@source_table_name	= source_table_name
---from @load_details
+;with wBaseSet as (
+select source_table_key
+      ,count(distinct hub_name) as hub
+	  ,count(distinct link_name) as link
+from @load_details
+group by source_table_key)
+select @error_message = 
+       case when link > 1 then 'Source Table is configured to load more than 1 Link.'
+            when link < 1 then case when hub <> 1 then 'Source Table which loads a Hub may only load 1 Hub' else 'Success' end
+			when link = 1 then case when hub < 1 then 'Link must be configured to link one or more Hubs' else 'Success' end
+			else 'Success'
+			end
+from wBaseSet 
+if @error_message <> 'Success' raiserror('Incorrect Source configuration: %s', 16, 1, @error_message)
+
 /*****************************************************************************************************************/
 SET @_Step = 'Load Hub Tables'
---print ''
---print 'Load Hub Tables'
---print '----------------'
+print ''
+print 'Load Hub Tables'
+print '----------------'
 declare @hub_database			varchar(128)
        ,@hub_name				varchar(128)
 
@@ -192,10 +227,8 @@ FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name
 WHILE @@FETCH_STATUS = 0   
 BEGIN   
        SET @_Step = 'Load Hub: ' + @hub_name
-	   --print @hub_name
-	   --print '/*********\'
-	   
-	   EXECUTE [dbo].[dv_load_hub_table] @source_system, @source_schema, @source_table, @hub_database, @hub_name
+	   print @hub_name
+	   EXECUTE [dbo].[dv_load_hub_table] @source_system, @source_schema, @source_table, @hub_name
 	   FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name  
 END   
 
@@ -205,9 +238,9 @@ DEALLOCATE hub_cursor
 
 /*****************************************************************************************************************/
 SET @_Step = 'Load Link Tables'
---print ''
---print 'Load Link Tables'
---print '----------------'
+print ''
+print 'Load Link Tables'
+print '----------------'
 declare @link_database			varchar(128)
        ,@link_name				varchar(128)
 
@@ -224,9 +257,9 @@ FETCH NEXT FROM link_cursor INTO @link_database, @link_name
 WHILE @@FETCH_STATUS = 0   
 BEGIN   
        SET @_Step = 'Load Link: ' + @link_name
-	   --print @link_name
-	   --print '/*********\'
-	   EXECUTE [dbo].[dv_load_link_table] @source_system, @source_schema, @source_table, @link_database, @link_name 
+	   print ''
+	   print @link_name
+	   EXECUTE [dbo].[dv_load_link_table] @source_system, @source_schema, @source_table, @link_name 
 	   FETCH NEXT FROM link_cursor INTO @link_database, @link_name  
 END   
 
@@ -236,10 +269,10 @@ DEALLOCATE link_cursor
 
 /*****************************************************************************************************************/
 SET @_Step = 'Load Sat Tables for: ' + @source_database + ' ' + @source_schema + ' ' + @source_table
---print ''
---print 'Load Sat Tables'
---print '----------------'
---print '/*********\'
+print ''
+print 'Load Sat Tables'
+print '----------------'
+print @_Step
 EXECUTE [dv_load_sats_for_source_table] @source_system, @source_schema, @source_table, @vault_source_load_type
 /*--------------------------------------------------------------------------------------------------------------*/
 

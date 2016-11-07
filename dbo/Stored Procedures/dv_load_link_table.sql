@@ -190,6 +190,8 @@ declare  @c_hub_key							int
 		,@c_hub_name                        varchar(128)
         ,@c_hub_schema						varchar(128)
         ,@c_hub_database					varchar(128)
+		,@c_link_key_name					varchar(128)
+		,@c_link_key_column_key				int
 
 set @link_hub_keys	= ''
 set @wrk_link_keys	= ''
@@ -201,6 +203,8 @@ select distinct h.[hub_key]
       ,h.[hub_name]
       ,h.[hub_schema]
       ,h.[hub_database]
+	  ,[link_key_name] = isnull(lkc.[link_key_column_name],h.[hub_name])
+	  ,lkc.link_key_column_key 
 FROM [dbo].[dv_link] l
 inner join [dbo].[dv_link_key_column] lkc on lkc.link_key = l.link_key
 inner join [dbo].[dv_hub_column] hc on hc.link_key_column_key = lkc.link_key_column_key
@@ -221,12 +225,14 @@ INTO @c_hub_key
     ,@c_hub_name
     ,@c_hub_schema
     ,@c_hub_database
+	,@c_link_key_name
+	,@c_link_key_column_key
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
-        select  @wrk_hub_joins   += (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ', '
-               ,@wrk_link_keys   += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ' = link.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + @crlf + ' AND '
-			   ,@wrk_link_match  += (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub'))  + ' , '
+        select  @wrk_hub_joins   += (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + ', '
+			   ,@wrk_link_keys   += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + ' = link.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + @crlf + ' AND '
+			   ,@wrk_link_match  += (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub'))  + ' , '
 
          from (
         select distinct
@@ -250,6 +256,8 @@ BEGIN
                 ,@c_hub_name
                 ,@c_hub_schema
                 ,@c_hub_database
+				,@c_link_key_name
+				,@c_link_key_column_key
 END
 
 CLOSE c_hub_key
