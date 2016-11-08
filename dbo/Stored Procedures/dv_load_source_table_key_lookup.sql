@@ -281,7 +281,7 @@ begin
 		,@c_hub_database					varchar(128)
 		,@c_link_key_name					varchar(128)
 		,@c_link_key_column_key				int
-		,@c_data_type						varchar(128)
+		,@c_hub_data_type						varchar(128)
 
 
 	set @link_hub_keys		= ''
@@ -303,8 +303,6 @@ begin
 	inner join [dbo].[dv_hub_column] hc on hc.link_key_column_key = lkc.link_key_column_key
 	inner join [dbo].[dv_hub_key_column] hkc on hkc.hub_key_column_key = hc.hub_key_column_key
 	inner join [dbo].[dv_hub] h on h.hub_key = hkc.hub_key
-	--inner join [dbo].[dv_column] c on c.column_key = hc.column_key
-	--inner join [dbo].[dv_source_table] st on st.source_table_key = c.table_key
 	where 1=1
 	  and l.[link_key] = @link_config_key
 	  order by [link_key_name]
@@ -316,7 +314,7 @@ begin
 		,@c_hub_database
 		,@c_link_key_name
 		,@c_link_key_column_key
-		,@c_data_type
+		,@c_hub_data_type
 
 	WHILE @@FETCH_STATUS = 0
 	BEGIN
@@ -324,8 +322,8 @@ begin
 			select @wrk_link_keys  += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + 
 				     				  ' = link.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + @crlf + ' AND '
 			select @wrk_link_joins += @c_link_key_name + '.' + quotename(hkc.[hub_key_column_name]) +
-			                         case when  @c_data_type <> replace([dbo].[fn_build_column_definition] (hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0), ' NOT NULL', '')
-									      then ' = CAST(src.' + quotename(hkc.[column_name]) + ' as ' + replace([dbo].[fn_build_column_definition] (hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0), ' NOT NULL', '') + ')' 
+			                         case when  @c_hub_data_type <> col_data_type
+									      then ' = CAST(src.' + quotename(hkc.[column_name]) + ' as ' + @c_hub_data_type + ')' 
 										  else ' = src.' + quotename(hkc.[column_name])
 										  end
 										  + @crlf + ' AND '
@@ -334,12 +332,8 @@ begin
 			 from (
 			 select distinct 
 			 h.[hub_name]
+			 ,col_data_type = replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
 			,hkc.[hub_key_column_name]
-			,hkc.[hub_key_column_type]
-			,hkc.[hub_key_column_length]
-			,hkc.[hub_key_column_precision]
-			,hkc.[hub_key_column_scale]
-			,hkc.[hub_key_Collation_Name]
 			,hkc.hub_key_ordinal_position
 			,c.[column_name]
 			from [dbo].[dv_hub] h
@@ -376,7 +370,7 @@ begin
 			and st.[source_table_key] = @source_table_config_key
 			and c.[is_retired] <> 1) hkc
 
-			set @link_hub_keys = @link_hub_keys + @wrk_link_keys
+			--set @link_hub_keys = @link_hub_keys + @wrk_link_keys
 
 			-------------------
 
@@ -388,7 +382,7 @@ begin
 					,@c_hub_database
 					,@c_link_key_name
 					,@c_link_key_column_key
-					,@c_data_type
+					,@c_hub_data_type
 	END
 
 	CLOSE c_hub_key
@@ -483,7 +477,7 @@ if @sat_link_hub_flag = 'H'
 
 if @sat_link_hub_flag = 'L'
     begin
-        set @sql1 += 'SELECT ' + quotename(@link_surrogate_keyname) + ' = cast(0 as integer) ' + @crlf
+        set @sql1 += 'SELECT DISTINCT ' + quotename(@link_surrogate_keyname) + ' = cast(0 as integer) ' + @crlf
         set @sql1 = @sql1 + @wrk_hub_joins
         end
 

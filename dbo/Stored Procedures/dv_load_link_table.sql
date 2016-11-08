@@ -306,7 +306,7 @@ EXECUTE [dbo].[dv_load_source_table_key_lookup] @source_system , @source_schema,
 
 set @sql1 = @sql
 set @sql1 = @sql1 + 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf
-set @sql1 = @sql1 + 'WITH wBaseSet AS (SELECT DISTINCT ' + @wrk_link_match + ' FROM ' + quotename(@temp_table_name) + ')' + @crlf
+set @sql1 = @sql1 + 'WITH wBaseSet AS (SELECT ' + @wrk_link_match + ' FROM ' + quotename(@temp_table_name) + ')' + @crlf
 set @sql1 = @sql1 + 'MERGE ' + @link_qualified_name + ' WITH (HOLDLOCK) AS link' + @crlf
 set @sql1 = @sql1 + 'USING wBaseSet AS tmp' + @crlf
 set @sql1 = @sql1 + 'ON' + @wrk_link_keys

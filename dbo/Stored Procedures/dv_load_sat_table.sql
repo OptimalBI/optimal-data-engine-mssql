@@ -234,16 +234,8 @@ select 	 @sat_database			= sat.[satellite_database]
 		,@sat_config_key		= sat.[satellite_key]		
 		,@sat_link_hub_flag		= sat.[link_hub_satellite_flag]		
 		,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat')))       
---from [dbo].[dv_source_table] t
---inner join [dbo].[dv_column] c
---on c.table_key = t.[source_table_key]
---inner join [dbo].[dv_satellite_column] sc
---on sc.column_key = c.column_key
---inner join [dbo].[dv_satellite] sat
---on sat.satellite_key = sc.satellite_key
 from [dbo].[dv_satellite] sat
 where 1=1
---and t.[source_table_key] = @source_table_config_key
 and sat.[satellite_name] = @vault_sat_name
 
 -- Owner Hub Table
@@ -286,15 +278,6 @@ select @source_load_date_time = 'vault_load_time'
 
 -- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
 set @sql = ''
---select @sql += 'src.' +quotename(sc.[column_name]) + @crlf +', '      
---from [dbo].[dv_column] c
---inner join dv_Satellite_Column sc
---on c.column_key = sc.column_key
---where 1=1
---and [discard_flag] <> 1
---and [table_key] = @source_table_config_key
---and sc.[satellite_key] = @sat_config_key
---order by sc.satellite_ordinal_position
 select @sql += 'src.' +quotename(sc.[column_name]) + @crlf +', '      
 from dv_Satellite_Column sc
 where 1=1
@@ -319,15 +302,6 @@ from dv_Satellite_Column sc
 where 1=1
 and sc.[satellite_key] = @sat_config_key
 order by sc.satellite_ordinal_position
---from [dbo].[dv_satellite] s
---inner join [dbo].[dv_satellite_column] sc
---on s.[satellite_key] = sc.[satellite_key]
---inner join [dbo].[dv_column] c
---on c.column_key = sc.column_key
---where 1=1
---and [discard_flag] <> 1
---and s.[satellite_key] = @sat_config_key
---order by sc.satellite_ordinal_position
 select @sat_payload = left(@sql, len(@sql) -1)	
 
 -- Compile the SQL
@@ -341,16 +315,15 @@ set @sql2 += ' (' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surr
 set @sql2 += ',   ' + replace(@sat_technical_columns, 'sat.', '')
 set @sql2 += replace(@sat_payload, 'sat.', '')
 set @sql2 += ')' + @crlf
---set @sql2 += 'SELECT ' + @crlf + '  ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf   
+   
 set @sql2 += 'SELECT ' + @crlf + '  hl_driver_key' + @crlf											-- Driving Hub / Link Surrogate Key
---set @sql2 += ', '	+ @source_load_date_time + @crlf												-- Source Load Date Time
---set @sql2 += ', '	+ @sat_load_date_time + @crlf													-- Source Load Date Time
+
 set @sql2 += ', case when MergeOutput.' + 
 			case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
 			else quotename(@link_surrogate_keyname) end + 
 			' is null then ' + @sat_end_date_col +  ' else ' + @source_load_date_time + ' end'+@crlf-- Source Load Date Time. Deletes detected by the fact that they have no source Key
 set @sql2 += ', '	+ '''' + cast(@source_table_config_key as varchar(128)) + '''' + @crlf			-- Source Table Reference Key
---set @sql2 += ', '	+ '1' + @crlf																	-- make the row Current
+																	-- make the row Current
 set @sql2 += ', case when MergeOutput.' + 
 			case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
 			else quotename(@link_surrogate_keyname) end + 
@@ -360,7 +333,7 @@ set @sql2 += ', case when MergeOutput.' +
 			else quotename(@link_surrogate_keyname) end + 
 			' is null then 1 else 0 end' + @crlf													-- If it is a delete tombstone, set the deleted row flag. Deletes detected by the fact that they have no source Key
 set @sql2 += ', MergeOutput.' + @sat_end_date_col + @crlf											-- Row Start Date						
---set @sql2 += ', '''	+ cast(@def_global_highdate as varchar(50)) + '''' + @crlf						-- Row End Date
+
 set @sql2 += ', case when MergeOutput.' + 
 			case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
 			else quotename(@link_surrogate_keyname) end + 
@@ -382,7 +355,7 @@ set @sql2 += '  sat.' + case when @sat_link_hub_flag = 'H' then  @hub_surrogate_
 set @sql2 += @sat_payload
 set @sql2 += ')' + @crlf + 'THEN UPDATE SET' + @crlf
 set @sql2 += @sat_current_row_col + '  = 0' + @crlf
---set @sql2 = @sql2 + ',  ' + @sat_end_date_col + ' = iif([vault_load_time] > sat.' + @sat_start_date_col + ', [vault_load_time], dateadd(ms,1, sat.' + @sat_end_date_col + '))' + @crlf
+
 set @sql2 += ',  ' + @sat_end_date_col + ' = iif(@version_date > sat.' + @sat_start_date_col + ', @version_date, dateadd(ms,1, sat.' + @sat_start_date_col + '))' + @crlf
 --Insert New Rows
 set @sql2 += 'WHEN NOT MATCHED BY TARGET ' + @crlf

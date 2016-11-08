@@ -34,7 +34,8 @@ DECLARE @link_key_column_key		int
 DECLARE @link_key					int
 
 DECLARE @column_name				varchar(128)
-DECLARE @column_definition			varchar(128)
+DECLARE @hub_column_definition		varchar(128)
+DECLARE @source_column_definition	varchar(128)
 
 DECLARE @hub_insert_count			int
 DECLARE @loop_count					int
@@ -137,6 +138,7 @@ select c.column_name
 	  ,h.hub_database
 	  ,h.hub_schema
 	  ,[dbo].[fn_build_column_definition] ([hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],1,0)
+	  ,[dbo].[fn_build_column_definition] ([column_type],[column_length],[column_precision],[column_scale],[Collation_Name],1,0)
 from [dbo].[dv_hub] h
 inner join [dbo].[dv_hub_key_column] hkc
 on h.hub_key = hkc.hub_key
@@ -167,7 +169,8 @@ FETCH NEXT FROM cur_hub_column INTO  @column_name
 							   ,@dv_timevault_name
 							   ,@hub_database
 							   ,@hub_schema
-							   ,@column_definition
+							   ,@hub_column_definition
+							   ,@source_column_definition
 WHILE @@FETCH_STATUS = 0
 BEGIN   
        set @current_link_key_column_key = @link_key_column_key
@@ -176,7 +179,12 @@ BEGIN
 	   set @loop_count += 1	   
 	   while @current_link_key_column_key = @link_key_column_key and @@FETCH_STATUS = 0
 	   BEGIN
-			select @source_column_list +=  @crlf +' CAST(' + quotename(@column_name) + ' AS ' + left(@column_definition, len(@column_definition) -5) + ') AS ' + quotename(@hub_key_column_name) + ','
+			select @source_column_list +=  @crlf +
+			       case when @hub_column_definition = @source_column_definition
+				        then quotename(@column_name)
+					    else ' CAST(' + quotename(@column_name) + ' AS ' + left(@hub_column_definition, len(@hub_column_definition) -5) + ')' 
+					    end + 
+			       ' AS ' + quotename(@hub_key_column_name) + ','
 			if @loop_count = 1
 			begin
 				select @match_list += @crlf +' TARGET.' + quotename(@hub_key_column_name) + ' = SOURCE.' + quotename(@hub_key_column_name)  + ' AND '
@@ -188,7 +196,8 @@ BEGIN
 							   ,@dv_timevault_name
 							   ,@hub_database
 							   ,@hub_schema
-							   ,@column_definition
+							   ,@hub_column_definition
+							   ,@source_column_definition
 		END
 	    set @SQL1 += left(@source_column_list, len(@source_column_list) -1) + @crlf + 
 		          'FROM ' + quotename(@dv_timevault_name) + '.'+quotename(@vault_source_schema)+ '.'+quotename(@vault_source_table) + @crlf +

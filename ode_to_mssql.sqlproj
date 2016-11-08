@@ -301,7 +301,6 @@
     <Build Include="Service Broker\dv_scheduler_s001.sql" />
     <Build Include="Security\SBLogin_Login.sql" />
     <Build Include="dbo\Tables\dv_link_key_column.sql" />
-    <Build Include="dbo\Tables\dv_hub_link_to_be_removed.sql" />
     <Build Include="dbo\Stored Procedures\dv_link_key_update.sql">
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
@@ -325,6 +324,8 @@
     </Build>
     <Build Include="dv_scripting\Stored Procedures\dv_build_snippet.sql" />
     <Build Include="Security\dv_scripting.sql" />
+    <Build Include="dbo\Stored Procedures\dv_validate_link.sql" />
+    <Build Include="dbo\Stored Procedures\dv_validate_hub_sat.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac">
