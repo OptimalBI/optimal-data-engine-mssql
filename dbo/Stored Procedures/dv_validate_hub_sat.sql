@@ -193,12 +193,11 @@ where s.satellite_name			= @vault_sat_name
 
 select @sat_payload += @crlf + ', s.' + quotename(sc.column_name) + ' AS ' + quotename('sat_' + sc.column_name)
 	  ,@source_payload += @crlf + ', ' +	
-		case when replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '') 
-		        = replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '') 
-		then quotename(c.column_name) 
-		else 'CAST(' + quotename(c.column_name) + ' AS ' + replace([dbo].[fn_build_column_definition] (sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0), ' NOT NULL', '') + ')'
-		end + 
-		' AS ' + quotename('sat_' + c.column_name)
+		case when [dbo].[fn_build_column_definition] ('',c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0,0,0) 
+		        = [dbo].[fn_build_column_definition] ('',sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0,0,0) 
+			 then quotename(c.column_name) 
+			 else [dbo].[fn_build_column_definition] (c.column_name,sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0,1,0)
+		     end + ' AS ' + quotename('sat_' + c.column_name)
 from [dbo].[dv_satellite] s
 inner join [dbo].[dv_satellite_column] sc	on sc.satellite_key = s.satellite_key
  left join [dbo].[dv_column] c				on c.satellite_col_key = sc.satellite_col_key

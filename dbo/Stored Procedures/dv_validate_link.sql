@@ -113,7 +113,7 @@ select distinct
 	  ,h.[hub_database]
 	  ,[link_key_name] = isnull(lkc.[link_key_column_name],h.[hub_name])
 	  ,lkc.link_key_column_key 
-	  ,data_type = replace([dbo].[fn_build_column_definition] (hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0), ' NOT NULL', '') 
+	  ,data_type = rtrim([dbo].[fn_build_column_definition] ('',hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0,0,0)) 
 FROM [dbo].[dv_link] l
 inner join [dbo].[dv_link_key_column] lkc on lkc.link_key = l.link_key
 inner join [dbo].[dv_hub_column] hc on hc.link_key_column_key = lkc.link_key_column_key
@@ -133,21 +133,25 @@ INTO @c_hub_key
 	,@c_hub_data_type
 
 WHILE @@FETCH_STATUS = 0
-BEGIN
+BEGIN 
+
 		select @wrk_link_joins  = 'INNER JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + @c_link_key_name + @crlf + ' ON  ' +
 		                          @c_link_key_name + '.' + (select column_name from [dbo].[fn_get_key_definition](@c_hub_name, 'hub')) +
 			                     ' =  l.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub'))
 										+ @crlf + ' AND '	
 		select @wrk_src_column_keys   += ', ' + quotename([column_name]) + 
-		                                 case when @c_hub_data_type <> col_data_type then ' = CAST(' + quotename([column_name]) + ' AS ' + @c_hub_data_type + ')'
-										      else ' ' 
-										      end + @crlf
+		                                 case when @c_hub_data_type <> col_data_type 
+											  then ' = ' + hub_data_type_cast
+										      else '' 
+										      end 
+											  + @crlf
 		      ,@wrk_hub_column_keys += ', ' + @c_link_key_name + '.' + [hub_key_column_name] + ' AS ' + 
-								@c_link_key_name + [hub_key_column_name] + @crlf
+								@c_link_key_name + [hub_key_column_name] + @crlf    
 		from (
 		 select distinct 
 	     h.[hub_name]
-		,col_data_type = replace([dbo].[fn_build_column_definition] (c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0), ' NOT NULL', '')
+		,col_data_type = [dbo].[fn_build_column_definition] ('',c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0,0,0)
+		,hub_data_type_cast = [dbo].[fn_build_column_definition] (quotename([column_name]),hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0,1,0)
 		,hkc.[hub_key_column_name]
 		,hkc.hub_key_ordinal_position
 		,c.[column_name]
@@ -166,11 +170,10 @@ BEGIN
 		and st.[source_table_key] = @source_table_config_key
 		and c.is_retired <> 1) hkc
 		ORDER BY hkc.hub_key_ordinal_position
-
+		--print @wrk_src_column_keys
 		-------------------
 
 		set @link_lookup_joins = @link_lookup_joins + left(@wrk_link_joins, len(@wrk_link_joins) - 4)
-		--print @wrk_src_column_keys --*************************************************************************************************************************
 		FETCH NEXT FROM c_hub_key
 		INTO @c_hub_key
 				,@c_hub_name

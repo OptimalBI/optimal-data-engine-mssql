@@ -134,17 +134,17 @@ select @SQL += 'CREATE TABLE ' + @table_name + '(' + @crlf + ' '
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Add the Columns'
 --1. Primary Key
-select @SQL = @SQL + column_name + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 0, 1) + @crlf + ',' 
+select @SQL = @SQL + column_name + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 0, 1, 0, 1) + @crlf + ',' 
 from [fn_get_key_definition](@object_name, @object_type)
 
 --Payload
-select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
+select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0, 0, 1) + @crlf + ',' 
 from
 (select *
 from @default_columns) a
 order by source_ordinal_position
 
-select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
+select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0, 0, 1) + @crlf + ',' 
 from
 (select *
 from @payload_columns) a
