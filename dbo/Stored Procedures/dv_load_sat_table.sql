@@ -310,7 +310,9 @@ set @sql2 = ''
 
 -- Insert New Rows for Updates
 set @sql2 = 'BEGIN TRANSACTION' + @crlf
-set @sql2 += 'INSERT INTO '	+ @sat_qualified_name + @crlf 
+set @sql2 += 'SELECT *  INTO #t' + @sat_table + ' FROM ' +  @sat_qualified_name + ' WHERE 1 = 0;' + @crlf
+--set @sql2 += 'INSERT INTO '	+ @sat_qualified_name + @crlf 
+set @sql2 += 'INSERT INTO #t' + @sat_table + @crlf
 set @sql2 += ' (' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
 set @sql2 += ',   ' + replace(@sat_technical_columns, 'sat.', '')
 set @sql2 += replace(@sat_payload, 'sat.', '')
@@ -357,7 +359,7 @@ set @sql2 += ')' + @crlf + 'THEN UPDATE SET' + @crlf
 set @sql2 += @sat_current_row_col + '  = 0' + @crlf
 
 set @sql2 += ',  ' + @sat_end_date_col + ' = iif(@version_date > sat.' + @sat_start_date_col + ', @version_date, dateadd(ms,1, sat.' + @sat_start_date_col + '))' + @crlf
---Insert New Rows
+--Insert New Rows for New Keys:
 set @sql2 += 'WHEN NOT MATCHED BY TARGET ' + @crlf
 set @sql2 += '  THEN INSERT ( ' + @crlf
 set @sql2 += '  ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
@@ -391,8 +393,18 @@ set @sql2 += '        ,[src].*' + @crlf
 set @sql2 += ') AS MergeOutput' + @crlf
 set @sql2 += '  WHERE 1=1' + @crlf
 set @sql2 += '  AND MergeOutput.Action = ''UPDATE''' + @crlf
---set @sql2 += '    AND ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + ' is not null' + @crlf
 set @sql2 += ';' + @crlf-- Merge Statement Must end with ';'
+
+-- Insert the Tombstones:
+set @sql2 += 'INSERT INTO ' + @sat_qualified_name  + @crlf
+set @sql2 += ' (' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
+set @sql2 += ',' + replace(@sat_technical_columns, 'sat.', '')
+set @sql2 += replace(@sat_payload, 'sat.', '')
+set @sql2 += ')' + @crlf
+set @sql2 += 'SELECT ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
+set @sql2 += ',' + replace(@sat_technical_columns, 'sat.', '')
+set @sql2 += replace(@sat_payload, 'sat.', '')  + @crlf
+set @sql2 += 'FROM #t' + @sat_table + ';' + @crlf
 
 -- Log Completion
 set @sql2 += 'EXECUTE [dv_log].[dv_log_progress] ''sat'',''' + @sat_table + ''',''' + @sat_schema + ''',''' +  @sat_database + ''',' --+ @crlf
@@ -403,12 +415,8 @@ set @sql2 += 'COMMIT;' + @crlf
 select @vault_sql_statement = @sql2
 IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @crlf
 /*--------------------------------------------------------------------------------------------------------------*/
---SET @_Step = 'Load The ' + case when @sat_link_hub_flag = 'H' then 'Hub' else 'Link' end
---IF @_JournalOnOff = 'ON'
---	SET @_ProgressText += @sql
 --print @vault_sql_statement
 --select @vault_sql_statement
---EXECUTE sp_executesql @SQL;
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE

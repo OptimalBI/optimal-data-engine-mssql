@@ -124,36 +124,9 @@ and t.[source_table_name]		= @vault_source_table_name
 SET @_Step = 'Get All Components related to the Source Table'	    
           
 insert @load_details
---select  distinct
---        ss.timevault_name
---       ,st.[source_table_key] as source_table_key
---       ,st.source_table_schema	
---	   ,st.source_table_name	
---	   ,st.source_table_load_type
---	   ,s.satellite_database
---	   ,s.satellite_name
---	   ,null,null,null,null,null,null
---from
---[dbo].[dv_source_system] ss
---inner join [dbo].[dv_source_table] st
---on st.system_key = ss.[source_system_key]
---inner join [dbo].[dv_column] c
---on c.table_key = st.[source_table_key]
---inner join [dbo].[dv_satellite_column] sc
---on sc.satellite_col_key = c.satellite_col_key
---inner join [dbo].[dv_satellite] s
---on s.satellite_key = sc.satellite_key
---where st.source_table_key = @source_table_config_key
-
---union 
 
 select  distinct
-    --    ss.timevault_name
         st.[source_table_key] as source_table_key
-    --   ,st.source_table_schema	
-	   --,st.source_table_name	
-	   --,st.source_table_load_type
-	   --,null,null
 	   ,l.link_key
 	   ,l.link_name
 	   ,l.link_database
@@ -171,12 +144,7 @@ where st.source_table_key = @source_table_config_key
 union
 
 select  distinct
-    --    ss.timevault_name
        st.[source_table_key] as source_table_key
-    --   ,st.source_table_schema	
-	   --,st.source_table_name	
-	   --,st.source_table_load_type
-	   --,null,null
 	   ,null,null,null
 	   ,h.hub_key
 	   ,h.hub_name
