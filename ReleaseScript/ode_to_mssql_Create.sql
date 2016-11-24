@@ -647,15 +647,6 @@ CREATE TABLE [dbo].[dv_link_key_column] (
 
 
 GO
-PRINT N'Creating [dbo].[dv_link_key_column].[UX_link_key_column_name]...';
-
-
-GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_link_key_column_name]
-    ON [dbo].[dv_link_key_column]([link_key_column_name] ASC) WHERE ([link_key_column_name] IS NOT NULL);
-
-
-GO
 PRINT N'Creating [log4].[Severity]...';
 
 

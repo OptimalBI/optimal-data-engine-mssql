@@ -31,6 +31,6 @@ AS
 									   ON [a].[link_key_column_key] = [b].[link_key_column_key];
 	END;
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_link_key_column_name]
-    ON [dbo].[dv_link_key_column]([link_key_column_name] ASC) WHERE ([link_key_column_name] IS NOT NULL);
+--CREATE UNIQUE NONCLUSTERED INDEX [UX_link_key_column_name]
+--    ON [dbo].[dv_link_key_column]([link_key_column_name] ASC) WHERE ([link_key_column_name] IS NOT NULL);
 
