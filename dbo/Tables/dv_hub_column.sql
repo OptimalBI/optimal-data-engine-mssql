@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [dbo].[dv_hub_column] (
     [hub_col_key]         INT                IDENTITY (1, 1) NOT NULL,
     [hub_key_column_key]  INT                NOT NULL,
-    [link_key_column_key] INT                DEFAULT ((0)) NULL,
+    [link_key_column_key] INT                NULL,
     [column_key]          INT                NOT NULL,
     [release_key]         INT                CONSTRAINT [DF_dv_hub_column_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]      INT                CONSTRAINT [DF__dv_hub_co__versi__2AD55B43] DEFAULT ((1)) NOT NULL,
@@ -15,6 +15,8 @@
     CONSTRAINT [dv_hub_column_unique] UNIQUE NONCLUSTERED ([hub_key_column_key] ASC, [column_key] ASC),
     CONSTRAINT [dv_hub_source_column_unique] UNIQUE NONCLUSTERED ([column_key] ASC)
 );
+
+
 
 
 

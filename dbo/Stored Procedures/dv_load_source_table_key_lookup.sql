@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[dv_load_source_table_key_lookup]
+﻿
+CREATE PROCEDURE [dbo].[dv_load_source_table_key_lookup]
 (
   @vault_source_system_name             varchar(128) = NULL
 , @vault_source_table_schema			varchar(128) = NULL
@@ -123,7 +124,7 @@ declare @c_hub_key										int
 		,@c_hub_database								varchar(128)
 		,@c_link_key_name								varchar(128)
 		,@c_link_key_column_key							int
-		,@c_hub_data_type								varchar(128)
+		--,@c_hub_data_type								varchar(128)
 
 declare @ref_function_list table (ref_function_seq		int identity(1,1)
 								 ,column_name			varchar(128)
@@ -299,7 +300,7 @@ begin
 		  ,h.[hub_database]
 		  ,[link_key_name] = isnull(lkc.[link_key_column_name],h.[hub_name])
 		  ,lkc.link_key_column_key 
-		  ,[dbo].[fn_build_column_definition] ('', hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0,0,0)
+		  --,[dbo].[fn_build_column_definition] ('', hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0,0,0)
 	FROM [dbo].[dv_link] l
 	inner join [dbo].[dv_link_key_column] lkc on lkc.link_key = l.link_key
 	inner join [dbo].[dv_hub_column] hc on hc.link_key_column_key = lkc.link_key_column_key
@@ -316,7 +317,7 @@ begin
 		,@c_hub_database
 		,@c_link_key_name
 		,@c_link_key_column_key
-		,@c_hub_data_type
+		--,@c_hub_data_type
 
 	WHILE @@FETCH_STATUS = 0
 	BEGIN
@@ -325,7 +326,8 @@ begin
 			select @wrk_link_keys  += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + 
 				     				  ' = link.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + @crlf + ' AND '
 			select @wrk_link_joins += @c_link_key_name + '.' + quotename(hkc.[hub_key_column_name]) + ' = ' +
-			                         case when  @c_hub_data_type <> col_data_type
+			                         ---case when  @c_hub_data_type <> col_data_type
+									 case when  hub_data_type <> col_data_type
 									      --then ' = CAST(src.' + quotename(hkc.[column_name]) + ' as ' + @c_hub_data_type + ')' 
 										  then col_data_type_cast
 										  else 'src.' + quotename(hkc.[column_name])
@@ -336,7 +338,7 @@ begin
 			 h.[hub_name]
 			,col_data_type = [dbo].[fn_build_column_definition] ('',c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0,0,0)
 			,col_data_type_cast = [dbo].[fn_build_column_definition] ('src.' + quotename(c.[column_name]), hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0,1,0) 
-
+			,hub_data_type = [dbo].[fn_build_column_definition] ('', hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0,0,0)
 			,hkc.[hub_key_column_name]
 			,hkc.hub_key_ordinal_position
 			,c.[column_name]
@@ -355,7 +357,6 @@ begin
 			and st.[source_table_key] = @source_table_config_key
 			and c.is_retired <> 1) hkc
 			ORDER BY hkc.hub_key_ordinal_position
-
 ---------------------------------------------------------
 			select  @wrk_hub_joins += ', ' + @c_link_key_name + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ' as ' + 
 									(select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + @crlf				   
@@ -384,7 +385,7 @@ begin
 					,@c_hub_database
 					,@c_link_key_name
 					,@c_link_key_column_key
-					,@c_hub_data_type
+					--,@c_hub_data_type
 	END
 
 	CLOSE c_hub_key
