@@ -1,10 +1,13 @@
-﻿CREATE PROCEDURE [dbo].[dv_load_hub_table]
+﻿
+CREATE PROCEDURE [dbo].[dv_load_hub_table]
 (
-  @vault_source_system		varchar(128)	= NULL
-, @vault_source_schema		varchar(128)	= NULL
-, @vault_source_table		varchar(128)	= NULL
+  @vault_source_unique_name	varchar(128)	= NULL
 , @vault_database			varchar(128)	= NULL
 , @vault_hub_name			varchar(128)	= NULL
+, @vault_source_version_key int				= NULL  -- Note that this parameter is provided for dv_load_source_table to be able to pass the key, 
+                                                    --      which was used in creating the stage table at the start of the run.
+													--      passing NULL here will cause the proc to use the current source version.
+, @vault_runkey				int				= NULL
 , @dogenerateerror			bit				= 0
 , @dothrowerror				bit				= 1
 )
@@ -14,32 +17,43 @@ SET NOCOUNT ON
 
 -- To Do - add Logging for the Payload Parameter
 --         validate Parameters properly
---declare @hub_name varchar(100) =  'AdventureWorks2014_production_productinventory'
 
 DECLARE @dv_load_date_time_column	varchar(128)
 DECLARE @dv_load_date_time			varchar(128) 
 DECLARE @dv_data_source_column		varchar(128)
-DECLARE @dv_data_source_key			int
-DECLARE @dv_timevault_name			varchar(128)
-DECLARE @hub_name					varchar(128) 
-DECLARE @hub_table_name				varchar(128) 
 DECLARE @default_load_date_time		varchar(128)
+DECLARE @dv_data_source_key			int
+DECLARE @dv_source_version_key		int
+DECLARE @dv_stage_table_name		varchar(512)
+
+--DECLARE @hub_name					varchar(128) 
+DECLARE @hub_table_name				varchar(128)
+DECLARE @hub_key_column_name		varchar(128)
 DECLARE @hub_load_date_time			varchar(128)
+DECLARE @hub_database				varchar(128)
+DECLARE @hub_schema					varchar(128)
+
+DECLARE @link_key_column_name		varchar(128)
+DECLARE @link_key_column_key		int
+DECLARE @link_key					int
+
+DECLARE @column_name				varchar(128)
+DECLARE @hub_column_definition		varchar(128)
+DECLARE @hub_column_definition_cast	varchar(128)
+DECLARE @source_column_definition	varchar(128)
+
 DECLARE @hub_insert_count			int
+DECLARE @loop_count					int
+DECLARE @current_link_key_column_key int
+DECLARE @rc							int
 
 DECLARE @crlf char(2) = CHAR(13) + CHAR(10)
 
-DECLARE @declare			nvarchar(512) = ''
-DECLARE @count_rows			nvarchar(256) = ''
 DECLARE @match_list			nvarchar(4000) = ''
 DECLARE @value_list			nvarchar(4000) = ''
 DECLARE @hub_column_list	nvarchar(4000) = ''
 DECLARE @source_column_list nvarchar(4000) = ''
 DECLARE @SQL1				nvarchar(4000) = ''
-DECLARE @SQL2				nvarchar(4000) = '' 
-DECLARE @SQL3				nvarchar(4000) = ''
-DECLARE @SQL4				nvarchar(4000) = ''
-DECLARE @SQL				nvarchar(4000) = ''
 DECLARE @ParmDefinition		nvarchar(500);
 
 -- Log4TSQL Journal Constants 
@@ -80,11 +94,10 @@ SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- l
 
 -- set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_source_system          : ' + COALESCE(@vault_source_system, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_schema          : ' + COALESCE(@vault_source_schema, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_table           : ' + COALESCE(@vault_source_table, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_unique_name     : ' + COALESCE(@vault_source_unique_name, '<NULL>')
 						+ @NEW_LINE + '    @vault_database               : ' + COALESCE(@vault_database, '<NULL>')
 						+ @NEW_LINE + '    @vault_hub_name               : ' + COALESCE(@vault_hub_name, '<NULL>')
+						+ @NEW_LINE + '    @vault_runkey                 : ' + COALESCE(CAST(@vault_runkey AS varchar), 'NULL')
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
 						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
 						+ @NEW_LINE
@@ -95,47 +108,47 @@ IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate inputs';
 
-IF (select count(*) from [dbo].[dv_source_system] where @vault_source_system = [source_system_name] ) <> 1
-			RAISERROR('Invalid @vault_source_system: %s', 16, 1, @vault_source_system);
+IF ((@vault_runkey is not null) and ((select count(*) from [dv_scheduler].[dv_run] where @vault_runkey = [run_key] and [run_status]='Started') <> 1))
+			RAISERROR('Invalid @vault_runkey provided: %i', 16, 1, @vault_runkey);
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults'
 
-select @declare = 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf
-select @count_rows = 'OUTPUT $action into @rowcounts;' + @crlf + 'select @insertcount = count(*) from @rowcounts;'
-
-select @hub_table_name				= [dbo].[fn_get_object_name](@vault_hub_name, 'hub') --from [dbo].[dv_hub] where hub_name = 'AdventureWorks2014_production_productinventory'
+select @hub_table_name				= [dbo].[fn_get_object_name](@vault_hub_name, 'hub') 
 select @default_load_date_time		= [default_varchar] from [dbo].[dv_defaults]		where default_type = 'Global'	and default_subtype = 'DefaultLoadDateTime'
 select @dv_load_date_time_column	= [column_name]		from [dbo].[dv_default_column]	where [object_type] = 'hub'		and object_column_type = 'Load_Date_Time'
 select @dv_data_source_column		= [column_name]		from [dbo].[dv_default_column]	where [object_type] = 'hub'		and object_column_type = 'Data_Source'
 select @dv_load_date_time			= c.column_name 
       ,@dv_data_source_key			= st.[source_table_key]
-	  ,@dv_timevault_name			= s.timevault_name
-from [dbo].[dv_source_system] s
-inner join [dbo].[dv_source_table] st
-on st.system_key = s.[source_system_key]
-left join [dbo].[dv_column] c
-on c.table_key = st.[source_table_key]
-and c.[is_source_date] = 1
+	  ,@dv_source_version_key		= isnull(@vault_source_version_key, sv.source_version_key) -- if no source version is provided, use the current source version for the source table used as source for this load.
+	  ,@dv_stage_table_name         = quotename(sd.[stage_database_name]) + '.' + quotename(sc.[stage_schema_name]) + '.' + quotename(st.[stage_table_name])
+from [dbo].[dv_source_table] st		
+left join [dbo].[dv_column] c	on c.table_key = st.[source_table_key]
+							   and c.[is_source_date] = 1
+							   and isnull(c.is_retired, 0) <> 1
+
+left join [dbo].[dv_stage_schema] sc on sc.stage_schema_key = st.stage_schema_key
+left join [dbo].[dv_stage_database] sd on sd.stage_database_key = sc.stage_database_key
+left join [dbo].[dv_source_version] sv on sv.source_table_key = st.source_table_key	
+									  and sv.is_current= 1
 where 1=1
-and s.source_system_name	= @vault_source_system
-and st.source_table_schema	= @vault_source_schema
-and st.source_table_name	= @vault_source_table
---and isnull(c.discard_flag, 0) <> 1
+and st.source_unique_name	= @vault_source_unique_name
+select @rc = count(*) from [dbo].[dv_source_version] where source_version_key = @dv_source_version_key and is_current= 1
+if @rc <> 1 RAISERROR('dv_source_table or current dv_source_version missing for: %s, source version : %i', 16, 1, @dv_stage_table_name, @vault_source_version_key);
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Build SQL Components'
 
-select @SQL1 = 'WITH wBaseSet AS (SELECT DISTINCT ' 
-	  ,@source_column_list += quotename(c.[column_name]) +','
-	  ,@SQL2 = 'FROM ' + quotename(s.[timevault_name]) + '.'+quotename([source_table_schema])+ '.'+quotename([source_table_name]) + ')' + @crlf 
-			 + 'MERGE ' + quotename(h.[hub_database]) +'.'+quotename(h.[hub_schema])+'.'+ quotename(@hub_table_name) + ' WITH (HOLDLOCK) AS TARGET ' + @crlf
-             + 'USING wBaseSet AS SOURCE' + @crlf + '  ON '
-      ,@match_list += 'TARGET.' + quotename(hkc.[hub_key_column_name]) + ' = CAST(SOURCE.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')' + ' AND '
-	  ,@SQL3 = @crlf + '  WHEN NOT MATCHED BY TARGET THEN ' + @crlf + 'INSERT(' + @dv_load_date_time_column + ',' + @dv_data_source_column + ',' 
-	  ,@hub_column_list += hkc.hub_key_column_name + ','
-	  ,@SQL4 = @crlf + 'VALUES(sysdatetimeoffset(),''' + cast(@dv_data_source_key as varchar(50)) + ''','
-	  ,@value_list += 'CAST(SOURCE.' + quotename(c.[column_name]) + ' as ' + [hub_key_column_type] + ')'  + ',' 
-
+DECLARE cur_hub_column CURSOR FOR  
+select c.column_name
+      ,hkc.hub_key_column_name
+	  ,link_key_column_key = isnull(hc.link_key_column_key, 0)
+	  --,st.source_unique_name
+	  ,h.hub_database
+	  ,h.hub_schema
+	  ,[dbo].[fn_build_column_definition] ('',[hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0,0,0)
+	  ,[dbo].[fn_build_column_definition] ('',[column_type],[column_length],[column_precision],[column_scale],[Collation_Name],0,0, 0,0)
+	  ,[dbo].[fn_build_column_definition] (quotename(c.column_name),[hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0, 1,0)
+	  
 from [dbo].[dv_hub] h
 inner join [dbo].[dv_hub_key_column] hkc
 on h.hub_key = hkc.hub_key
@@ -145,45 +158,89 @@ inner join [dbo].[dv_column] c
 on c.column_key = hc.column_key
 inner join [dbo].[dv_source_table] st
 on c.[table_key] = st.[source_table_key]
-inner join [dbo].[dv_source_system] s
-on s.[source_system_key] = st.system_key
 where 1=1
 and h.hub_name				= @vault_hub_name
 and h.hub_database			= @vault_database
-and s.source_system_name	= @vault_source_system
-and st.source_table_schema	= @vault_source_schema
-and st.source_table_name	= @vault_source_table
+and st.source_unique_name	= @vault_source_unique_name
 and isnull(c.is_retired, 0) <> 1
-ORDER BY hkc.hub_key_ordinal_position 
+order by link_key_column_key, c.column_name  --NB order is vital for the following loop to work!
 
-/*--------------------------------------------------------------------------------------------------------------*/
-SET @_Step = 'Combine the SQL Components'
+set @loop_count = 0
+set @SQL1 = 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf + 
+            'DECLARE @version_date datetimeoffset(7)' + @crlf +
+			'DECLARE @load_end_datetime datetimeoffset(7)' + @crlf +
+			'select @version_date = sysdatetimeoffset()'  + @crlf +
+			'BEGIN TRANSACTION' + @crlf +
+            ';WITH wBaseSet AS (' + @crlf
 
-select @SQL = replace(
-          @declare
-        + @SQL1
-		+ left(@source_column_list, len(@source_column_list) -1) 
-		+ @SQL2
-		+ left(@match_list, len(@match_list) -4)
-		+ @SQL3
-		+ @hub_column_list + ')'
-		+ @SQL4
-		+ @value_list + ')'
-		+ @count_rows
-		, ',)', ')')
+OPEN cur_hub_column   
+FETCH NEXT FROM cur_hub_column INTO  @column_name		   
+							   ,@hub_key_column_name
+							   ,@link_key_column_key
+							   --,@dv_timevault_name
+							   ,@hub_database
+							   ,@hub_schema
+							   ,@hub_column_definition
+							   ,@source_column_definition
+							   ,@hub_column_definition_cast
+WHILE @@FETCH_STATUS = 0
+BEGIN   
+       set @current_link_key_column_key = @link_key_column_key
+	   set @SQL1 += 'SELECT DISTINCT ' 
+	   set @source_column_list = ''
+	   set @loop_count += 1	   
+	   while @current_link_key_column_key = @link_key_column_key and @@FETCH_STATUS = 0
+	   BEGIN
+			select @source_column_list +=  @crlf +
+			       case when @hub_column_definition = @source_column_definition
+				        then quotename(@column_name)
+					    --else ' CAST(' + quotename(@column_name) + ' AS ' + left(@hub_column_definition, len(@hub_column_definition) -5) + ')'
+						else @hub_column_definition_cast 
+					    end + 
+			       ' AS ' + quotename(@hub_key_column_name) + ','
+			if @loop_count = 1
+			begin
+				select @match_list += @crlf +' TARGET.' + quotename(@hub_key_column_name) + ' = SOURCE.' + quotename(@hub_key_column_name)  + ' AND '
+				select @hub_column_list  += @crlf +' SOURCE.' + quotename(@hub_key_column_name) + ','
+			end
+			FETCH NEXT FROM cur_hub_column INTO  @column_name		   
+							   ,@hub_key_column_name
+							   ,@link_key_column_key
+							   --,@dv_timevault_name
+							   ,@hub_database
+							   ,@hub_schema
+							   ,@hub_column_definition
+							   ,@source_column_definition							   
+							   ,@hub_column_definition_cast
+		END
+	    set @SQL1 += left(@source_column_list, len(@source_column_list) -1) + @crlf + 
+		          'FROM ' + @dv_stage_table_name + @crlf +
+				  'UNION ' + @crlf  
+END  
 
+set @SQL1 = left(@SQL1, len(@SQL1) -10)  + ')' + @crlf +              
+			'MERGE ' + quotename(@hub_database) +'.'+quotename(@hub_schema)+'.'+ quotename(@hub_table_name) + ' WITH (HOLDLOCK) AS TARGET ' + @crlf +
+            'USING wBaseSet AS SOURCE' + @crlf + ' ON ' + left(@match_list, len(@match_list) - 4) + @crlf +
+			'WHEN NOT MATCHED BY TARGET THEN ' + @crlf + 'INSERT(' + @dv_load_date_time_column + ',' + @dv_data_source_column + ',' + replace(left(@hub_column_list, len(@hub_column_list) -1), 'SOURCE.','') + ')' + @crlf +
+			'VALUES(@version_date,''' + cast(@dv_source_version_key as varchar(50)) + ''',' + left(@hub_column_list, len(@hub_column_list) -1) + ')' + @crlf +
+			'OUTPUT $action into @rowcounts;' + @crlf + 'select @insertcount = count(*) from @rowcounts where merge_action = ''INSERT'';' + @crlf + 
+			'SELECT @load_end_datetime = sysdatetimeoffset();' + @crlf 
+-- Log Completion
+
+set @SQL1 += 'EXECUTE [dv_log].[dv_log_progress] ''hub'',''' + @vault_hub_name + ''',''' + @hub_schema + ''',''' +  @hub_database + ''',' 
+set @SQL1 += '''' + @vault_source_unique_name + ''',@@SPID,' + isnull(cast(@vault_runkey as varchar), 'NULL') + ', @version_date, null, @version_date, @load_end_datetime, @insertcount, 0, 0, 0' + @crlf
+set @SQL1 += 'COMMIT;' + @crlf
+
+CLOSE cur_hub_column   
+DEALLOCATE cur_hub_column
 
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Load The Hub'
-IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
+IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL1 + @crlf
 SET @ParmDefinition = N'@insertcount int OUTPUT';
-
- --print 'hub'
- --print @sql 
-
-EXECUTE sp_executesql @SQL, @ParmDefinition, @insertcount = @hub_insert_count OUTPUT;
---select @hub_insert_count
+--print @SQL1
+EXECUTE sp_executesql @SQL1, @ParmDefinition, @insertcount = @hub_insert_count OUTPUT;
 
 /*--------------------------------------------------------------------------------------------------------------*/
 
@@ -238,7 +295,7 @@ OnComplete:
 								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
 			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
 		END
-
+--print @_ProgressText
 	IF @_JournalOnOff = 'ON'
 		EXEC log4.JournalWriter
 				  @Task				= @_FunctionName

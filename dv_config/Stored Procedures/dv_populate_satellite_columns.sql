@@ -1,9 +1,7 @@
 ﻿CREATE PROCEDURE [dv_config].[dv_populate_satellite_columns]
 (
-	 @vault_source_system					varchar(50)
-    ,@vault_source_schema					varchar(128)
-	,@vault_source_table					varchar(128)	
-	,@vault_satellite_name					varchar(128)	= Null
+	 @vault_source_unique_name				varchar(128)	= Null
+	,@vault_satellite_name                  varchar(128)    = Null
 	,@vault_release_number					int				= 0
 	,@vault_rerun_satellite_column_insert	bit				= 0
 	,@DoGenerateError						bit				= 0
@@ -15,8 +13,8 @@ SET NOCOUNT ON;
 
 -- Internal use variables
 
-declare @table_fully_qualified				nvarchar(512)
-	   ,@satellite_key						int
+declare --@table_fully_qualified				nvarchar(512)
+	    @satellite_key						int
 	   ,@source_table_key					int
 
 
@@ -57,9 +55,7 @@ SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- l
 
 --set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_source_system                : ' + COALESCE(@vault_source_system						, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_schema                : ' + COALESCE(@vault_source_schema						, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_table                 : ' + COALESCE(@vault_source_table						, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_unique_name           : ' + COALESCE(@vault_source_unique_name					, '<NULL>')
 						+ @NEW_LINE + '    @vault_satellite_name               : ' + COALESCE(@vault_satellite_name						, '<NULL>')
 						+ @NEW_LINE + '    @vault_rerun_satellite_column_insert: ' + COALESCE(cast(@vault_rerun_satellite_column_insert as varchar)	, '<NULL>')
 						+ @NEW_LINE + '    @DoGenerateError : ' + COALESCE(CAST(@DoGenerateError AS varchar)							, '<NULL>')
@@ -73,7 +69,7 @@ IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate Inputs';
 
-select @table_fully_qualified = quotename(@vault_source_system) + '.' + quotename(@vault_source_schema) + '.' + quotename(@vault_source_table)
+--select @table_fully_qualified = quotename(@vault_source_system) + '.' + quotename(@vault_source_schema) + '.' + quotename(@vault_source_table)
 
 SET @_Step = 'Initialise Variables';
 
@@ -84,11 +80,7 @@ select @satellite_key = [satellite_key]
 
 select @source_table_key = st.[source_table_key] 
 	from [dbo].[dv_source_table] st
-	inner join [dbo].[dv_source_system] ss
-	on ss.source_system_key = st.system_key
-	where ss.[source_system_name]	= @vault_source_system
-	  and st.[source_table_schema]	= @vault_source_schema 
-	  and st.[source_table_name]	= @vault_source_table
+	where st.[source_unique_name]	= @vault_source_unique_name
 select 1 from [dbo].[dv_satellite_column] where [satellite_key] = @satellite_key
 if @@ROWCOUNT > 0  -- Satellite already has Columns attached
 	begin

@@ -21,16 +21,12 @@ if @RN > 0
 ;with wSchedule_Table as (
       select s.schedule_key
 	        ,st.[source_table_key]
-	        ,ss.source_system_name
-	        ,st.source_table_schema
-			,st.source_table_name
+	        ,st.source_unique_name
 	  from [dv_scheduler].[vw_dv_schedule_current] s
 	  inner join [dv_scheduler].[vw_dv_schedule_source_table_current] sst
 	  on sst.schedule_key = s.schedule_key
 	  inner join [dbo].[dv_source_table] st
 	  on st.[source_table_key] = sst.source_table_key
-	  inner join [dbo].[dv_source_system] ss
-	  on ss.[source_system_key] = st.system_key
 	  where s.schedule_name in(select ltrim(rtrim(Item)) FROM [dbo].[fn_split_strings] (@schedule_list, ','))
 	)
 ,wBaseSetPrior as (
@@ -38,9 +34,7 @@ select
     schtp.[source_table_key] as table_key_prior
    ,scht.[source_table_key]
    ,source_table_name = cast(
-						quotename(schtp.[source_system_name]) + '.' +  
-						quotename(schtp.[source_table_schema]) + '.' +  
-						quotename(schtp.[source_table_name]) as nvarchar(512))   
+						quotename(schtp.[source_unique_name])as nvarchar(512))   
     
 from wSchedule_Table schtp
 left join [dv_scheduler].[vw_dv_source_table_hierarchy_current] sth
@@ -58,9 +52,7 @@ select
     schtp.[source_table_key] as table_key_prior
    ,scht.[source_table_key]
    ,source_table_name = cast(
-						quotename(schtp.[source_system_name]) + '.' +  
-						quotename(schtp.[source_table_schema]) + '.' +  
-						quotename(schtp.[source_table_name]) as nvarchar(512))   
+						quotename(schtp.[source_unique_name]) as nvarchar(512))   
 
 from wSchedule_Table schtp
 left join [dv_scheduler].[vw_dv_source_table_hierarchy_current] sth

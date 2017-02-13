@@ -1,6 +1,5 @@
 ﻿CREATE PROC [dbo].[dv_source_system_insert] 
     @source_system_name varchar(50),
-    @timevault_name varchar(50),
 	@is_retired bit,
 	@release_number int
 AS 
@@ -16,11 +15,11 @@ AS
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 	
-	INSERT INTO [dbo].[dv_source_system] ([source_system_name], [timevault_name], [is_retired], [release_key])
-	SELECT @source_system_name, @timevault_name, @is_retired, @release_key
+	INSERT INTO [dbo].[dv_source_system] ([source_system_name], [is_retired], [release_key])
+	SELECT @source_system_name, @is_retired, @release_key
 	
 	-- Begin Return Select <- do not remove
-	SELECT [source_system_key], [source_system_name], [timevault_name],[release_key]
+	SELECT [source_system_key], [source_system_name], [release_key]
 	FROM   [dbo].[dv_source_system]
 	WHERE  [source_system_key] = SCOPE_IDENTITY()
 	-- End Return Select <- do not remove

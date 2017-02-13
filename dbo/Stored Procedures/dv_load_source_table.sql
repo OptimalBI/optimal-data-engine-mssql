@@ -1,9 +1,8 @@
 ﻿CREATE PROCEDURE [dbo].[dv_load_source_table]
 (
-  @vault_source_system_name		varchar(128) = NULL
-, @vault_source_table_schema	varchar(128) = NULL
-, @vault_source_table_name		varchar(128) = NULL
+  @vault_source_unique_name		varchar(128) = NULL
 , @vault_source_load_type		varchar(50)  = NULL
+, @vault_runkey                 int          = NULL
 , @dogenerateerror				bit				= 0
 , @dothrowerror					bit				= 1
 )
@@ -22,23 +21,24 @@ set nocount on
 
 -- Object Specific Settings
 -- Source Table
-declare  @source_system						varchar(128)
-        ,@source_database					varchar(128)
+declare  @source_database					varchar(128)
 		,@source_schema						varchar(128)
 		,@source_table						varchar(128)
+		,@source_load_type					varchar(50)
+		,@source_type						varchar(50)
 		,@source_table_config_key			int
 		,@source_qualified_name				varchar(512)
+		,@source_version_key				int
+		,@source_version					int
+		,@source_procedure_name				varchar(128)
 		,@source_load_date_time				varchar(128)
 		,@source_payload					nvarchar(max)
+		,@error_message						varchar(256) 
+		,@stage_delta_switch				varchar(100) = 'N'
+		,@sql								nvarchar(4000)
 --  Working Storage
 declare @load_details table 
-       (source_database_name		varchar(128)
-       ,source_table_key		int
-	   ,source_table_schema     varchar(128)
-	   ,source_table_name		varchar(128)
-	   ,source_table_load_type  varchar(50)
-	   ,satellite_database      varchar(128)
-	   ,satellite_name			varchar(128)
+       (source_table_key		int
 	   ,link_key				int
 	   ,link_name				varchar(128)
 	   ,link_database			varchar(128)
@@ -84,10 +84,9 @@ SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- l
 
 -- set Log4TSQL Parameters for Logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_source_system_name     : ' + COALESCE(@vault_source_system_name, 'NULL')
-						+ @NEW_LINE + '    @vault_source_table_schema    : ' + COALESCE(@vault_source_table_schema, 'NULL')
-						+ @NEW_LINE + '    @vault_source_table_name      : ' + COALESCE(@vault_source_table_name, 'NULL')
+						+ @NEW_LINE + '    @vault_source_unique_name     : ' + COALESCE(@vault_source_unique_name, 'NULL')
 						+ @NEW_LINE + '    @vault_source_load_type       : ' + COALESCE(@vault_source_load_type, 'NULL')
+						+ @NEW_LINE + '    @vault_runkey                 : ' + COALESCE(CAST(@vault_runkey AS varchar), 'NULL')
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
 						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
 						+ @NEW_LINE
@@ -101,81 +100,99 @@ SET @_Step = 'Validate inputs';
 
 IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
 			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
---IF isnull(@recreate_flag, '') not in ('Y', 'N') 
---			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
-/*--------------------------------------------------------------------------------------------------------------*/	   
+IF ((@vault_runkey is not null) and ((select count(*) from [dv_scheduler].[dv_run] where @vault_runkey = [run_key] and [run_status]='Started') <> 1))
+			RAISERROR('Invalid @vault_runkey provided: %i', 16, 1, @vault_runkey);
+/*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults'
+-- Global Settings
+select @stage_delta_switch		= [default_varchar] from [dbo].[dv_defaults]		where default_type = 'Global'	and default_subtype = 'StageDeltaSwitch'
+
 -- Object Specific Settings
 -- Source Table
-select 	 @source_system				= s.[source_system_name]	
-        ,@source_database			= s.[timevault_name]
-		,@source_schema				= t.[source_table_schema]
-		,@source_table				= t.[source_table_name]
-		,@source_table_config_key	= t.[source_table_key]
-		,@source_qualified_name		= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
-from [dbo].[dv_source_system] s
-inner join [dbo].[dv_source_table] t
-on t.system_key = s.[source_system_key]
+select 	 @source_database			= sdb.[stage_database_name]
+		,@source_schema				= ss.[stage_schema_name]
+		,@source_table				= st.[stage_table_name]
+		,@source_load_type			= coalesce(@vault_source_load_type, st.[load_type], 'Full')
+		,@source_type				= st.[source_type]
+		,@source_table_config_key	= st.[source_table_key]
+		,@source_qualified_name		= quotename(sdb.[stage_database_name]) + '.' + quotename(ss.[stage_schema_name]) + '.' + quotename(st.[stage_table_name])
+		,@source_version			= sv.[source_version]
+		,@source_procedure_name		= sv.[source_procedure_name]
+from [dbo].[dv_source_table] st
+inner join [dbo].[dv_stage_schema] ss on ss.stage_schema_key = st.stage_schema_key
+inner join [dbo].[dv_stage_database] sdb on sdb.stage_database_key = ss.stage_database_key
+inner join [dbo].[dv_source_version] sv on sv.[source_table_key] = st.[source_table_key]
 where 1=1
-and s.[source_system_name]		= @vault_source_system_name
-and t.[source_table_schema]		= @vault_source_table_schema
-and t.[source_table_name]		= @vault_source_table_name
+and st.[source_unique_name]		= @vault_source_unique_name
+and sv.[is_current]				= 1
+if @@ROWCOUNT <> 1 RAISERROR('dv_source_table or current dv_source_version missing for : %s', 16, 1, @vault_source_unique_name);
 
 SET @_Step = 'Get All Components related to the Source Table'	    
-insert @load_details            
+          
+insert @load_details
 select  distinct
-        ss.timevault_name
-       ,st.[source_table_key] as source_table_key
-       ,st.source_table_schema	
-	   ,st.source_table_name	
-	   ,st.source_table_load_type
-	   ,s.satellite_database
-	   ,s.satellite_name
+        st.[source_table_key] as source_table_key
 	   ,l.link_key
 	   ,l.link_name
 	   ,l.link_database
-	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_key		else linkhub.hub_key		end as hub_key
-	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_name		else linkhub.hub_name		end as hub_name
-	   ,case when s.link_hub_satellite_flag = 'H' then h.hub_database	else linkhub.hub_database	end as hub_database 
+	   ,null,null,null
 from
-[dbo].[dv_source_system] ss
-inner join [dbo].[dv_source_table] st
-on st.system_key = ss.[source_system_key]
-inner join [dbo].[dv_column] c
-on c.table_key = st.[source_table_key]
-inner join [dbo].[dv_satellite_column] sc
-on sc.satellite_col_key = c.satellite_col_key
-inner join [dbo].[dv_satellite] s
-on s.satellite_key = sc.satellite_key
-left join [dbo].[dv_link] l
-on s.link_key = l.link_key
-and (l.link_key > 0 OR l.link_key < -100)
-left join [dbo].[dv_hub] h 
-on h.hub_key = s.hub_key
-and (h.hub_key > 0 OR h.hub_key < -100)
-left join [dbo].[dv_hub_link] hl
-on hl.link_key = l.link_key
-left join [dbo].[dv_hub] linkhub
-on linkhub.hub_key = hl.hub_key
-where ss.source_system_name		= @vault_source_system_name
-  and st.source_table_schema	= @vault_source_table_schema
-  and st.source_table_name		= @vault_source_table_name
+           [dbo].[dv_source_table] st		
+inner join [dbo].[dv_column] c				on c.table_key = st.[source_table_key] 
+inner join [dbo].[dv_hub_column] hc			on hc.column_key = c.column_key
+inner join [dbo].[dv_link_key_column] lkc	on lkc.link_key_column_key = hc.link_key_column_key
+inner join [dbo].[dv_link] l				on l.link_key = lkc.link_key
+											and (l.link_key > 0 OR l.link_key < -100)
+where st.source_table_key = @source_table_config_key
+  
+union
 
+select  distinct
+       st.[source_table_key] as source_table_key
+	   ,null,null,null
+	   ,h.hub_key
+	   ,h.hub_name
+	   ,h.hub_database
+from
+           [dbo].[dv_source_table] st		
+inner join [dbo].[dv_column] c				on c.table_key = st.[source_table_key] 
+inner join [dbo].[dv_hub_column] hc			on hc.column_key = c.column_key
+inner join [dbo].[dv_hub_key_column] hkc	on hkc.hub_key_column_key = hc.hub_key_column_key
+inner join [dbo].[dv_hub] h					on h.hub_key = hkc.hub_key
+											and (h.hub_key > 0 OR h.hub_key < -100)
+where st.source_table_key = @source_table_config_key
+
+;with wBaseSet as (
+select source_table_key
+      ,count(distinct hub_name) as hub
+	  ,count(distinct link_name) as link
+from @load_details
+group by source_table_key)
+select @error_message = 
+       case when link > 1 then 'Source Table is configured to load more than 1 Link.'
+            when link < 1 then case when hub <> 1 then 'Source Table which loads a Hub may only load 1 Hub' else 'Success' end
+			when link = 1 then case when hub < 1 then 'Link must be configured to link one or more Hubs' else 'Success' end
+			else 'Success'
+			end
+from wBaseSet 
+if @error_message <> 'Success' raiserror('Incorrect Source configuration: %s', 16, 1, @error_message)
+--select * from @load_details
 /*****************************************************************************************************************/
---Load the Source Table in stages:
---declare @source_database		varchar(128)
---       ,@source_table_schema	varchar(128)
---	   ,@source_table_name		varchar(128)
-
---select @source_database		= source_database_name
---      ,@source_table_schema = source_table_schema
---	  ,@source_table_name	= source_table_name
---from @load_details
+SET @_Step = 'Process the Stage Table'
+print ''
+print 'Process Stage Table'
+print '-------------------'
+EXECUTE[dbo].[dv_load_stage_table] 
+   @vault_source_unique_name	= @vault_source_unique_name
+  ,@vault_source_load_type		= @source_load_type
+  ,@vault_runkey				= @vault_runkey
+  ,@vault_source_version_key	= @source_version_key OUTPUT -- returns the Source Version Key to be applied as "Source" to the Vault Objects being loaded later.
+ 
 /*****************************************************************************************************************/
 SET @_Step = 'Load Hub Tables'
---print ''
---print 'Load Hub Tables'
---print '----------------'
+print ''
+print 'Load Hub Tables'
+print '----------------'
 declare @hub_database			varchar(128)
        ,@hub_name				varchar(128)
 
@@ -192,10 +209,8 @@ FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name
 WHILE @@FETCH_STATUS = 0   
 BEGIN   
        SET @_Step = 'Load Hub: ' + @hub_name
-	   --print @hub_name
-	   --print '/*********\'
-	   
-	   EXECUTE [dbo].[dv_load_hub_table] @source_system, @source_schema, @source_table, @hub_database, @hub_name
+	   print @hub_name
+	   EXECUTE [dbo].[dv_load_hub_table] @vault_source_unique_name, @hub_database, @hub_name, @source_version_key, @vault_runkey
 	   FETCH NEXT FROM hub_cursor INTO @hub_database, @hub_name  
 END   
 
@@ -205,9 +220,9 @@ DEALLOCATE hub_cursor
 
 /*****************************************************************************************************************/
 SET @_Step = 'Load Link Tables'
---print ''
---print 'Load Link Tables'
---print '----------------'
+print ''
+print 'Load Link Tables'
+print '----------------'
 declare @link_database			varchar(128)
        ,@link_name				varchar(128)
 
@@ -224,9 +239,9 @@ FETCH NEXT FROM link_cursor INTO @link_database, @link_name
 WHILE @@FETCH_STATUS = 0   
 BEGIN   
        SET @_Step = 'Load Link: ' + @link_name
-	   --print @link_name
-	   --print '/*********\'
-	   EXECUTE [dbo].[dv_load_link_table] @source_system, @source_schema, @source_table, @link_database, @link_name 
+	   print ''
+	   print @link_name
+	   EXECUTE [dbo].[dv_load_link_table] @vault_source_unique_name, @link_name, @source_version_key, @vault_runkey
 	   FETCH NEXT FROM link_cursor INTO @link_database, @link_name  
 END   
 
@@ -235,12 +250,12 @@ DEALLOCATE link_cursor
 
 
 /*****************************************************************************************************************/
-SET @_Step = 'Load Sat Tables for: ' + @source_database + ' ' + @source_schema + ' ' + @source_table
---print ''
---print 'Load Sat Tables'
---print '----------------'
---print '/*********\'
-EXECUTE [dv_load_sats_for_source_table] @source_system, @source_schema, @source_table, @vault_source_load_type
+SET @_Step = 'Load Sat Tables for: ' + @vault_source_unique_name
+print ''
+print 'Load Sat Tables'
+print '----------------'
+print @_Step
+EXECUTE [dv_load_sats_for_source_table] @vault_source_unique_name, @source_load_type,@source_version_key, @vault_runkey
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE

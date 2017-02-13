@@ -6,16 +6,12 @@ RETURN
 with wSchedule_Table as (
       select s.schedule_key
 	        ,st.[source_table_key]
-	        ,ss.source_system_name
-	        ,st.source_table_schema
-			,st.source_table_name
+	        ,st.source_unique_name
 	  from [dv_scheduler].[vw_dv_schedule_current] s
 	  inner join [dv_scheduler].[vw_dv_schedule_source_table_current] sst
 	  on sst.schedule_key = s.schedule_key
 	  inner join [dbo].[dv_source_table] st
 	  on st.[source_table_key] = sst.source_table_key
-	  inner join [dbo].[dv_source_system] ss
-	  on ss.[source_system_key] = st.system_key
 	  where s.schedule_name in(select ltrim(rtrim(Item)) FROM [dbo].[fn_split_strings] (@schedule_list, ','))
 	)
 ,wBaseSet as (

@@ -23,9 +23,7 @@ select
     mp.run_manifest_key as run_manifest_key_prior
    ,m.run_manifest_key
    ,source_table_name = cast(
-							quotename(mp.[source_system_name]) + '.' +  
-							quotename(mp.[source_table_schema]) + '.' +  
-							quotename(mp.[source_table_name])  
+							quotename(mp.[source_unique_name])  
 						as nvarchar(512))   
  
 from [dv_scheduler].[dv_run] r
@@ -47,9 +45,7 @@ select
     mp.run_manifest_key as run_manifest_key_prior
    ,m.run_manifest_key
    ,source_table_name = cast(
-							quotename(mp.[source_system_name]) + '.' +  
-							quotename(mp.[source_table_schema]) + '.' +  
-							quotename(mp.[source_table_name])  
+							quotename(mp.[source_unique_name])  
 						as nvarchar(512))   
     
 from [dv_scheduler].[dv_run] r

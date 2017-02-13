@@ -1,13 +1,16 @@
 ﻿CREATE
 FUNCTION [dbo].[fn_build_column_definition] 
 (
-	@DataType varchar(50)
+	@ColumnName varchar(128)
+   ,@DataType varchar(50)
    ,@DataLength int
    ,@precision int 
    ,@scale int 
    ,@CollationName varchar(50)
    ,@is_nullable bit
    ,@is_identity bit
+   ,@return_cast bit
+   ,@return_detail bit
 )
 RETURNS varchar(256)
 AS
@@ -104,13 +107,27 @@ select @ResultVar = UPPER(@DataType)
                             
                END
 
-IF UPPER(@DataType) IN ('nchar','nvarchar','char','varchar')
-   IF isnull(@CollationName, '') <> ''
-      set @ResultVar = rtrim(@ResultVar) + ' COLLATE ' + @CollationName
 
-set @ResultVar = rtrim(@ResultVar) + case when isnull (@is_identity, 1) = 1 then ' IDENTITY(1,1) ' else ' ' END 
 
-set @ResultVar = rtrim(@ResultVar) + case when isnull (@is_nullable, 1) = 1 then '' else ' NOT' END + ' NULL'
+IF @return_cast = 0 
+BEGIN
+    IF UPPER(@DataType) IN ('nchar','nvarchar','char','varchar')
+		IF isnull(@CollationName, '') <> ''
+			set @ResultVar = rtrim(@ResultVar) + ' COLLATE ' + @CollationName
+	IF @return_detail = 1
+	BEGIN
+		set @ResultVar = rtrim(@ResultVar) + case when isnull (@is_identity, 1) = 1 then ' IDENTITY(1,1) ' else ' ' END
+		set @ResultVar = rtrim(@ResultVar) + case when isnull (@is_nullable, 1) = 1 then '' else ' NOT' END + ' NULL'
+	END
+END
+ELSE
+BEGIN
+set @ResultVar = 'CAST(' + @ColumnName + case when isnull(@CollationName, '') <> '' then  ' COLLATE ' + @CollationName else '' end + ' AS ' + ltrim(rtrim(@ResultVar)) + ')'
+
+--set @ResultVar = 'CAST(' + QUOTENAME(@ColumnName) + case when isnull(@CollationName, '') <> '' then  ' COLLATE ' + @CollationName else '' end + ' AS ' + ltrim(rtrim(@ResultVar)) + ')'
+--set @ResultVar = REPLACE(REPLACE(@ResultVar, '[[','['), ']]',']')
+--set @ResultVar = REPLACE(REPLACE(@ResultVar, '[[','['), ']]',']')
+END
 RETURN @ResultVar
 
 END

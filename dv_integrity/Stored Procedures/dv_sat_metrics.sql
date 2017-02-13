@@ -143,7 +143,7 @@ select @SQL =
 + @crlf + @crlf
 from [dbo].[dv_satellite] s
 where satellite_key = @sat_loop_key
---select @SQL
+--print @SQL
 execute sp_executesql @SQL
 select @sat_loop_key = max(satellite_key) from [dbo].[dv_satellite]
 		where satellite_key < @sat_loop_key

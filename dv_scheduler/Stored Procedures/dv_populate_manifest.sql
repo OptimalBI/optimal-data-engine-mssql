@@ -82,26 +82,16 @@ SET @_Step = 'Initialise Release';
 -- insert all tables to be run into the dv_run_manifest table
 INSERT INTO dv_scheduler.dv_run_manifest (
 	 [run_key]
-	,[source_system_name]
-	,[source_timevault]
-	,[source_table_schema]
-	,[source_table_name]
+	,[source_unique_name]
 	,[source_table_key]
 	,[source_table_load_type]
-	,[source_procedure_schema]
-	,[source_procedure_name]
 	,[priority]
 	,[queue]
 	)
 SELECT @run_key AS run_key
-	,[src_system].[source_system_name]
-	,[src_system].[timevault_name]
-	,[src_table].[source_table_schema]
-	,[src_table].[source_table_name]
+	,[src_table].[source_unique_name]
 	,[src_table].[source_table_key]
-	,case when [schd_src_table].[source_table_load_type] = 'Default' then [src_table].[source_table_load_type] else [schd_src_table].[source_table_load_type] end
-	,[src_table].[source_procedure_schema]
-	,[src_table].[source_procedure_name]
+	,case when [schd_src_table].[source_table_load_type] = 'Default' then [src_table].[load_type] else [schd_src_table].[source_table_load_type] end
 	,[schd_src_table].[priority]
 	,[schd_src_table].[queue]
 FROM dv_scheduler.vw_dv_schedule_current AS schd
@@ -109,8 +99,8 @@ INNER JOIN dv_scheduler.vw_dv_schedule_source_table_current AS schd_src_table
 	ON schd.schedule_key = schd_src_table.schedule_key
 INNER JOIN dbo.dv_source_table AS src_table 
 	ON schd_src_table.source_table_key = src_table.[source_table_key]
-INNER JOIN dbo.dv_source_system AS src_system 
-	ON src_table.system_key = src_system.[source_system_key]
+--INNER JOIN dbo.dv_source_system AS src_system 
+--	ON src_table.system_key = src_system.[source_system_key]
 WHERE upper(schedule_name) IN (
 		SELECT replace(Item, ' ', '')
 		FROM dbo.fn_split_strings(upper(@schedule_name), ',')

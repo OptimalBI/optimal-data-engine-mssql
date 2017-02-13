@@ -137,7 +137,7 @@ select @top
 	AS (
 		SELECT top (@top) [run_schedule_name]
 			,[run_key] = cast([run_key] AS VARCHAR)
-			,[source_table_name]
+			,[source_unique_name]
 			,[start_datetime] = format([start_datetime], 'yyyy/MM/dd HH:mm:ss')
 			,[completed_datetime] = format(isnull([completed_datetime], [run_end_datetime]), 'yyyy/MM/dd HH:mm:ss')
 			,[run_manifest_status]
@@ -151,7 +151,7 @@ select @top
 	AS (
 		SELECT [run_schedule_name]
 			,[run_key]
-			,[source_table_name]
+			,[source_unique_name]
 			,[start_datetime]
 			,[completed_datetime]
 			,[run_manifest_status]
@@ -171,7 +171,7 @@ select @top
 							THEN 5
 						ELSE 99
 						END
-					,[source_table_name]
+					,[source_unique_name]
 				)
 		FROM wBaseSet
 		)
@@ -179,7 +179,7 @@ select @top
 	AS (
 		SELECT [run_schedule_name]
 			,[run_key]
-			,[source_table_name]
+			,[source_unique_name]
 			,[start_datetime] = min([start_datetime])
 			,[completed_datetime] = min([completed_datetime])
 			,[run_manifest_status] = min([run_manifest_status])
@@ -188,11 +188,11 @@ select @top
 		FROM wNumbered
 		GROUP BY [run_schedule_name]
 			,[run_key]
-			,[source_table_name]
+			,[source_unique_name]
 		)
 	SELECT [run_schedule_name] = isnull(c.[run_schedule_name], ' ')
 		,[run_key] = isnull(c.[run_key], ' ')
-		,[source_table_name] = isnull(c.[source_table_name], ' ')
+		,[source_table_name] = isnull(c.[source_unique_name], ' ')
 		,[start_datetime] = isnull(c.[start_datetime], '<Not Started>')
 		,[completed_datetime] = isnull(c.[completed_datetime], ' ')
 		,[run_manifest_status] = isnull(t.[run_manifest_status], ' ')

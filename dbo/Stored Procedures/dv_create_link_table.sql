@@ -14,6 +14,7 @@ declare @filegroup		varchar(256)
 declare @schema			varchar(256)
 declare @database		varchar(256)
 declare @table_name		varchar(256)
+declare @is_compressed  bit
 declare @crlf			char(2) = CHAR(13) + CHAR(10)
 declare @SQL			varchar(4000) = ''
 declare @varobject_name varchar(128)
@@ -81,13 +82,15 @@ declare @payload_columns [dbo].[dv_column_type]
 select @database = [link_database]
       ,@schema = [link_schema]
 	  ,@filegroup = null
+	  ,@is_compressed = [is_compressed]
 from [dbo].[dv_link]
 where 1=1
   and [link_database] = @vault_database
   and [link_name]	  = @vault_link_name
 
 insert @payload_columns
-select hd.[column_name]
+select  DISTINCT 
+        column_name = case when lkc.link_key_column_name is null then hd.[column_name] else hd1.[column_name] end
        ,hd.[column_type]
        ,hd.[column_length]
 	   ,hd.[column_precision]
@@ -98,12 +101,14 @@ select hd.[column_name]
 	   ,1 
 	   ,''
 	   ,''
+
 FROM [dbo].[dv_link] l
-inner join [dbo].[dv_hub_link] hl
-on l.link_key = hl.link_key
-inner join [dbo].[dv_hub] h
-on h.hub_key = hl.hub_key
+inner join [dbo].[dv_link_key_column] lkc on lkc.link_key = l.link_key
+inner join [dbo].[dv_hub_column] hc on hc.[link_key_column_key] = lkc.[link_key_column_key]
+inner join [dbo].[dv_hub_key_column] hkc on hkc.hub_key_column_key = hc.hub_key_column_key
+inner join [dbo].[dv_hub] h on h.hub_key = hkc.hub_key
 cross apply [fn_get_key_definition](h.hub_name, 'hub') hd
+cross apply [fn_get_key_definition](lkc.link_key_column_name, 'hub') hd1
 where l.[link_name] = @vault_link_name
 
 select @varobject_name = [dbo].[fn_get_object_name](@vault_link_name, 'lnk')
@@ -121,6 +126,7 @@ EXECUTE [dbo].[dv_create_DV_table]
   ,'lnk'
   ,@payload_columns
   ,0
+  ,@is_compressed
   ,@recreate_flag
   ,@dogenerateerror
   ,@dothrowerror
@@ -129,12 +135,14 @@ EXECUTE [dbo].[dv_create_DV_table]
 SET @_Step = 'Index the Link on the Hub Keys'
 select @SQL = ''
 select @SQL += 'CREATE UNIQUE NONCLUSTERED INDEX ' + quotename('UX__' + @varobject_name + cast(newid() as varchar(56))) 
-	select @SQL += ' ON ' + @table_name + '(' + @crlf + ' '
-	select @SQL = @SQL + rtrim(column_name) + @crlf +  ','
-		from @payload_columns
-		order by column_name
-	select @SQL = left(@SQL, len(@SQL) -1) + ') ON ' + quotename(@filegroup) + @crlf 
-
+select @SQL += ' ON ' + @table_name + '(' + @crlf + ' '
+select @SQL = @SQL + rtrim(column_name) + @crlf +  ','
+	from @payload_columns
+	order by column_name
+select @SQL = left(@SQL, len(@SQL) -1) + ') '
+if @is_compressed = 1
+select @SQL += ' WITH ( DATA_COMPRESSION = PAGE )'
+select @SQL += ' ON ' + quotename(@filegroup) + @crlf 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Index'
 IF @_JournalOnOff = 'ON'

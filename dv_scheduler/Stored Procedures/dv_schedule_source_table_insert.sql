@@ -1,8 +1,6 @@
 ﻿CREATE PROC [dv_scheduler].[dv_schedule_source_table_insert] 
      @schedule_name				varchar(128)
-	,@source_system_name		varchar(50)
-	,@source_table_schema		varchar(128)
-    ,@source_table_name			varchar(128)
+	,@source_unique_name		varchar(128)
     ,@source_table_load_type	varchar(50)
 	,@priority					varchar(50)
 	,@queue						VARCHAR(50)
@@ -17,7 +15,6 @@ BEGIN
 	declare @release_key					int
 	       ,@schedule_key					int
 	       ,@source_table_key				int
-		   ,@source_table_qualified_name	varchar(512)
 	       ,@rc								int
 	select @release_key = [release_key] from [dv_release].[dv_release_master] where [release_number] = @release_number
 	set @rc = @@rowcount
@@ -33,17 +30,12 @@ BEGIN
 				RAISERROR('Schedule Name %s Does Not Exist', 16, 1, @schedule_name)
 				else
 					begin
-					select @source_table_qualified_name = quotename(@source_system_name) + '.' + quotename(@source_table_schema) + quotename(@source_table_name)
 					select @source_table_key = [source_table_key] 
-					from [dbo].[dv_source_system] s
-					inner join [dbo].[dv_source_table] st
-					on s.[source_system_key] = st.[system_key]
-					where s.[source_system_name]	= @source_system_name
-					  and st.[source_table_schema]	= @source_table_schema
-					  and [source_table_name]		= @source_table_name
+					from [dbo].[dv_source_table] st
+					where st.[source_unique_name]	= @source_unique_name
 					set @rc = @@rowcount
 					if @rc <> 1 
-						RAISERROR('Source Table %s Does Not Exist', 16, 1, @source_table_qualified_name)
+						RAISERROR('Source Table %s Does Not Exist', 16, 1, @source_unique_name)
 						else
 							INSERT INTO [dv_scheduler].[dv_schedule_source_table] ([schedule_key] ,[source_table_key] ,[source_table_load_type] ,[priority] ,[queue] ,[release_key])
 							 VALUES (@schedule_key ,@source_table_key,@source_table_load_type,@priority,@queue,@release_key)

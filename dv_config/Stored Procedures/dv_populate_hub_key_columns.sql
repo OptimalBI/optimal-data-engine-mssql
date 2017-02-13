@@ -21,7 +21,7 @@ declare @column_key							int
 	   ,@hub_key_fully_qualified			nvarchar(512)
 	   ,@column_fully_qualified				nvarchar(512)
 
-
+/*
 -- Log4TSQL Journal Constants 
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
 DECLARE @SEVERITY_SEVERE        smallint = 2;
@@ -181,4 +181,5 @@ OnComplete:
 
 	--! Return the value of @@ERROR (which will be zero on success)
 	RETURN (@_Error);
+	*/
 END

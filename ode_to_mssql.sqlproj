@@ -96,6 +96,7 @@
     <Folder Include="dv_scripting\" />
     <Folder Include="dv_scripting\Functions\" />
     <Folder Include="dv_scripting\Stored Procedures\" />
+    <Folder Include="dv_log\Views\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\dv_source_table.sql" />
@@ -183,12 +184,6 @@
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
     <Build Include="dbo\Stored Procedures\dv_hub_update.sql">
-      <QuotedIdentifier>Off</QuotedIdentifier>
-    </Build>
-    <Build Include="dbo\Stored Procedures\dv_hub_link_insert.sql">
-      <QuotedIdentifier>Off</QuotedIdentifier>
-    </Build>
-    <Build Include="dbo\Stored Procedures\dv_hub_link_delete.sql">
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
     <Build Include="dbo\Stored Procedures\dv_hub_key_update.sql">
@@ -285,7 +280,6 @@
     <Build Include="dv_integrity\Stored Procedures\dv_hub_metrics.sql" />
     <Build Include="dv_integrity\Stored Procedures\dv_col_metrics.sql" />
     <Build Include="dv_config\Stored Procedures\dv_populate_hub_key_columns.sql" />
-    <Build Include="dv_config\Stored Procedures\dv_populate_satellite.sql" />
     <Build Include="dv_config\Stored Procedures\dv_populate_satellite_columns.sql" />
     <Build Include="dv_config\Stored Procedures\dv_populate_source_table_columns.sql" />
     <Build Include="dv_config\Stored Procedures\dv_global_config_update.sql" />
@@ -319,7 +313,66 @@
     <Build Include="dbo\Stored Procedures\dv_ref_function_delete.sql">
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
-    <Build Include="ODE_Release\Tables\dv_release_003_001_001_1.sql" />
+    <Build Include="ODE_Release\Tables\dv_release_004_001_001.sql" />
+    <Build Include="dbo\Tables\dv_stage_schema.sql" />
+    <Build Include="dbo\Tables\dv_stage_database.sql" />
+    <Build Include="dbo\Tables\dv_source_version.sql" />
+    <Build Include="dbo\Tables\dv_object_match.sql" />
+    <Build Include="dbo\Tables\dv_link_key_column.sql" />
+    <Build Include="dbo\Tables\dv_column_match.sql" />
+    <Build Include="dv_log\Views\dv_dv_load_state_current.sql" />
+    <Build Include="dbo\Views\vw_stage_table.sql" />
+    <Build Include="dbo\Views\vw_LR_match_config_details.sql" />
+    <Build Include="dbo\Functions\fn_get_satellite_pit statement.sql" />
+    <Build Include="dbo\Functions\fn_get_sat_pit statement.sql" />
+    <Build Include="dbo\Functions\fn_get_object_join_statement.sql" />
+    <Build Include="dbo\Functions\fn_get_object_from_statement.sql" />
+    <Build Include="dbo\Functions\fn_get_object_column_list.sql" />
+    <Build Include="dv_integrity\Stored Procedures\dv_LeftrightComparison_AdHoc.sql" />
+    <Build Include="dv_integrity\Stored Procedures\dv_build_match_script.sql" />
+    <Build Include="dv_config\Stored Procedures\dv_populate_satellite_remove.sql" />
+    <Build Include="dbo\Stored Procedures\dv_stage_schema_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_stage_schema_insert.sql" />
+    <Build Include="dbo\Stored Procedures\dv_stage_schema_delete.sql" />
+    <Build Include="dbo\Stored Procedures\dv_stage_database_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_stage_database_insert.sql" />
+    <Build Include="dbo\Stored Procedures\dv_stage_database_delete.sql" />
+    <Build Include="dbo\Stored Procedures\dv_source_version_update.sql" />
+    <Build Include="dbo\Stored Procedures\dv_source_version_insert.sql" />
+    <Build Include="dbo\Stored Procedures\dv_source_version_delete.sql" />
+    <Build Include="dbo\Stored Procedures\dv_object_match_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_object_match_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_object_match_delete.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_stage_table_LeftrightComparison.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_stage_table_BespokeProcedure.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_stage_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_link_key_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_link_key_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_link_key_delete.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_create_stage_table.sql" />
+    <Build Include="dbo\Stored Procedures\dv_column_match_update.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_column_match_insert.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Stored Procedures\dv_column_match_delete.sql" />
+    <Build Include="dbo\User Defined Types\dv_column_matching_list.sql" />
+    <Build Include="dbo\User Defined Types\dv_column_list.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment1.sql" />

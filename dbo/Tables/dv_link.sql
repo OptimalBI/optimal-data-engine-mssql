@@ -5,6 +5,7 @@
     [link_schema]       VARCHAR (128)      NOT NULL,
     [link_database]     VARCHAR (128)      NOT NULL,
     [is_retired]        BIT                DEFAULT ((0)) NOT NULL,
+    [is_compressed]     BIT                DEFAULT ((0)) NOT NULL,
     [release_key]       INT                CONSTRAINT [DF_dv_link_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]    INT                CONSTRAINT [DF__dv_link__version__6C190EBB] DEFAULT ((1)) NOT NULL,
     [updated_by]        VARCHAR (30)       CONSTRAINT [DF__dv_link__updated__6D0D32F4] DEFAULT (suser_name()) NULL,
@@ -14,6 +15,8 @@
     CONSTRAINT [dv_link_abr_unique] UNIQUE NONCLUSTERED ([link_abbreviation] ASC),
     CONSTRAINT [dv_link_unique] UNIQUE NONCLUSTERED ([link_database] ASC, [link_schema] ASC, [link_name] ASC)
 );
+
+
 
 
 GO

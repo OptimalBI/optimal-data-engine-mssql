@@ -1,12 +1,14 @@
 ﻿
 CREATE PROCEDURE [dv_config].[dv_populate_source_table_columns]
 (
-	 @vault_source_system					varchar(50)
-    ,@vault_source_schema					varchar(128)
-	,@vault_source_table					varchar(128)	
-	,@vault_source_table_load_type			varchar(128)
-	,@vault_source_procedure_schema			varchar(128)	= Null		
-	,@vault_source_procedure_name			varchar(128)	= Null
+	 @vault_stage_database					varchar(128)
+    ,@vault_stage_schema					varchar(128)
+	,@vault_stage_table						varchar(128)
+	,@vault_source_unique_name				varchar(128)
+	,@vault_source_type						varchar(50)
+	,@vault_stage_table_load_type			varchar(50)
+	--,@vault_source_procedure_schema			varchar(128)	= Null		
+	--,@vault_source_procedure_name			varchar(128)	= Null
 	,@vault_release_number					int				= 0
 	,@vault_rerun_column_insert				bit				= 0
 	,@DoGenerateError						bit				= 0
@@ -18,9 +20,8 @@ SET NOCOUNT ON;
 
 -- Internal use variables
 
-declare @vault_stage_database				 varchar(128)
-	   ,@system_key							 int
-	   ,@source_table_key					 int
+declare @stage_table_key					 int
+       ,@stage_schema_key                    int
 	   ,@procedure_fully_qualified			 nvarchar(512)
 	   ,@table_fully_qualified				 nvarchar(512)
 
@@ -62,12 +63,14 @@ SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- l
 
 --set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_source_system          : ' + COALESCE(@vault_source_system						, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_schema          : ' + COALESCE(@vault_source_schema						, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_table           : ' + COALESCE(@vault_source_table							, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_table_load_type : ' + COALESCE(@vault_source_table_load_type				, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_procedure_schema: ' + COALESCE(@vault_source_procedure_schema				, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_procedure_name  : ' + COALESCE(@vault_source_procedure_name				, '<NULL>')
+						+ @NEW_LINE + '    @vault_stage_database         : ' + COALESCE(@vault_stage_database						, '<NULL>')
+						+ @NEW_LINE + '    @vault_stage_schema           : ' + COALESCE(@vault_stage_schema						    , '<NULL>')
+						+ @NEW_LINE + '    @vault_stage_table            : ' + COALESCE(@vault_stage_table							, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_unique_name     : ' + COALESCE(@vault_source_unique_name					, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_type            : ' + COALESCE(@vault_source_type							, '<NULL>')
+						+ @NEW_LINE + '    @vault_stage_table_load_type  : ' + COALESCE(@vault_stage_table_load_type				, '<NULL>')
+						--+ @NEW_LINE + '    @vault_source_procedure_schema: ' + COALESCE(@vault_source_procedure_schema				, '<NULL>')
+						--+ @NEW_LINE + '    @vault_source_procedure_name  : ' + COALESCE(@vault_source_procedure_name				, '<NULL>')
 						+ @NEW_LINE + '    @vault_release_number         : ' + COALESCE(cast(@vault_release_number as varchar)		, '<NULL>')
 						+ @NEW_LINE + '    @vault_rerun_column_insert    : ' + COALESCE(cast(@vault_rerun_column_insert as varchar)	, '<NULL>')
 						+ @NEW_LINE + '    @DoGenerateError : ' + COALESCE(CAST(@DoGenerateError AS varchar)						, '<NULL>')
@@ -75,59 +78,65 @@ SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_Spr
 						+ @NEW_LINE
 
 BEGIN TRANSACTION
-BEGIN TRY
+BEGIN TRY   
 SET @_Step = 'Generate any required error';
 IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate Inputs';
 
-select @vault_stage_database = [timevault_name]
-      ,@system_key			 = [source_system_key]
-	from [dbo].[dv_source_system] where [source_system_name] = @vault_source_system
 
-select @table_fully_qualified = quotename(@vault_source_system) + '.' + quotename(@vault_source_schema) + '.' + quotename(@vault_source_table)
-select @procedure_fully_qualified = quotename(@vault_stage_database) + '.' + quotename(@vault_source_procedure_schema) + '.' + quotename(@vault_source_procedure_name)
+select @table_fully_qualified = quotename(@vault_stage_database) + '.' + quotename(@vault_stage_schema) + '.' + quotename(@vault_stage_table)
+--select @procedure_fully_qualified = quotename(@vault_stage_database) + '.' + quotename(@vault_source_procedure_schema) + '.' + quotename(@vault_source_procedure_name)
 
-if not (isnull(@vault_source_procedure_schema, '') = '' and isnull(@vault_source_procedure_name, '') = '')
-	if OBJECT_ID(@procedure_fully_qualified, N'P') is null
-		raiserror('Procedure %s does not exist. Please Create it and retry this Process', 16, 1, @procedure_fully_qualified)
+--if not (isnull(@vault_source_procedure_schema, '') = '' and isnull(@vault_source_procedure_name, '') = '')
+--	if OBJECT_ID(@procedure_fully_qualified, N'P') is null
+--		raiserror('Procedure %s does not exist. Please Create it and retry this Process', 16, 1, @procedure_fully_qualified)
 
 SET @_Step = 'Initialise Variables';
 
 SET @_Step = 'Create Config For Table';
 
-select @vault_stage_database = [timevault_name]
-      ,@system_key			 = [source_system_key]
-	from [dbo].[dv_source_system] where [source_system_name] = @vault_source_system
-select @source_table_key = [source_table_key] 
-	from [dbo].[dv_source_table] where [system_key] = @system_key and [source_table_schema] = @vault_source_schema and [source_table_name] = @vault_source_table
+--select @vault_stage_database = [timevault_name]
+--      ,@system_key			 = [source_system_key]
+--	from [dbo].[dv_source_system] where [source_system_name] = @vault_source_system
+select @stage_schema_key = ss.stage_schema_key
+from [dbo].[dv_stage_schema] ss
+inner join [dbo].[dv_stage_database] sdb on sdb.stage_database_key = ss.stage_database_key
+where ss.stage_schema_name = @vault_stage_schema
+  and sdb.stage_database_name = @vault_stage_database
+select @stage_table_key = [source_table_key] 
+	from [dbo].[dv_source_table] where [source_unique_name] = @vault_source_unique_name
 if @@ROWCOUNT = 0  -- Table doesn't exist in Config.
 	begin
-	EXECUTE @source_table_key			= [dbo].[dv_source_table_insert] 
-		    @system_key					= @system_key
-		   ,@source_table_schema		= @vault_source_schema
-		   ,@source_table_name			= @vault_source_table
-		   ,@source_table_load_type		= @vault_source_table_load_type
-		   ,@source_procedure_schema	= @vault_source_procedure_schema
-		   ,@source_procedure_name		= @vault_source_procedure_name
-		   ,@is_retired					= 0
-		   ,@release_number				= @vault_release_number
+	EXECUTE @stage_table_key = [dbo].[dv_source_table_insert] 
+				 @source_unique_name     = @vault_source_unique_name
+				,@source_type			 = @vault_source_type         
+				,@load_type              = @vault_stage_table_load_type             
+				,@system_key			 = null    
+				,@source_table_schema    = null    
+				,@source_table_name      = ''    
+				,@stage_schema_key       = @stage_schema_key	    
+				,@stage_table_name       = @vault_stage_table	
+				,@is_retired			 = 0
+				,@release_number		 = @vault_release_number
 	end
 	else  -- Table Does Exist in Config
 	begin
 	if @vault_rerun_column_insert = 1
 	    begin
-		delete from [dbo].[dv_hub_column] where [column_key] in (select [column_key] from [dbo].[dv_column] where [table_key] = @source_table_key)
-		delete from [dbo].[dv_column] where [table_key] = @source_table_key
+		delete from [dbo].[dv_hub_column] where [column_key] in (select [column_key] from [dbo].[dv_column] where [table_key] = @stage_table_key)
+		delete from [dbo].[dv_column] where [table_key] = @stage_table_key
 		EXECUTE [dbo].[dv_source_table_update] 
-			@table_key					= @source_table_key					
-		   ,@system_key					= @system_key
-		   ,@source_table_schema		= @vault_source_schema
-		   ,@source_table_name			= @vault_source_table
-		   ,@source_table_load_type		= @vault_source_table_load_type
-		   ,@source_procedure_schema	= @vault_source_procedure_schema
-		   ,@source_procedure_name		= @vault_source_procedure_name
-		   ,@is_retired = 0
+			     @source_table_key		 = @stage_table_key					
+		        ,@source_unique_name     = @vault_source_unique_name
+				,@source_type			 = @vault_source_type         
+				,@load_type              = @vault_stage_table_load_type             
+				,@system_key			 = null   
+				,@source_table_schema    = null    
+				,@source_table_name      = ''    
+				,@stage_schema_key       = @stage_schema_key	    
+				,@stage_table_name       = @vault_stage_table	
+				,@is_retired			 = 0
 		end
 	else
 		begin
@@ -175,7 +184,6 @@ and o.type in(''U'', ''V'')
 and s.name = @schema_name
 and o.name = @table_name
 for xml raw)'
-
 declare
 @column_name				varchar(128),
 @column_type				varchar(30),
@@ -188,11 +196,11 @@ declare
 @is_source_date				bit,
 @is_retired					bit
 
---print @sql
+--select @sql, @parm_definition, @vault_stage_schema, @vault_stage_table
 if @_JournalOnOff = 'ON'
 	set @_ProgressText  = @_ProgressText + @NEW_LINE + @sql + @NEW_LINE;
-exec sp_executesql @sql, @parm_definition, @schema_name = @vault_source_schema, @table_name = @vault_source_table, @column_list_OUT=@column_list_xml output;
-select @column_list_xml
+exec sp_executesql @sql, @parm_definition, @schema_name = @vault_stage_schema, @table_name = @vault_stage_table, @column_list_OUT=@column_list_xml output;
+--select @column_list_xml
 declare Col_Cursor cursor forward_only for 
 SELECT  
  --      Tbl.Col.value('@table_key', 'int')					table_key,
@@ -224,7 +232,7 @@ while @@FETCH_STATUS = 0
 begin								
 
 EXECUTE [dbo].[dv_column_insert] 
-	    @table_key					= @source_table_key
+	    @table_key					= @stage_table_key
 	   ,@satellite_col_key          = NULL
 	   ,@release_number				= @vault_release_number
 	   ,@column_name				= @column_name					

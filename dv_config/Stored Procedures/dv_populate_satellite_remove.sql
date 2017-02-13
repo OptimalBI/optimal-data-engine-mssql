@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dv_config].[dv_populate_satellite]
+﻿CREATE PROCEDURE [dv_config].[dv_populate_satellite_remove]
 (
 	 @vault_satellite_name					varchar(128)	= Null
     ,@vault_link_hub_flag					char(1)			= null

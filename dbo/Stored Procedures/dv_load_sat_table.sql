@@ -1,12 +1,14 @@
 ﻿CREATE PROCEDURE [dbo].[dv_load_sat_table]
 (
-  @vault_source_system_name		varchar(128) = NULL
-, @vault_source_table_schema	varchar(128) = NULL
-, @vault_source_table_name		varchar(128) = NULL
+  @vault_source_unique_name		varchar(128) = NULL
 , @vault_sat_name				varchar(128) = NULL
 , @vault_temp_table_name        varchar(116) = NULL 
 , @vault_source_load_type		varchar(50)  = NULL 
+, @vault_source_version_key		int			 = NULL -- Note that this parameter is provided for dv_load_source_table to be able to pass the key, 
+                                                    --      which was used in creating the stage table at the start of the run.
+													--      passing NULL here will cause the proc to use the current source version.
 , @vault_sql_statement          nvarchar(max) OUTPUT
+, @vault_runkey					int          = NULL
 , @dogenerateerror				bit				= 0
 , @dothrowerror					bit				= 1
 )
@@ -43,11 +45,11 @@ DECLARE
 
 -- Object Specific Settings
 -- Source Table
-		,@source_system						varchar(128)
 		,@source_database					varchar(128)
 		,@source_schema						varchar(128)
 		,@source_table						varchar(128)
 		,@source_table_config_key			int
+		,@source_version_key				int
 		,@source_qualified_name				varchar(512)
 		,@source_load_date_time				varchar(128)
 		,@source_load_type					varchar(50)
@@ -87,10 +89,12 @@ DECLARE @execution_id				int
        ,@rows_inserted				int
 	   ,@rows_updated				int
 	   ,@rows_deleted				int
+	   ,@rows_affected				int
 	   ,@load_duration				int
 	   ,@load_start_time            datetimeoffset(7)
 	   ,@load_finish_time			datetimeoffset(7)
 	   ,@load_high_water			datetimeoffset(7)
+	   ,@rc							int
 DECLARE @sat_insert_count			int
 	   ,@sql						nvarchar(max)
 	   ,@sql1						nvarchar(max)
@@ -145,12 +149,11 @@ SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- l
 
 -- set Log4TSQL Parameters for Logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @vault_source_system_name	 : ' + COALESCE(@vault_source_system_name, 'NULL')
-						+ @NEW_LINE + '    @vault_source_table_schema    : ' + COALESCE(@vault_source_table_schema, 'NULL')
-						+ @NEW_LINE + '    @vault_source_table_name      : ' + COALESCE(@vault_source_table_name, 'NULL')
-						+ @NEW_LINE + '    @vault_sat_name               : ' + COALESCE(@vault_sat_name, 'NULL')
+						+ @NEW_LINE + '    @vault_source_unique_name	 : ' + COALESCE(@vault_source_unique_name, 'NULL')
+						+ @NEW_LINE + '    @vault_sat_name				 : ' + COALESCE(@vault_sat_name, 'NULL')
 						+ @NEW_LINE + '    @vault_temp_table_name        : ' + COALESCE(@vault_temp_table_name, 'NULL')
 						+ @NEW_LINE + '    @vault_source_load_type       : ' + COALESCE(@vault_source_load_type, 'NULL')
+						+ @NEW_LINE + '    @vault_runkey                 : ' + COALESCE(CAST(@vault_runkey AS varchar), 'NULL')
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
 						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
 						+ @NEW_LINE
@@ -163,8 +166,8 @@ SET @_Step = 'Validate inputs';
 
 IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
 			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
---IF isnull(@recreate_flag, '') not in ('Y', 'N') 
---			RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
+IF ((@vault_runkey is not null) and ((select count(*) from [dv_scheduler].[dv_run] where @vault_runkey = [run_key] and [run_status]='Started') <> 1))
+			RAISERROR('Invalid @vault_runkey provided: %i', 16, 1, @vault_runkey);
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults'
 select
@@ -211,20 +214,24 @@ and object_column_type = 'Source_Date_Time'
 -- Object Specific Settings
 -- Source Table
 
-select 	 @source_system				= s.[source_system_name]	
-        ,@source_database			= s.[timevault_name]
-		,@source_schema				= t.[source_table_schema]
-		,@source_table				= t.[source_table_name]
-		,@source_table_config_key	= t.[source_table_key]
-		,@source_qualified_name		= quotename(s.[timevault_name]) + '.' + quotename(t.[source_table_schema]) + '.' + quotename(t.[source_table_name])
-		,@source_load_type			= coalesce(@vault_source_load_type, t.[source_table_load_type]) --The Run Time Load Type, If provided, overides the Default for the Source Table
-from [dbo].[dv_source_system] s
-inner join [dbo].[dv_source_table] t
-on t.system_key = s.[source_system_key]
+select 	 @source_database			= sdb.[stage_database_name]
+		,@source_schema				= ss.[stage_schema_name]
+		,@source_table				= st.[stage_table_name]
+		,@source_table_config_key	= st.[source_table_key]
+		,@source_version_key		= isnull(@vault_source_version_key, sv.source_version_key) -- if no source version is provided, use the current source version for the source table used as source for this load.
+		,@source_qualified_name		= quotename(sdb.[stage_database_name]) + '.' + quotename(ss.[stage_schema_name]) + '.' + quotename(st.[stage_table_name])
+		,@source_load_type			= coalesce(@vault_source_load_type, st.[load_type]) --The Run Time Load Type, If provided, overides the Default for the Source Table
+from [dbo].[dv_source_table] st
+inner join [dbo].[dv_stage_schema] ss on ss.stage_schema_key = st.stage_schema_key
+inner join [dbo].[dv_stage_database] sdb on sdb.stage_database_key = ss.stage_database_key
+left join  [dbo].[dv_source_version] sv on sv.source_table_key = st.source_table_key	
+									   and sv.is_current= 1
 where 1=1
-and s.[source_system_name]		= @vault_source_system_name
-and t.[source_table_schema]		= @vault_source_table_schema
-and t.[source_table_name]		= @vault_source_table_name
+and st.[source_unique_name]		= @vault_source_unique_name
+if @@ROWCOUNT <> 1 RAISERROR ('Invalid Link Parameters Supplied',16,1);
+select @rc = count(*) from [dbo].[dv_source_version] where source_version_key = @source_version_key and is_current= 1
+if @rc <> 1 RAISERROR('dv_source_table or current dv_source_version missing for: %s, source version : %i', 16, 1, @source_qualified_name, @source_version_key);
+
 
 -- Get Satellite Details
 select 	 @sat_database			= sat.[satellite_database]						
@@ -234,16 +241,8 @@ select 	 @sat_database			= sat.[satellite_database]
 		,@sat_config_key		= sat.[satellite_key]		
 		,@sat_link_hub_flag		= sat.[link_hub_satellite_flag]		
 		,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat')))       
---from [dbo].[dv_source_table] t
---inner join [dbo].[dv_column] c
---on c.table_key = t.[source_table_key]
---inner join [dbo].[dv_satellite_column] sc
---on sc.column_key = c.column_key
---inner join [dbo].[dv_satellite] sat
---on sat.satellite_key = sc.satellite_key
 from [dbo].[dv_satellite] sat
 where 1=1
---and t.[source_table_key] = @source_table_config_key
 and sat.[satellite_name] = @vault_sat_name
 
 -- Owner Hub Table
@@ -286,15 +285,6 @@ select @source_load_date_time = 'vault_load_time'
 
 -- Build the Source Payload NB - needs to join to the Sat Table to get each satellite related to the source.
 set @sql = ''
---select @sql += 'src.' +quotename(sc.[column_name]) + @crlf +', '      
---from [dbo].[dv_column] c
---inner join dv_Satellite_Column sc
---on c.column_key = sc.column_key
---where 1=1
---and [discard_flag] <> 1
---and [table_key] = @source_table_config_key
---and sc.[satellite_key] = @sat_config_key
---order by sc.satellite_ordinal_position
 select @sql += 'src.' +quotename(sc.[column_name]) + @crlf +', '      
 from dv_Satellite_Column sc
 where 1=1
@@ -319,15 +309,6 @@ from dv_Satellite_Column sc
 where 1=1
 and sc.[satellite_key] = @sat_config_key
 order by sc.satellite_ordinal_position
---from [dbo].[dv_satellite] s
---inner join [dbo].[dv_satellite_column] sc
---on s.[satellite_key] = sc.[satellite_key]
---inner join [dbo].[dv_column] c
---on c.column_key = sc.column_key
---where 1=1
---and [discard_flag] <> 1
---and s.[satellite_key] = @sat_config_key
---order by sc.satellite_ordinal_position
 select @sat_payload = left(@sql, len(@sql) -1)	
 
 -- Compile the SQL
@@ -336,21 +317,22 @@ set @sql2 = ''
 
 -- Insert New Rows for Updates
 set @sql2 = 'BEGIN TRANSACTION' + @crlf
-set @sql2 += 'INSERT INTO '	+ @sat_qualified_name + @crlf 
+set @sql2 += 'select @load_start_date = sysdatetimeoffset();' + @crlf
+set @sql2 += 'SELECT *  INTO #t' + @sat_table + ' FROM ' +  @sat_qualified_name + ' WHERE 1 = 0;' + @crlf
+set @sql2 += 'INSERT INTO #t' + @sat_table + @crlf
 set @sql2 += ' (' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
 set @sql2 += ',   ' + replace(@sat_technical_columns, 'sat.', '')
 set @sql2 += replace(@sat_payload, 'sat.', '')
 set @sql2 += ')' + @crlf
---set @sql2 += 'SELECT ' + @crlf + '  ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf   
+   
 set @sql2 += 'SELECT ' + @crlf + '  hl_driver_key' + @crlf											-- Driving Hub / Link Surrogate Key
---set @sql2 += ', '	+ @source_load_date_time + @crlf												-- Source Load Date Time
---set @sql2 += ', '	+ @sat_load_date_time + @crlf													-- Source Load Date Time
+
 set @sql2 += ', case when MergeOutput.' + 
 			case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
 			else quotename(@link_surrogate_keyname) end + 
 			' is null then ' + @sat_end_date_col +  ' else ' + @source_load_date_time + ' end'+@crlf-- Source Load Date Time. Deletes detected by the fact that they have no source Key
-set @sql2 += ', '	+ '''' + cast(@source_table_config_key as varchar(128)) + '''' + @crlf			-- Source Table Reference Key
---set @sql2 += ', '	+ '1' + @crlf																	-- make the row Current
+set @sql2 += ', '	+ '''' + cast(@source_version_key as varchar(128)) + '''' + @crlf			-- Source Table Reference Key
+																	-- make the row Current
 set @sql2 += ', case when MergeOutput.' + 
 			case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
 			else quotename(@link_surrogate_keyname) end + 
@@ -360,7 +342,7 @@ set @sql2 += ', case when MergeOutput.' +
 			else quotename(@link_surrogate_keyname) end + 
 			' is null then 1 else 0 end' + @crlf													-- If it is a delete tombstone, set the deleted row flag. Deletes detected by the fact that they have no source Key
 set @sql2 += ', MergeOutput.' + @sat_end_date_col + @crlf											-- Row Start Date						
---set @sql2 += ', '''	+ cast(@def_global_highdate as varchar(50)) + '''' + @crlf						-- Row End Date
+
 set @sql2 += ', case when MergeOutput.' + 
 			case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
 			else quotename(@link_surrogate_keyname) end + 
@@ -382,9 +364,9 @@ set @sql2 += '  sat.' + case when @sat_link_hub_flag = 'H' then  @hub_surrogate_
 set @sql2 += @sat_payload
 set @sql2 += ')' + @crlf + 'THEN UPDATE SET' + @crlf
 set @sql2 += @sat_current_row_col + '  = 0' + @crlf
---set @sql2 = @sql2 + ',  ' + @sat_end_date_col + ' = iif([vault_load_time] > sat.' + @sat_start_date_col + ', [vault_load_time], dateadd(ms,1, sat.' + @sat_end_date_col + '))' + @crlf
+
 set @sql2 += ',  ' + @sat_end_date_col + ' = iif(@version_date > sat.' + @sat_start_date_col + ', @version_date, dateadd(ms,1, sat.' + @sat_start_date_col + '))' + @crlf
---Insert New Rows
+--Insert New Rows for New Keys:
 set @sql2 += 'WHEN NOT MATCHED BY TARGET ' + @crlf
 set @sql2 += '  THEN INSERT ( ' + @crlf
 set @sql2 += '  ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
@@ -392,7 +374,7 @@ set @sql2 += ', ' + replace(@sat_technical_columns, 'sat.', '')
 set @sql2 += replace(@sat_payload, 'sat.', '') + ')' + @crlf
 set @sql2 += 'VALUES(' + @crlf + '  src.' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf  + ', ' 
 set @sql2 += '[vault_load_time]' + @crlf
-set @sql2 += ', ' + cast(@source_table_config_key as varchar(50)) + @crlf
+set @sql2 += ', ' + cast(@source_version_key as varchar(50)) + @crlf
 set @sql2 += ', 1' + @crlf
 set @sql2 += ', 0' + @crlf
 set @sql2 += ', @version_date ' + @crlf
@@ -418,24 +400,32 @@ set @sql2 += '        ,[src].*' + @crlf
 set @sql2 += ') AS MergeOutput' + @crlf
 set @sql2 += '  WHERE 1=1' + @crlf
 set @sql2 += '  AND MergeOutput.Action = ''UPDATE''' + @crlf
---set @sql2 += '    AND ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + ' is not null' + @crlf
 set @sql2 += ';' + @crlf-- Merge Statement Must end with ';'
 
+-- Insert the Tombstones:
+set @sql2 += 'INSERT INTO ' + @sat_qualified_name  + @crlf
+set @sql2 += ' (' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
+set @sql2 += ',' + replace(@sat_technical_columns, 'sat.', '')
+set @sql2 += replace(@sat_payload, 'sat.', '')
+set @sql2 += ')' + @crlf
+set @sql2 += 'SELECT ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
+set @sql2 += ',' + replace(@sat_technical_columns, 'sat.', '')
+set @sql2 += replace(@sat_payload, 'sat.', '')  + @crlf
+set @sql2 += 'FROM #t' + @sat_table + ';' + @crlf
+set @sql2 += 'SELECT @rows_updated = @@ROWCOUNT;' + @crlf
+set @sql2 += 'SELECT @load_end_date = sysdatetimeoffset();' + @crlf
+
 -- Log Completion
-set @sql2 += 'EXECUTE [dv_log].[dv_log_progress] ''sat'',''' + @sat_table + ''',''' + @sat_schema + ''',''' +  @sat_database + ''',' --+ @crlf
-set @sql2 += '''' + @source_table + ''',''' +  @source_schema + ''',''' + @source_system + ''',' --+ @crlf 
-set @sql2 += cast(isnull(@execution_id, 0) as varchar(50)) + ', @version_date, '  
-          + cast(isnull(@rows_inserted, 0) as varchar(50)) + ',' + cast(isnull(@rows_updated, 0) as varchar(50)) + ',' + cast(isnull(@rows_deleted, 0) as varchar(50)) + @crlf
+set @sql2 += 'EXECUTE [dv_log].[dv_log_progress] ''sat'',''' + @sat_table + ''',''' + @sat_schema + ''',''' +  @sat_database + ''',' 
+set @sql2 += '''' + @vault_source_unique_name + ''',' 
+set @sql2 += '@@SPID,' + isnull(cast(@vault_runkey as varchar), 'NULL') + ', @version_date, @lookup_start_date, @load_start_date, @load_end_date, 0, @rows_updated, 0, 0' + @crlf
 set @sql2 += 'COMMIT;' + @crlf
 select @vault_sql_statement = @sql2
 IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @crlf
 /*--------------------------------------------------------------------------------------------------------------*/
---SET @_Step = 'Load The ' + case when @sat_link_hub_flag = 'H' then 'Hub' else 'Link' end
---IF @_JournalOnOff = 'ON'
---	SET @_ProgressText += @sql
+
 --print @vault_sql_statement
 --select @vault_sql_statement
---EXECUTE sp_executesql @SQL;
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE

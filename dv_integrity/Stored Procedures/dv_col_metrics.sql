@@ -138,6 +138,7 @@ select @run_time = cast(sysdatetimeoffset() as varchar(50))
 
 --tests:
 -- Note that each test must have a case for each data type being references (it must be a regular matrix)
+-- Needs to go into Config!
 insert @tests values('min'		, 'min'			, 'varchar'	, 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
 insert @tests values('min'		, 'min'			, 'nvarchar', 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
 insert @tests values('min'		, 'min'			, 'char', 'cast(min([<column_name>]) as varchar(max)) as [min_<column_name>]', '[min_<column_name>]')
@@ -240,6 +241,23 @@ insert @tests values('minlength', 'minlength'	, 'float'	, 'cast(0 as bigint) as 
 insert @tests values('minlength', 'minlength'	, 'real'	, 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
 insert @tests values('minlength', 'minlength'	, 'bit'		, 'cast(0 as bigint) as [minlength_<column_name>]', '[minlength_<column_name>]')
 
+insert @tests values('maxlength', 'maxlength'	, 'varchar' , 'max(cast(len([<column_name>]) as bigint)) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'nvarchar' ,'max(cast(len([<column_name>]) as bigint)) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'char' ,'max(cast(len([<column_name>]) as bigint)) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'numeric' , 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'decimal' , 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'int'		, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'bigint'  , 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'smallint'  , 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'tinyint'  , 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'datetime', 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'date', 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'money'	, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'smallmoney'	, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'float'	, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'real'	, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+insert @tests values('maxlength', 'maxlength'	, 'bit'		, 'cast(0 as bigint) as [maxlength_<column_name>]', '[maxlength_<column_name>]')
+
 -- Truncate the Stage Table
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'If Exists then Drop Existing Table'
@@ -254,12 +272,12 @@ BEGIN
        [column_name] [varchar](128) NOT NULL,
        [column_key] [varchar](128) NOT NULL,
 	   [min_value] [varchar](max) NULL,
-
        [max_value] [varchar](max) NULL,
        [domain_count] [bigint] NULL,
        [null_count] [bigint] NULL,
        [blank_count] [bigint] NULL,
-       [minlength] [bigint] NULL
+       [minlength] [bigint] NULL,
+	   [maxlength] [bigint] NULL
        )'
        execute sp_executesql @sql
        set @sql = ''
@@ -312,8 +330,6 @@ begin
 			select @sql2 = 'from ' + table_name + @crlf from @Columns
 			set @sql2 += 'where ' + @def_global_default_load_date_time + ' >= ' + @sat_start_date_col + ' and ' +  @def_global_default_load_date_time + ' < ' + @sat_end_date_col + @crlf
 					   + 'and ' + @sat_tombstone_col + '= 0)' + @crlf
---					   + 'insert ' + @stage_qualified_name + @crlf
---					   + 'into ' + @stage_qualified_name  + @crlf 
 					   + ',w2 as (' + @crlf
 			select @col_loop_key  = min(column_name) from @Columns
 			while @col_loop_key is not null
@@ -333,14 +349,12 @@ begin
 			end
 			set @sql2 = left(@sql2, len(@sql2) - 7)
 			set @sql1 = @sql + @sql1 + @sql2 
-			--set @sql1 = @sql1 + ')' + @crlf + 'select * into ' + @stage_qualified_name + @crlf + 'from w2'
-			--execute sp_executesql @sql1
 			set @sql1 = @sql1 + ')' + @crlf
              + 'insert ' + @stage_qualified_name + @crlf
              + 'select * from w2'
+			--select @sql1
             execute sp_executesql @sql1
 			IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @sql1 + @crlf
-			--select @sql1
 		end
 	end
 	select @sat_loop_key = max(satellite_key) from [dbo].[dv_satellite]

@@ -6,7 +6,8 @@
 , @object_filegroup              varchar(128)   = NULL
 , @object_type					 varchar(30)    = NULL
 , @payload_columns			     [dbo].[dv_column_type] READONLY
-, @sat_is_columnstore			 bit			= 0
+, @is_columnstore			     bit			= 0
+, @is_compressed				 bit			= 0
 , @recreate_flag                 char(1)		= 'N'
 , @dogenerateerror               bit            = 0
 , @dothrowerror                  bit			= 1
@@ -14,13 +15,7 @@
 AS
 BEGIN
 SET NOCOUNT ON
-
--- To Do - add Logging for the Payload Parameter
---         validate Parameters properly
---declare @hub_name varchar(100) =  'AdventureWorks2014_production_productinventory'
-
 declare @varobject_name			varchar(128)
---declare @filegroup				varchar(128)
 declare @schema					varchar(128)
 declare @database				varchar(128)
 declare @default_columns		dv_column_type
@@ -77,7 +72,8 @@ SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_Spr
 						+ @NEW_LINE + '    @object_filegroup             : ' + COALESCE(@object_filegroup, '<NULL>')
 						+ @NEW_LINE + '    @object_type                  : ' + COALESCE(@object_type, '<NULL>')
 						+ @NEW_LINE + '    @payload_columns              : ' + COALESCE(@payload_columns_string, '<NULL>')
-						+ @NEW_LINE + '    @sat_is_columnstore           : ' + COALESCE(CAST(@sat_is_columnstore AS varchar), '<NULL>')
+						+ @NEW_LINE + '    @is_columnstore               : ' + COALESCE(CAST(@is_columnstore AS varchar), '<NULL>')
+						+ @NEW_LINE + '    @is_compressed                : ' + COALESCE(CAST(@is_compressed AS varchar), '<NULL>')
 						+ @NEW_LINE + '    @recreate_flag                : ' + COALESCE(@recreate_flag, '<NULL>')
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
 						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
@@ -93,7 +89,7 @@ IF isnull(@object_name, '')		= '' RAISERROR('No @object_name: %s', 16, 1, @objec
 IF isnull(@object_schema, '')	= '' RAISERROR('No @object_schema: %s', 16, 1, @object_schema);
 IF isnull(@object_database, '')	= '' RAISERROR('No @object_database: %s', 16, 1, @object_database);
 IF isnull(@object_database, '')	= '' RAISERROR('No @object_filegroup: %s', 16, 1, @object_filegroup);
-IF isnull(@object_type, '')	not in('Hub', 'Lnk', 'Sat') RAISERROR(' @object_type: %s: Valid Values: Hub, Lnk or Sat', 16, 1, @object_type);
+IF isnull(@object_type, '')	not in('Hub', 'Lnk', 'Sat', 'Stg') RAISERROR(' @object_type: %s: Valid Values: Hub, Lnk or Sat', 16, 1, @object_type);
 IF isnull(@payload_columns_string, '')	= '' RAISERROR('No @payload_columns: %s', 16, 1, @payload_columns_string);
 IF isnull(@recreate_flag, '') not in ('Y', 'N') RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -134,17 +130,17 @@ select @SQL += 'CREATE TABLE ' + @table_name + '(' + @crlf + ' '
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Add the Columns'
 --1. Primary Key
-select @SQL = @SQL + column_name + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 0, 1) + @crlf + ',' 
+select @SQL = @SQL + column_name + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 0, 1, 0, 1) + @crlf + ',' 
 from [fn_get_key_definition](@object_name, @object_type)
 
 --Payload
-select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
+select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0, 0, 1) + @crlf + ',' 
 from
 (select *
 from @default_columns) a
 order by source_ordinal_position
 
-select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]([column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0) + @crlf + ',' 
+select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0, 0, 1) + @crlf + ',' 
 from
 (select *
 from @payload_columns) a
@@ -152,18 +148,22 @@ order by satellite_ordinal_position, column_name
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Add the Primary Key'
-if @sat_is_columnstore = 0
+if @is_columnstore = 0
 	begin
 	select @pk_name = column_name from [fn_get_key_definition](@object_name, @object_type)
 	select @SQL += 'PRIMARY KEY CLUSTERED (' + @pk_name + ') ON ' + quotename(@object_filegroup) + @crlf
 	end
-	
-select @SQL += ') ON ' + quotename(@object_filegroup) + ';' + @crlf
+select @SQL += ') '	
+select @SQL += ' ON ' + quotename(@object_filegroup) 
+if @is_columnstore = 0  -- columnstore takes precedence if both switches are set.
+	if @is_compressed = 1
+		select @SQL += ' WITH ( DATA_COMPRESSION = PAGE ) '
+select @SQL += ';' + @crlf
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Table'
 IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
---select @SQL --**************
+--print @SQL --**************
 exec (@SQL)
 
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -219,7 +219,7 @@ OnComplete:
 								+ ' after a total run time of ' + log4.FormatElapsedTime(@_SprocStartTime, NULL, 3)
 			SET @_ProgressText  = @_ProgressText + @NEW_LINE + @_Message;
 		END
-
+--print @_ProgressText
 	IF @_JournalOnOff = 'ON'
 		EXEC log4.JournalWriter
 				  @Task				= @_FunctionName

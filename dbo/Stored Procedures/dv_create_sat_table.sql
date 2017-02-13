@@ -66,12 +66,13 @@ DECLARE
 		,@sat_schema						varchar(128)
 		,@sat_table							varchar(128)
 		,@sat_surrogate_keyname				varchar(128)
-		,@hub_link_surrogate_key			varchar(128)
+		,@sat_surrogate_key			varchar(128)
 		,@sat_config_key					int
 		,@sat_link_hub_flag					char(1)
 		,@sat_qualified_name				varchar(512)
 		,@sat_tombstone_indicator			varchar(50)
 		,@sat_is_columnstore				bit
+		,@sat_is_compressed					bit
 		,@sat_technical_columns				nvarchar(max)
 		,@sat_payload						nvarchar(max)
 
@@ -191,7 +192,8 @@ select 	 @sat_database			= sat.[satellite_database]
 		,@sat_surrogate_keyname	= [dbo].[fn_get_object_name] (sat.[satellite_name],'SatSurrogate')		
 		,@sat_config_key		= sat.[satellite_key]		
 		,@sat_link_hub_flag		= sat.[link_hub_satellite_flag]
-		,@sat_is_columnstore	= sat.[is_columnstore]		
+		,@sat_is_columnstore	= sat.[is_columnstore]	
+		,@sat_is_compressed		= sat.[is_compressed]	
 		,@sat_qualified_name	= quotename(sat.[satellite_database]) + '.' + quotename(coalesce(sat.[satellite_schema], @def_sat_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (sat.[satellite_name], 'sat')))       
 
 from [dbo].[dv_satellite] sat
@@ -242,7 +244,7 @@ select top 1 k.[column_name]
   cross apply [dbo].[fn_get_key_definition] (l.link_name, 'lnk') k
   where s.[satellite_key] = @sat_config_key
 
-select @hub_link_surrogate_key = [column_name] from @payload_columns
+select @sat_surrogate_key = [column_name] from @payload_columns
 
 insert @payload_columns
 select  sc.[column_name]
@@ -274,6 +276,7 @@ EXECUTE [dbo].[dv_create_DV_table]
   ,'Sat'
   ,@payload_columns
   ,@sat_is_columnstore
+  ,@sat_is_compressed
   ,@recreate_flag
   ,@dogenerateerror
   ,@dothrowerror
@@ -285,8 +288,7 @@ if @sat_is_columnstore = 0
 	begin
 	select @SQL += 'CREATE UNIQUE NONCLUSTERED INDEX ' + quotename('UX__' + @sat_table + cast(newid() as varchar(56))) 
 	select @SQL += ' ON ' + @sat_qualified_name + '(' + @crlf + ' '
-	--select @SQL = @SQL + @hub_link_surrogate_key + ',' + @sat_end_date_col +',' + @sat_current_row_col + ',' + @sat_tombstone_indicator	
-	select @SQL = @SQL + @hub_link_surrogate_key + ',' + @sat_start_date_col 	
+	select @SQL = @SQL + @sat_surrogate_key + ',' + @sat_start_date_col 	
 	select @SQL = @SQL + ') INCLUDE(' + @sat_current_row_col +',' + @sat_tombstone_indicator + ') ON ' + quotename(@def_sat_filegroup) + @crlf
 	end
 else

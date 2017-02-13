@@ -3,6 +3,7 @@
     @link_abbreviation varchar(4) = NULL,
     @link_schema varchar(128),
     @link_database varchar(128),
+	@is_compressed bit,
 	@is_retired bit,
 	@release_number int
 AS 
@@ -18,11 +19,11 @@ AS
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 
-	INSERT INTO [dbo].[dv_link] ([link_name], [link_abbreviation], [link_schema], [link_database], [is_retired], [release_key])
-	SELECT @link_name, @link_abbreviation, @link_schema, @link_database, @is_retired, @release_key
+	INSERT INTO [dbo].[dv_link] ([link_name], [link_abbreviation], [link_schema], [link_database], [is_compressed], [is_retired], [release_key])
+	SELECT @link_name, @link_abbreviation, @link_schema, @link_database, @is_compressed, @is_retired, @release_key
 	
 	-- Begin Return Select <- do not remove
-	SELECT [link_key], [link_name], [link_abbreviation], [link_schema], [link_database], [is_retired], [release_key], [version_number], [updated_by], [updated_datetime]
+	SELECT *
 	FROM   [dbo].[dv_link]
 	WHERE  [link_key] = SCOPE_IDENTITY()
 	-- End Return Select <- do not remove

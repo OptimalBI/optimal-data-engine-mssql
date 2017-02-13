@@ -12,12 +12,7 @@ DECLARE @task							nvarchar(512)
 	   ,@msgChar						nvarchar(500)
 	   ,@sql							nvarchar(4000)
 	   ,@dialog_handle					uniqueidentifier
-	   ,@vault_source_system_name		nvarchar(50)
-	   ,@vault_source_timevault			nvarchar(50)
-	   ,@vault_source_table_schema		nvarchar(128)
-	   ,@vault_source_table_name		nvarchar(128)
-	   ,@vault_procedure_schema			nvarchar(128)
-	   ,@vault_procedure_name			nvarchar(128)
+	   ,@vault_source_unique_name			nvarchar(128)
 	   ,@vault_source_table_run_type	nvarchar(50)
 	   ,@vault_runkey					varchar(20)
 	   ,@vault_run_key					int
@@ -78,10 +73,12 @@ IF @DoGenerateError = 1
 SET @_Step = 'Validate inputs';
 
 SET @dialog_handle = NULL
+
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults'
 
 select @stage_delta_switch		= [default_varchar] from [dbo].[dv_defaults]		where default_type = 'Global'	and default_subtype = 'StageDeltaSwitch'
+
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_Step = 'Pull From the Queue';
@@ -101,18 +98,14 @@ IF (@rowcount > 0)
 	IF @message_type_name = @queue_name
 		BEGIN 
 		    SELECT
-			     @vault_runkey			    = x.value('(/Request/RunKey)[1]'			,'VARCHAR(20)')
-				,@vault_source_timevault	= x.value('(/Request/SourceTimeVault)[1]'	,'VARCHAR(50)')
-				,@vault_source_system_name	= x.value('(/Request/SourceSystem)[1]'		,'VARCHAR(50)')
-				,@vault_source_table_schema	= x.value('(/Request/SourceSchema)[1]'		,'VARCHAR(128)')
-				,@vault_source_table_name	= x.value('(/Request/SourceTable)[1]'		,'VARCHAR(128)')
-				,@vault_procedure_schema	= x.value('(/Request/ProcSchema)[1]'		,'VARCHAR(128)')
-				,@vault_procedure_name		= x.value('(/Request/ProcName)[1]'			,'VARCHAR(128)')
+			     @vault_runkey					= x.value('(/Request/RunKey)[1]'			,'VARCHAR(20)')
+				,@vault_source_unique_name		= x.value('(/Request/SourceUniqueName)[1]'	,'VARCHAR(128)')
 				,@vault_source_table_run_type	= x.value('(/Request/RunType)[1]'			,'VARCHAR(50)')
 			FROM @msg.nodes('/Request') AS T(x);
-			
+	
+		
 			set @vault_run_key = cast(ltrim(rtrim(@vault_runkey)) as int)
-			select @vault_source_table_run_type = case when @vault_source_table_run_type = 'Default' then null else @vault_source_table_run_type end
+			select @vault_source_table_run_type = case when @vault_source_table_run_type = 'Default' then NULL else @vault_source_table_run_type end
 
 			SELECT 1
 			  FROM [dv_scheduler].[dv_run] r
@@ -120,27 +113,27 @@ IF (@rowcount > 0)
 			  on r.run_key = m.run_key
 			  where 1=1
 				and r.run_key = @vault_run_key
-				and m.source_system_name = @vault_source_system_name
+				and m.source_unique_name = @vault_source_unique_name
 				and r.run_status = 'Started'
 				and m.run_status = 'Queued'
 			if @@rowcount > 0
 			BEGIN
-				EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Processing'
+				EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_unique_name ,'Processing'
 
-				--WAITFOR DELAY '00:00:10'
-				if not (ltrim(rtrim(@vault_procedure_schema)) = '' or ltrim(rtrim(@vault_procedure_name)) = '')
-					BEGIN
-					SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
-					print @_Step	
-					set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name) 
-					if @stage_delta_switch = 'Y' 
-					set @sql = @sql + ' ''' + @vault_source_table_run_type + ''''
-					exec (@SQL)
-					END
-				SET @_Step = 'Loading Table: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
-				exec [dbo].[dv_load_source_table] @vault_source_system_name, @vault_source_table_schema, @vault_source_table_name, @vault_source_table_run_type
+				--WAITFOR DELAY '00:00:30'
+				--if not (ltrim(rtrim(@vault_procedure_schema)) = '' or ltrim(rtrim(@vault_procedure_name)) = '')
+				--	BEGIN
+				--	SET @_Step = 'Executing Procedure: '+ quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name);
+				--	print @_Step	
+				--	set @sql = 'EXEC ' + quotename(@vault_source_timevault) + '.' + quotename(@vault_procedure_schema) + '.' + quotename(@vault_procedure_name)
+				--	if @stage_delta_switch = 'Y' 
+				--	set @sql = @sql + ' ''' + @vault_source_table_run_type + ''''
+				--	exec (@SQL)
+				--	END
+				SET @_Step = 'Loading Table: ' + quotename(@vault_source_unique_name) 
+				exec [dbo].[dv_load_source_table] @vault_source_unique_name, @vault_source_table_run_type, @vault_runkey
 				SET @_Step = 'Load Completed'
-				EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Completed'
+				EXECUTE [dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_unique_name ,'Completed'
 			END
 		END		
 	ELSE 
@@ -154,20 +147,19 @@ SET @_ProgressText  = @_ProgressText + @NEW_LINE
 
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Completed Load of: ' + quotename(@vault_source_system_name) + '.' + quotename(@vault_source_table_schema) + '.' + quotename(@vault_source_table_name)
-print @_Message
+SET @_Message   = 'Completed Load of: ' + quotename(@vault_source_unique_name) 
+--print @_Message
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed Load of: ' + isnull(quotename(@vault_source_system_name), '') + '.' + isnull(quotename(@vault_source_table_schema), '') + '.' + isnull(quotename(@vault_source_table_name), '') + @NEW_LINE
+SET @_ErrorContext	= 'Failed Load of: ' + isnull(quotename(@vault_source_unique_name), '') + @NEW_LINE
 SET @_ErrorContext += 'For Message Type: ' + isnull(@message_type_name, '') + @NEW_LINE + 'For Message: ' + isnull(@msgChar, '')
-IF (XACT_STATE() = -1) -- uncommitable transaction
-OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
+IF (XACT_STATE() = -1) OR (@@TRANCOUNT > 0)
 	BEGIN
 		ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
 	END
-EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_system_name ,@vault_source_table_schema ,@vault_source_table_name ,'Failed'
+EXECUTE[dv_scheduler].[dv_manifest_status_update] @vault_run_key ,@vault_source_unique_name ,'Failed'
 
 EXEC log4.ExceptionHandler
 		  @ErrorContext  = @_ErrorContext

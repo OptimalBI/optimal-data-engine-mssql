@@ -1,7 +1,7 @@
 ﻿CREATE view [dv_scheduler].[vw_manifest_status]
 as
 select
-         [source_table_name]		= quotename(m.[source_system_name]) + '.' + quotename(m.[source_table_schema]) + '.' + quotename(m.[source_table_name])
+         [source_unique_name]		= quotename(m.[source_unique_name]) 
 		,[run_manifest_status]		= m.[run_status]
         ,m.[start_datetime]
         ,m.[completed_datetime]

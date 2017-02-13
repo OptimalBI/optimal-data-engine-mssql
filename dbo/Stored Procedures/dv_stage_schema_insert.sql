@@ -1,6 +1,9 @@
-﻿CREATE PROC [dbo].[dv_hub_link_insert] 
-    @link_key int,
-    @hub_key int,
+﻿
+
+CREATE PROC [dbo].[dv_stage_schema_insert] 
+    @stage_database_key int,
+    @stage_schema_name varchar(128),
+	@is_retired bit,
 	@release_number int
 AS 
 	SET NOCOUNT ON 
@@ -15,13 +18,13 @@ AS
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 
-	INSERT INTO [dbo].[dv_hub_link] ([link_key], [hub_key],[release_key])
-	SELECT @link_key, @hub_key, @release_key
+	INSERT INTO [dbo].[dv_stage_schema] ([stage_database_key],[stage_schema_name],[is_retired],[release_key])
+    SELECT @stage_database_key, @stage_schema_name, @is_retired, @release_key
 	
 	-- Begin Return Select <- do not remove
-	SELECT [hub_link_key], [link_key], [hub_key],[release_key], [version_number], [updated_by], [updated_datetime]
-	FROM   [dbo].[dv_hub_link]
-	WHERE  [hub_link_key] = SCOPE_IDENTITY()
+	SELECT *
+	FROM   [dbo].[dv_stage_schema]
+	WHERE  [stage_schema_key] = SCOPE_IDENTITY()
 	-- End Return Select <- do not remove
                
 	COMMIT

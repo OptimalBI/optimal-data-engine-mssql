@@ -1,29 +1,24 @@
 ﻿CREATE TABLE [dv_log].[dv_load_state] (
-    [load_state_key]   INT                IDENTITY (1, 1) NOT NULL,
-    [source_table_key] INT                DEFAULT ((-1)) NOT NULL,
-    [object_key]       INT                DEFAULT ((-1)) NOT NULL,
-    [object_type]      VARCHAR (50)       DEFAULT ('<Unknown>') NOT NULL,
-    [execution_key]    INT                DEFAULT ((-1)) NOT NULL,
-    [load_high_water]  DATETIMEOFFSET (7) NULL,
-    [rows_inserted]    INT                DEFAULT ((0)) NOT NULL,
-    [rows_updated]     INT                DEFAULT ((0)) NOT NULL,
-    [rows_deleted]     INT                DEFAULT ((0)) NOT NULL,
-    [updated_by]       VARCHAR (30)       DEFAULT (user_name()) NULL,
-    [update_date_time] DATETIMEOFFSET (7) DEFAULT (sysdatetimeoffset()) NOT NULL,
+    [load_state_key]        INT                IDENTITY (1, 1) NOT NULL,
+    [source_table_key]      INT                DEFAULT ((-1)) NULL,
+    [object_key]            INT                DEFAULT ((-1)) NULL,
+    [object_type]           VARCHAR (50)       DEFAULT ('<Unknown>') NULL,
+    [execution_key]         INT                DEFAULT ((-1)) NULL,
+    [run_key]               INT                NULL,
+    [load_high_water]       DATETIMEOFFSET (7) NULL,
+    [lookup_start_datetime] DATETIMEOFFSET (7) NULL,
+    [load_start_datetime]   DATETIMEOFFSET (7) NULL,
+    [load_end_datetime]     DATETIMEOFFSET (7) NULL,
+    [rows_inserted]         INT                DEFAULT ((0)) NULL,
+    [rows_updated]          INT                DEFAULT ((0)) NULL,
+    [rows_deleted]          INT                DEFAULT ((0)) NULL,
+    [rows_affected]         INT                DEFAULT ((0)) NULL,
+    [updated_by]            VARCHAR (30)       DEFAULT (suser_name()) NULL,
+    [update_date_time]      DATETIMEOFFSET (7) DEFAULT (sysdatetimeoffset()) NULL,
     PRIMARY KEY CLUSTERED ([load_state_key] ASC)
 );
 
 
-GO
 
-CREATE TRIGGER [dv_log].[dv_load_state_audit] ON [dv_log].[dv_load_state]
-AFTER INSERT, UPDATE
-AS
-	BEGIN
-	    UPDATE [a]
-		 SET
-			[update_date_time] = SYSDATETIMEOFFSET()
-		   , [updated_by] = SUSER_NAME() FROM [dv_log].[dv_load_state] AS [a]
-									   JOIN [inserted] AS [b]
-									   ON [a].[load_state_key] = [b].[load_state_key];
-	END;
+
+GO

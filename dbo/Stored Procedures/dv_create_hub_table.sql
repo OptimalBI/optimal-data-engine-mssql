@@ -11,13 +11,14 @@ BEGIN
 SET NOCOUNT ON
 
 declare @filegroup		varchar(256)
-declare @schema			varchar(256)
-declare @database		varchar(256)
-declare @table_name		varchar(256)
-declare @pk_name		varchar(256)
-declare @crlf			char(2) = CHAR(13) + CHAR(10)
-declare @SQL			varchar(4000) = ''
-declare @varobject_name varchar(128)
+       ,@schema			varchar(256)
+       ,@database		varchar(256)
+       ,@table_name		varchar(256)
+	   ,@is_compressed  bit 
+       ,@pk_name		varchar(256)
+       ,@crlf			char(2) = CHAR(13) + CHAR(10)
+       ,@SQL			varchar(4000) = ''
+       ,@varobject_name varchar(128)
 
 -- Log4TSQL Journal Constants 
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
@@ -82,6 +83,7 @@ declare @payload_columns [dbo].[dv_column_type]
 select @database = [hub_database]
       ,@schema = [hub_schema]
 	  ,@filegroup = null
+	  ,@is_compressed = [is_compressed]
 from [dbo].[dv_hub]
 where 1=1
    and [hub_database] = @vault_database
@@ -121,6 +123,7 @@ EXECUTE [dbo].[dv_create_DV_table]
   ,'Hub'
   ,@payload_columns
   ,0
+  ,@is_compressed
   ,@recreate_flag
   ,@dogenerateerror
   ,@dothrowerror
@@ -129,11 +132,14 @@ EXECUTE [dbo].[dv_create_DV_table]
 SET @_Step = 'Index the Hub on the Business Key'
 select @SQL = ''
 select @SQL += 'CREATE UNIQUE NONCLUSTERED INDEX ' + quotename('UX__' + @varobject_name + cast(newid() as varchar(56))) 
-	select @SQL += ' ON ' + @table_name + '(' + @crlf + ' '
-	select @SQL = @SQL + rtrim(quotename(column_name)) + @crlf +  ','
-		from @payload_columns
-		order by bk_ordinal_position
-	select @SQL = left(@SQL, len(@SQL) -1) + ') ON ' + quotename(@filegroup) + @crlf
+select @SQL += ' ON ' + @table_name + '(' + @crlf + ' '
+select @SQL = @SQL + rtrim(quotename(column_name)) + @crlf +  ','
+	from @payload_columns
+	order by bk_ordinal_position
+select @SQL = left(@SQL, len(@SQL) -1) + ') '
+if @is_compressed = 1
+	select @SQL += ' WITH ( DATA_COMPRESSION = PAGE )'
+select @SQL += ' ON ' + quotename(@filegroup) + @crlf
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Create The Index'

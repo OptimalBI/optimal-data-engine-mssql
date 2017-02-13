@@ -124,18 +124,19 @@ begin
 	+ ',''' + l.link_name + ''' as [object_name]' + @crlf
 	+ ',l.' + @link_data_source_col + ' as [record_source]' + @crlf
 	+ ',ss.[source_system_name]' + @crlf
-	+ ',cfg.[source_table_name]' + @crlf
+	+ ',cfg.[source_table_nme] as [source_table_name]' + @crlf
 	+ ',count_big(*) as [Runkey]' + @crlf
 	+'from ' + quotename(l.[link_database]) + '.' + quotename(l.[link_schema]) + '.' + quotename([dbo].[fn_get_object_name] (l.link_name, 'lnk')) +' l' + @crlf
-	+'left join [dbo].[dv_source_table] cfg on cfg.source_table_key = l.' + @link_data_source_col + @crlf
+	+ 'left join  [dbo].[dv_source_version] sv on sv.source_version_key = l.' + @link_data_source_col + @crlf
+	+'left join [dbo].[dv_source_table] cfg on cfg.source_table_key = sv.source_table_key ' + @crlf
 	+'left join [dbo].[dv_source_system] ss on ss.[source_system_key] = cfg.[system_key]' + @crlf
 	+'where ' + @link_load_date_time + ' <= ''' + @run_time + '''' + @crlf + 
-	+ 'group by l.' + @link_data_source_col + ', ss.[source_system_name],cfg.[source_table_name]' + @crlf 
+	+ 'group by l.' + @link_data_source_col + ', ss.[source_system_name],cfg.[source_table_nme]' + @crlf 
 	+ 'end' + @crlf
     + @crlf + @crlf
 	from [dbo].[dv_link] l
 	where link_key = @link_loop_key
-	--select @SQL
+	--print @SQL
 	exec sp_executesql @SQL
 end
 select @link_loop_key = max(link_key) from [dbo].[dv_link]
