@@ -7,7 +7,6 @@ CREATE PROCEDURE [dv_config].[dv_populate_source_table_columns]
 	,@vault_source_unique_name				varchar(128)
 	,@vault_source_type						varchar(50)
 	,@vault_stage_table_load_type			varchar(50)
-	,@vault_source_system_name				varchar(128)
 	--,@vault_source_procedure_schema			varchar(128)	= Null		
 	--,@vault_source_procedure_name			varchar(128)	= Null
 	,@vault_release_number					int				= 0
@@ -23,7 +22,6 @@ SET NOCOUNT ON;
 
 declare @stage_table_key					 int
        ,@stage_schema_key                    int
-	   ,@system_key							 int
 	   ,@procedure_fully_qualified			 nvarchar(512)
 	   ,@table_fully_qualified				 nvarchar(512)
 
@@ -71,7 +69,6 @@ SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_Spr
 						+ @NEW_LINE + '    @vault_source_unique_name     : ' + COALESCE(@vault_source_unique_name					, '<NULL>')
 						+ @NEW_LINE + '    @vault_source_type            : ' + COALESCE(@vault_source_type							, '<NULL>')
 						+ @NEW_LINE + '    @vault_stage_table_load_type  : ' + COALESCE(@vault_stage_table_load_type				, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_system_name     : ' + COALESCE(@vault_source_system_name					, '<NULL>')
 						--+ @NEW_LINE + '    @vault_source_procedure_schema: ' + COALESCE(@vault_source_procedure_schema				, '<NULL>')
 						--+ @NEW_LINE + '    @vault_source_procedure_name  : ' + COALESCE(@vault_source_procedure_name				, '<NULL>')
 						+ @NEW_LINE + '    @vault_release_number         : ' + COALESCE(cast(@vault_release_number as varchar)		, '<NULL>')
@@ -99,9 +96,9 @@ SET @_Step = 'Initialise Variables';
 
 SET @_Step = 'Create Config For Table';
 
-select @system_key			 = [source_system_key]
-	from [dbo].[dv_source_system] where [source_system_name] = @vault_source_system_name
-
+--select @vault_stage_database = [timevault_name]
+--      ,@system_key			 = [source_system_key]
+--	from [dbo].[dv_source_system] where [source_system_name] = @vault_source_system
 select @stage_schema_key = ss.stage_schema_key
 from [dbo].[dv_stage_schema] ss
 inner join [dbo].[dv_stage_database] sdb on sdb.stage_database_key = ss.stage_database_key
@@ -115,7 +112,7 @@ if @@ROWCOUNT = 0  -- Table doesn't exist in Config.
 				 @source_unique_name     = @vault_source_unique_name
 				,@source_type			 = @vault_source_type         
 				,@load_type              = @vault_stage_table_load_type             
-				,@system_key			 = @system_key    
+				,@system_key			 = null    
 				,@source_table_schema    = null    
 				,@source_table_name      = ''    
 				,@stage_schema_key       = @stage_schema_key	    
@@ -134,7 +131,7 @@ if @@ROWCOUNT = 0  -- Table doesn't exist in Config.
 		        ,@source_unique_name     = @vault_source_unique_name
 				,@source_type			 = @vault_source_type         
 				,@load_type              = @vault_stage_table_load_type             
-				,@system_key			 = @system_key   
+				,@system_key			 = null   
 				,@source_table_schema    = null    
 				,@source_table_name      = ''    
 				,@stage_schema_key       = @stage_schema_key	    
