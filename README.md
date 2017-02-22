@@ -69,6 +69,12 @@ Visit http://www.ode.ninja/ - this is where we keep our guides and share our kno
 
 ## Change log: ##
 ```
+Build 004.001.001 on 20170301
+		* Added satellite columns
+		* Added link columns and reorganised the hub-link relationship to enable Same-as links
+		* Reorganised source table functionality
+		* Added satellite functions feature for the calculated fields
+		* Added table reconciliation functionality (left-right object match)
 Build 002.002.001 on 20160819
         * Added the ability to pass a parameter from the scheduler, to a Staging Procedure, telling the Procedure what type of run to perform (Full or DELTA).
 Build 002.001.001 on 20160805
