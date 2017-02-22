@@ -21580,7 +21580,13 @@ USING (VALUES	('Global','LowDate',1,'datetime',NULL,NULL,'Jan  1 1900 12:00:00:0
 				('Sat','Filegroup',1,'varchar',NULL,'PRIMARY',NULL,0),
 				('SatSurrogate','Suffix',1,'varchar',NULL,'_key',NULL,0),
 				('dv_col_metrics','RunType',1,'varchar',NULL,'Weekly', NULL, 0),
-				('Scheduler','PollDelayInSeconds',1,'int',30,NULL,NULL,0)
+				('Scheduler','PollDelayInSeconds',1,'int',30,NULL,NULL,0),
+				('stg','Filegroup',1,'varchar',NULL,'PRIMARY',NULL,0),
+				('stg','MasterTableColumn',1,'varchar',NULL,'_master_table',NULL,0),
+				('stg','MatchKeyColumn',1,'varchar',NULL,'_match_row',NULL,0),
+				('stg','Prefix',1,'varchar',NULL,'',NULL,0),
+				('stg','Schema',1,'varchar',NULL,'Stage',NULL,0)
+
 			) AS src([default_type],[default_subtype],[default_sequence],[data_type],[default_integer],[default_varchar],[default_dateTime],[release_key])
 	ON
 		trgt.[default_type]     = src.[default_type] and 
