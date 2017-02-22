@@ -21620,7 +21620,10 @@ USING	(VALUES ('Hub','Object_Key',1,'h_','%','_key','int',NULL,NULL,NULL,NULL,0,
 			    ('Sat','Current_Row',5,NULL,'dv_row_is_current',NULL,'bit',NULL,NULL,NULL,NULL,0,0,0,0),
 			    ('Sat','Tombstone_Indicator',6,NULL,'dv_is_tombstone',NULL,'bit',NULL,NULL,NULL,NULL,0,0,0,0),
 			    ('Sat','Version_Start_Date',7,NULL,'dv_rowstartdate',NULL,'datetimeoffset',NULL,7,NULL,NULL,0,0,0,0),
-			    ('Sat','Version_End_Date',8,NULL,'dv_rowenddate',NULL,'datetimeoffset',NULL,7,NULL,NULL,0,0,0,0)			  
+			    ('Sat','Version_End_Date',8,NULL,'dv_rowenddate',NULL,'datetimeoffset',NULL,7,NULL,NULL,0,0,0,0),
+			    ('Stg','Object_Key',1,'_stg','%','_key','int',NULL,NULL,NULL,NULL,0,1,0,0),
+			    ('Stg','Load_Date_Time',2,NULL,'dv_stage_date_time',NULL,'datetimeoffset',NULL,7,NULL,NULL,0,0,0,0),
+			    ('Stg','Source_Version_Key',3,NULL,'dv_source_version_key',NULL,'varchar',50,NULL,NULL,NULL,0,0,0,0)						  
 			) AS src([object_type],[object_column_type],[ordinal_position],[column_prefix],[column_name],[column_suffix],[column_type],[column_length],[column_precision],[column_scale],[collation_Name],[is_nullable],[is_pk],[discard_flag],[release_key])
 	ON
 		trgt.[object_type]			= src.[object_type] and 
