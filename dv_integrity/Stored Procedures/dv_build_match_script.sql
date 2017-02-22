@@ -145,7 +145,6 @@ and object_type = 'stg'
 SELECT @stage_match_key_column = cast([dbo].[fn_get_default_value] ('MatchKeyColumn', 'Stg') as varchar(128))
 SELECT @stage_master_table_column = cast([dbo].[fn_get_default_value] ('MasterTableColumn', 'Stg') as varchar(128))
 
-
 if      @right_object_type = 'hub' select @right_object_config_key = [hub_key]			from [dbo].[dv_hub]			where [hub_database] = @right_object_database		and [hub_schema]		= @right_object_schema	and [hub_name] = @right_object_name
 else if @right_object_type = 'lnk' select @right_object_config_key = [link_key]			from [dbo].[dv_link]		where [link_database] = @right_object_database		and [link_schema]		= @right_object_schema	and [link_name] = @right_object_name
 else if @right_object_type = 'sat' select @right_object_config_key = [satellite_key]	from [dbo].[dv_satellite]	where [satellite_database] = @right_object_database	and [satellite_schema]	= @right_object_schema	and [satellite_name] = @right_object_name
@@ -285,7 +284,7 @@ select @sqlRight += case
 				else 'CAST(' + r.[column_qualified_name] + ' AS ' + rtrim(l.[column_definition]) + ') AS ' + r.column_name
 				end + ',' + @crlf
 from @payload_columns_ordered pc
-inner join [dbo].[fn_get_object_column_list] (@right_object_config_key, @right_object_type, DEFAULT) l on l.[column_name] = pc.[left_column_name]
+inner join [dbo].[fn_get_object_column_list] (@left_object_config_key, @left_object_type, DEFAULT) l on l.[column_name] = pc.[left_column_name]
 inner join [dbo].[fn_get_object_column_list] (@right_object_config_key, @right_object_type, DEFAULT) r on r.[column_name] = pc.[right_column_name] 
 order by pc.column_order
 set @sqlRight = left(@sqlRight, len(@sqlRight) -3)  + @crlf
@@ -296,6 +295,7 @@ if @right_object_type = 'sat'
 	end
 
 end
+
 select @sql = ';WITH wLeft as (' + @crlf +
 			  @sqlLeft + @crlf +
 			  'EXCEPT' + @crlf +
@@ -313,6 +313,7 @@ select @sql += @crlf + 'SELECT ' +
 					   '[' + @stage_Load_Date_Time_column + '] = sysdatetimeoffset(), ' + 
 					   case when isnull(@match_key, '') <> '' then cast(@match_key as varchar(50)) + ' as [' + @stage_Source_Version_Key_column + '], ' else '' end +
 					   '[' + @stage_match_key_column + '] = row_number() over (order by [' + @stage_master_table_column + ']), * ' 
+
 if @select_into = 1 and isnull(@output_name, '') <> '' select @sql += @crlf + ' INTO ' + @output_object_qualified_name + @crlf
 select @sql += ' FROM wMatch'
 /*--------------------------------------------------------------------------------------------------------------*/
