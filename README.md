@@ -58,7 +58,7 @@ If you simply wish to build an ODE instance and use it, the following instructio
 Details of the current functionality can be found here http://www.ode.ninja/category/features/
 
 ## Notes ##
-* Untested on SQL Server editions prior to 2014
+* Untested on SQL Server editions prior to 2014. Release script is compiled for SQL Server 2016 edition.
 * This product is still in Beta and should not be deployed to a production environment without thorough testing by you to ensure no adverse effects on your environment
 
 ## Feedback, suggestions, bugs, contributions: ##
