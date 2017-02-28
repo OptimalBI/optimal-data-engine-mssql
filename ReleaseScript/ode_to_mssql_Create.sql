@@ -51,7 +51,7 @@ END
 GO
 PRINT N'Creating $(DatabaseName)...'
 GO
-CREATE DATABASE [$(DatabaseName)] COLLATE SQL_Latin1_General_CP1_CI_AS
+CREATE DATABASE [$(DatabaseName)]
 GO
 IF EXISTS (SELECT 1
            FROM   [master].[dbo].[sysdatabases]

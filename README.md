@@ -1,4 +1,4 @@
-﻿# Optimal Data Engine (ODE) Build 002.002.001 #
+﻿# Optimal Data Engine (ODE) Build 004.001.001 #
 Copyright 2015 OptimalBI - Licensed under the GNU GENERAL PUBLIC LICENSE Version 3.0 (GPL-3.0)
 
 ## The Approach: ##
@@ -65,7 +65,7 @@ Details of the current functionality can be found here http://www.ode.ninja/cate
 Please submit these to GitHub issue tracking or join us in developing by forking the project and then making a pull request!
 
 ## Find out more: ##
-Visit http://www.ode.ninja/ - this is where we keep our guides and share our knowledge. To find out more about OptimalBI and the work we do visit http://www.optimalbi.com or check out our blogs at http://optimalbi.com/blog/tag/data-vault/ for all the latest on our Data Vault journey. If you want to get in touch, you can email us at hey@optimalbi.com
+Visit http://ode.ninja/ - this is where we keep our guides and share our knowledge. To find out more about OptimalBI and the work we do visit http://www.optimalbi.com or check out our blogs at http://optimalbi.com/blog/tag/data-vault/ for all the latest on our Data Vault journey. If you want to get in touch, you can email us at hey@optimalbi.com
 
 ## Change log: ##
 ```
