@@ -15,11 +15,11 @@ CREATE PROCEDURE [dv_integrity].[dv_LeftrightComparison_AdHoc]
 , @right_object_type				varchar(50)
 , @right_sat_pit					datetimeoffset(7)
 --, @right_object_filter				nvarchar(4000)
-, @output_database					nvarchar(128)
-, @output_schema					nvarchar(128)
-, @output_name						nvarchar(128)
-, @select_into						bit
-, @match_key						int
+, @output_database					nvarchar(128) = NULL
+, @output_schema					nvarchar(128) = NULL
+, @output_name						nvarchar(128) = NULL
+, @select_into						bit				= 0
+, @match_key						int				= 0
 , @payload_columns					[dbo].[dv_column_matching_list] READONLY
 , @dogenerateerror					bit				= 0
 , @dothrowerror						bit				= 1

@@ -14,7 +14,7 @@
     </RootPath>
     <RootNamespace>ode_to_mssql</RootNamespace>
     <AssemblyName>ode_to_mssql</AssemblyName>
-    <ModelCollation>1033, CI</ModelCollation>
+    <ModelCollation>1033,CI</ModelCollation>
     <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
     <DeployToDatabase>True</DeployToDatabase>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
@@ -27,6 +27,7 @@
     <ServiceBrokerOption>EnableBroker</ServiceBrokerOption>
     <Trustworthy>True</Trustworthy>
     <GenerateCreateScript>True</GenerateCreateScript>
+    <DefaultCollation>Latin1_General_CI_AS</DefaultCollation>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>

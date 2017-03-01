@@ -55,9 +55,10 @@ DECLARE
 		,@stage_Source_Version_Key_column varchar(128)
 		,@stage_match_key_column        varchar(128)
 		,@stage_master_table_column		varchar(128)
-		,@stage_column_list             varchar(max)			
+		,@stage_column_list             varchar(max)
+DECLARE @leftColumnList table(ColumnSQL varchar(512))			
 DECLARE @payload_columns_ordered table([left_column_name] varchar(128), [right_column_name] varchar(128), [column_order] int identity(1,1))
-insert @payload_columns_ordered select * from @payload_columns order by 1, 2
+INSERT  @payload_columns_ordered select * from @payload_columns order by 1, 2
 -- Log4TSQL Journal Constants 										
 DECLARE @SEVERITY_CRITICAL				smallint = 1;
 DECLARE @SEVERITY_SEVERE				smallint = 2;
@@ -142,8 +143,15 @@ select @stage_Source_Version_Key_column	= [column_name]
 from [dbo].[dv_default_column]
 where object_column_type = 'Source_Version_Key'	
 and object_type = 'stg'
-SELECT @stage_match_key_column = cast([dbo].[fn_get_default_value] ('MatchKeyColumn', 'Stg') as varchar(128))
-SELECT @stage_master_table_column = cast([dbo].[fn_get_default_value] ('MasterTableColumn', 'Stg') as varchar(128))
+
+select @stage_match_key_column	= [column_name]
+from [dbo].[dv_default_column]
+where object_column_type = 'MatchKeyColumn'	
+and object_type = 'mtc'
+select @stage_master_table_column	= [column_name]
+from [dbo].[dv_default_column]
+where object_column_type = 'MasterTableColumn'	
+and object_type = 'mtc'
 
 if      @right_object_type = 'hub' select @right_object_config_key = [hub_key]			from [dbo].[dv_hub]			where [hub_database] = @right_object_database		and [hub_schema]		= @right_object_schema	and [hub_name] = @right_object_name
 else if @right_object_type = 'lnk' select @right_object_config_key = [link_key]			from [dbo].[dv_link]		where [link_database] = @right_object_database		and [link_schema]		= @right_object_schema	and [link_name] = @right_object_name
@@ -209,7 +217,7 @@ FROM [dbo].[vw_stage_table] st
   and st.stage_database		=  @output_database	
   and st.stage_schema		= @output_schema
   and st.stage_table_name	= @output_name	
-  order by c.source_ordinal_position
+  order by column_name
 set @stage_column_list = left(@stage_column_list, len(@stage_column_list) - 1) + ')'
 
 select @sqlLeft = 'SELECT ' 
@@ -241,7 +249,6 @@ begin
 select @sqlLeft += l.[column_qualified_name] + ',' + @crlf
 from @payload_columns_ordered pc
 inner join [dbo].[fn_get_object_column_list] (@left_object_config_key, @left_object_type, DEFAULT) l on l.[column_name] = pc.[left_column_name]
---inner join [dbo].[fn_get_object_column_list] (@right_object_config_key, @right_object_type, DEFAULT) r on r.[column_name] = pc.[right_column_name]
 order by pc.column_order
 set @sqlLeft = left(@sqlLeft, len(@sqlLeft) -3)  + @crlf
 select @sqlLeft +=[dbo].[fn_get_object_from_statement](@left_object_config_key, @left_object_type, DEFAULT) + @crlf + 'WHERE 1=1' 
@@ -252,7 +259,6 @@ if @left_object_type = 'sat'
 
 end
 
---select @sql += ', wRight as (SELECT ''' + @right_object_qualified_name + ''' AS MasterTable,' + @crlf
 select @sqlRight = 'SELECT ' + @crlf
 if @right_object_type = 'lnk'
 begin 
@@ -284,7 +290,7 @@ select @sqlRight += case
 				else 'CAST(' + r.[column_qualified_name] + ' AS ' + rtrim(l.[column_definition]) + ') AS ' + r.column_name
 				end + ',' + @crlf
 from @payload_columns_ordered pc
-inner join [dbo].[fn_get_object_column_list] (@left_object_config_key, @left_object_type, DEFAULT) l on l.[column_name] = pc.[left_column_name]
+inner join [dbo].[fn_get_object_column_list] (@right_object_config_key, @right_object_type, DEFAULT) l on l.[column_name] = pc.[left_column_name]
 inner join [dbo].[fn_get_object_column_list] (@right_object_config_key, @right_object_type, DEFAULT) r on r.[column_name] = pc.[right_column_name] 
 order by pc.column_order
 set @sqlRight = left(@sqlRight, len(@sqlRight) -3)  + @crlf
@@ -295,7 +301,6 @@ if @right_object_type = 'sat'
 	end
 
 end
-
 select @sql = ';WITH wLeft as (' + @crlf +
 			  @sqlLeft + @crlf +
 			  'EXCEPT' + @crlf +
@@ -308,19 +313,28 @@ select @sql = ';WITH wLeft as (' + @crlf +
 			  'SELECT ''' + @left_object_qualified_name + ''' AS [' + @stage_master_table_column + '], * FROM wLeft' + @crlf +
 			  'UNION ALL' + @crlf +
 			  'SELECT ''' + @right_object_qualified_name + ''' AS [' + @stage_master_table_column + '], * FROM wRight)' + @crlf 
-if @select_into = 0 and isnull(@output_name, '') <> '' select @sql += @crlf + ' INSERT ' + @output_object_qualified_name + ' ' + @stage_column_list + @crlf
-select @sql += @crlf + 'SELECT ' +                         
-					   '[' + @stage_Load_Date_Time_column + '] = sysdatetimeoffset(), ' + 
-					   case when isnull(@match_key, '') <> '' then cast(@match_key as varchar(50)) + ' as [' + @stage_Source_Version_Key_column + '], ' else '' end +
-					   '[' + @stage_match_key_column + '] = row_number() over (order by [' + @stage_master_table_column + ']), * ' 
 
+if @select_into = 0 and isnull(@output_name, '') <> '' select @sql += @crlf + 'INSERT ' + @output_object_qualified_name + ' ' + @stage_column_list + @crlf
+
+-- Build the INSERT Column List:
+insert @leftColumnList(ColumnSQL) select quotename(left_column_name) from @payload_columns
+insert @leftColumnList(ColumnSQL) select quotename(@stage_Load_Date_Time_column) + ' = sysdatetimeoffset()'
+insert @leftColumnList(ColumnSQL) select quotename(@stage_master_table_column)
+if isnull(@match_key, '') <> '' 
+	insert @leftColumnList(ColumnSQL) select quotename(@stage_Source_Version_Key_column) + ' = ' + cast(@match_key as varchar(50))
+insert @leftColumnList(ColumnSQL) select quotename(@stage_match_key_column) + ' = row_number() over (order by ' + quotename(@stage_master_table_column) + ')'
+
+select @sql += @crlf + 'SELECT '
+select @sql += ColumnSQL + ', ' 
+from @leftColumnList
+order by ColumnSQL
+select @sql = left(@sql, len(@sql) - 1)
 if @select_into = 1 and isnull(@output_name, '') <> '' select @sql += @crlf + ' INTO ' + @output_object_qualified_name + @crlf
 select @sql += ' FROM wMatch'
 /*--------------------------------------------------------------------------------------------------------------*/
 IF @_JournalOnOff = 'ON' SET @_ProgressText  = @_ProgressText + @crlf + @SQL + @crlf
 --print @SQL --**************
 set @vault_sql_statement = @sql 
-
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE
