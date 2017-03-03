@@ -6,8 +6,5 @@ bin/
 *.pdb
 obj/
 *.suo
-<<<<<<< HEAD
 *.jfm
-=======
-*.jfm
->>>>>>> 4fbe3a1ff97e23cee5c3d4e1597841301074e8df
+

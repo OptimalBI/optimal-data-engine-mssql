@@ -290,7 +290,7 @@ select @sqlRight += case
 				else 'CAST(' + r.[column_qualified_name] + ' AS ' + rtrim(l.[column_definition]) + ') AS ' + r.column_name
 				end + ',' + @crlf
 from @payload_columns_ordered pc
-inner join [dbo].[fn_get_object_column_list] (@right_object_config_key, @right_object_type, DEFAULT) l on l.[column_name] = pc.[left_column_name]
+inner join [dbo].[fn_get_object_column_list] (@left_object_config_key, @left_object_type, DEFAULT) l on l.[column_name] = pc.[left_column_name]
 inner join [dbo].[fn_get_object_column_list] (@right_object_config_key, @right_object_type, DEFAULT) r on r.[column_name] = pc.[right_column_name] 
 order by pc.column_order
 set @sqlRight = left(@sqlRight, len(@sqlRight) -3)  + @crlf
