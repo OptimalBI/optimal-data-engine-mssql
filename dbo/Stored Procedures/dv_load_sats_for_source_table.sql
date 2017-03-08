@@ -161,7 +161,7 @@ SET @_Step = 'Validate inputs';
 
 IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
 			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
-IF ((@vault_runkey is not null) and ((select count(*) from [dv_scheduler].[dv_run] where @vault_runkey = [run_key] and [run_status]='Started') <> 1))
+IF ((@vault_runkey is not null) and ((select count(*) from [dv_scheduler].[dv_run] where @vault_runkey = [run_key]) <> 1))
 			RAISERROR('Invalid @vault_runkey provided: %i', 16, 1, @vault_runkey);
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults'

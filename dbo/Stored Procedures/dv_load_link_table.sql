@@ -131,7 +131,7 @@ SET @_Step = 'Generate any required error';
 IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate inputs';
-IF ((@vault_runkey is not null) and ((select count(*) from [dv_scheduler].[dv_run] where @vault_runkey = [run_key] and [run_status]='Started') <> 1))
+IF ((@vault_runkey is not null) and ((select count(*) from [dv_scheduler].[dv_run] where @vault_runkey = [run_key]) <> 1))
 			RAISERROR('Invalid @vault_runkey provided: %i', 16, 1, @vault_runkey);
 
 /*--------------------------------------------------------------------------------------------------------------*/

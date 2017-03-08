@@ -293,7 +293,7 @@ while @sat_loop_key >= @sat_loop_stop_key
 /**********************************************************************************************************************/
 begin
 -- Looping through all Satellites
-	if (@def_runtype = 'Weekly' and @sat_loop_key%7 = 2 --datepart(weekday, getdate()-7)-1
+	if (@def_runtype = 'Weekly' and @sat_loop_key%7 = datepart(weekday, getdate()-7)-1
 		)
 	   or @def_runtype = 'Full'
 	begin 
