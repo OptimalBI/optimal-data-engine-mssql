@@ -138,8 +138,8 @@ begin
 	+ @crlf + @crlf
 	from [dbo].[dv_hub] l
 	where hub_key = @hub_loop_key
-	print @SQL
-	--execute sp_executesql @SQL
+	--print @SQL
+	execute sp_executesql @SQL
 end
 select @hub_loop_key = max(hub_key) from [dbo].[dv_hub]
 		where hub_key < @hub_loop_key
