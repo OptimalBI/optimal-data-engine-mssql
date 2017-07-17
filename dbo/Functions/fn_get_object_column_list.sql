@@ -41,8 +41,8 @@ if @object_type = 'hub'
 		  ,hkc.hub_key_column_precision
 		  ,hkc.hub_key_column_scale
 		  ,hkc.hub_key_Collation_Name		  
-		  ,[dbo].[fn_build_column_definition] (hkc.hub_key_column_name, hkc.hub_key_column_type,hkc.hub_key_column_length, hub_key_column_precision, hkc.hub_key_column_scale, hkc.hub_key_Collation_Name, 0,0,0,0)
-		  ,[dbo].[fn_build_column_definition] (hkc.hub_key_column_name, hkc.hub_key_column_type,hkc.hub_key_column_length, hub_key_column_precision, hkc.hub_key_column_scale, hkc.hub_key_Collation_Name, 0,0,1,1)
+		  ,[dbo].[fn_build_column_definition] (hkc.hub_key_column_name, hkc.hub_key_column_type,hkc.hub_key_column_length, hub_key_column_precision, hkc.hub_key_column_scale, hkc.hub_key_Collation_Name,0,NULL,0,0,0,0)
+		  ,[dbo].[fn_build_column_definition] (hkc.hub_key_column_name, hkc.hub_key_column_type,hkc.hub_key_column_length, hub_key_column_precision, hkc.hub_key_column_scale, hkc.hub_key_Collation_Name,0,NULL,0,0,1,1)
 		  ,hkc.hub_key_column_key
 		from [dbo].[dv_hub] h
 		inner join [dbo].[dv_hub_key_column] hkc on hkc.hub_key = h.hub_key		
@@ -61,8 +61,8 @@ else if @object_type = 'lnk'
 		  , c.column_precision
 		  , c.column_scale
 		  , c.collation_Name
-		  ,[dbo].[fn_build_column_definition] (c.column_name, c.column_type,c.column_length, c.column_precision, c.column_scale, c.Collation_Name, 0,0,0,0)
-		  ,[dbo].[fn_build_column_definition] (c.column_name, c.column_type,c.column_length, c.column_precision, c.column_scale, c.Collation_Name, 0,0,1,1)
+		  ,[dbo].[fn_build_column_definition] (c.column_name, c.column_type,c.column_length, c.column_precision, c.column_scale, c.Collation_Name,0,NULL,0,0,0,0)
+		  ,[dbo].[fn_build_column_definition] (c.column_name, c.column_type,c.column_length, c.column_precision, c.column_scale, c.Collation_Name,0,NULL,0,0,1,1)
 		  ,lkc.link_key_column_key
 	from [dbo].[dv_link] l
 		inner join [dbo].[dv_link_key_column] lkc on lkc.[link_key_column_key] = l.[link_key]
@@ -84,8 +84,8 @@ else if @object_type = 'sat'
 		  ,sc.column_precision
 		  ,sc.column_precision
 		  ,sc.Collation_Name
-		  ,[dbo].[fn_build_column_definition] (sc.column_name, sc.column_type,sc.column_length, sc.column_precision, sc.column_scale, sc.Collation_Name, 0,0,0,0)
-		  ,[dbo].[fn_build_column_definition] (sc.column_name, sc.column_type,sc.column_length, sc.column_precision, sc.column_scale, sc.Collation_Name, 0,0,1,1)
+		  ,[dbo].[fn_build_column_definition] (sc.column_name, sc.column_type,sc.column_length, sc.column_precision, sc.column_scale, sc.Collation_Name,0,NULL,0,0,0,0)
+		  ,[dbo].[fn_build_column_definition] (sc.column_name, sc.column_type,sc.column_length, sc.column_precision, sc.column_scale, sc.Collation_Name,0,NULL,0,0,1,1)
 		  ,sc.satellite_col_key
 
 	from [dbo].[dv_satellite] s
@@ -106,8 +106,8 @@ begin
 		  ,c.column_precision
 		  ,c.column_precision
 		  ,c.Collation_Name
-		  ,[dbo].[fn_build_column_definition] (c.column_name, c.column_type,c.column_length, c.column_precision, c.column_scale, c.Collation_Name, 0,0,0,0)
-		  ,[dbo].[fn_build_column_definition] (c.column_name, c.column_type,c.column_length, c.column_precision, c.column_scale, c.Collation_Name, 0,0,1,1)
+		  ,[dbo].[fn_build_column_definition] (c.column_name, c.column_type,c.column_length, c.column_precision, c.column_scale, c.Collation_Name,0,NULL,0,0,0,0)
+		  ,[dbo].[fn_build_column_definition] (c.column_name, c.column_type,c.column_length, c.column_precision, c.column_scale, c.Collation_Name,0,NULL,0,0,1,1)
 		  ,c.column_key
 
 	from [dbo].[dv_source_table] s

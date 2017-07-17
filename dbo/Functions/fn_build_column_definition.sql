@@ -7,6 +7,8 @@ FUNCTION [dbo].[fn_build_column_definition]
    ,@precision int 
    ,@scale int 
    ,@CollationName varchar(50)
+   ,@has_default bit
+   ,@default_value varchar(50)
    ,@is_nullable bit
    ,@is_identity bit
    ,@return_cast bit
@@ -117,7 +119,14 @@ BEGIN
 	IF @return_detail = 1
 	BEGIN
 		set @ResultVar = rtrim(@ResultVar) + case when isnull (@is_identity, 1) = 1 then ' IDENTITY(1,1) ' else ' ' END
+		IF @has_default = 1 
+			set @ResultVar = rtrim(@ResultVar) + ' DEFAULT (' + 
+				case when UPPER(@DataType) IN ('nchar','nvarchar','char','varchar') then QUOTENAME(isnull(@default_value, ''),'''')
+				     else @default_value
+					 end
+					 + ')'
 		set @ResultVar = rtrim(@ResultVar) + case when isnull (@is_nullable, 1) = 1 then '' else ' NOT' END + ' NULL'
+		
 	END
 END
 ELSE

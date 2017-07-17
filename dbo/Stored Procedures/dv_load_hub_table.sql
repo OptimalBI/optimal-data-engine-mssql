@@ -32,6 +32,7 @@ DECLARE @hub_key_column_name		varchar(128)
 DECLARE @hub_load_date_time			varchar(128)
 DECLARE @hub_database				varchar(128)
 DECLARE @hub_schema					varchar(128)
+DECLARE @hub_key					int
 
 DECLARE @link_key_column_name		varchar(128)
 DECLARE @link_key_column_key		int
@@ -135,6 +136,12 @@ where 1=1
 and st.source_unique_name	= @vault_source_unique_name
 select @rc = count(*) from [dbo].[dv_source_version] where source_version_key = @dv_source_version_key and is_current= 1
 if @rc <> 1 RAISERROR('dv_source_table or current dv_source_version missing for: %s, source version : %i', 16, 1, @dv_stage_table_name, @vault_source_version_key);
+
+
+select @hub_key = hub_key
+from [dbo].[dv_hub]
+where hub_name = @vault_hub_name
+
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Build SQL Components'
 
@@ -145,9 +152,9 @@ select c.column_name
 	  --,st.source_unique_name
 	  ,h.hub_database
 	  ,h.hub_schema
-	  ,[dbo].[fn_build_column_definition] ('',[hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0,0,0)
-	  ,[dbo].[fn_build_column_definition] ('',[column_type],[column_length],[column_precision],[column_scale],[Collation_Name],0,0, 0,0)
-	  ,[dbo].[fn_build_column_definition] (quotename(c.column_name),[hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0, 1,0)
+	  ,[dbo].[fn_build_column_definition] ('',[hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,NULL,0,0,0,0)
+	  ,[dbo].[fn_build_column_definition] ('',[column_type],[column_length],[column_precision],[column_scale],[Collation_Name],0,NULL,0,0,0,0)
+	  ,[dbo].[fn_build_column_definition] (quotename(c.column_name),[hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,NULL,0,0,1,0)
 	  
 from [dbo].[dv_hub] h
 inner join [dbo].[dv_hub_key_column] hkc
@@ -168,8 +175,12 @@ order by link_key_column_key, c.column_name  --NB order is vital for the followi
 set @loop_count = 0
 set @SQL1 = 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf + 
             'DECLARE @version_date datetimeoffset(7)' + @crlf +
-			'DECLARE @load_end_datetime datetimeoffset(7)' + @crlf +
-			'select @version_date = sysdatetimeoffset()'  + @crlf +
+			'DECLARE @source_date_time datetimeoffset(7)' + @crlf --+
+
+select @SQL1 += [dv_scripting].[fn_get_task_log_insert_statement] ('', '', '', 1) -- add the logging variables.
+select @SQL1 += 'DECLARE @vault_runkey int = ' + isnull(cast(@vault_runkey as varchar(20)), '0') + @crlf +
+			'SELECT @version_date = sysdatetimeoffset()' + @crlf +
+			'SET @__load_start_date = @version_date' + @crlf + 
 			'BEGIN TRANSACTION' + @crlf +
             ';WITH wBaseSet AS (' + @crlf
 
@@ -177,7 +188,6 @@ OPEN cur_hub_column
 FETCH NEXT FROM cur_hub_column INTO  @column_name		   
 							   ,@hub_key_column_name
 							   ,@link_key_column_key
-							   --,@dv_timevault_name
 							   ,@hub_database
 							   ,@hub_schema
 							   ,@hub_column_definition
@@ -223,12 +233,12 @@ set @SQL1 = left(@SQL1, len(@SQL1) -10)  + ')' + @crlf +
             'USING wBaseSet AS SOURCE' + @crlf + ' ON ' + left(@match_list, len(@match_list) - 4) + @crlf +
 			'WHEN NOT MATCHED BY TARGET THEN ' + @crlf + 'INSERT(' + @dv_load_date_time_column + ',' + @dv_data_source_column + ',' + replace(left(@hub_column_list, len(@hub_column_list) -1), 'SOURCE.','') + ')' + @crlf +
 			'VALUES(@version_date,''' + cast(@dv_source_version_key as varchar(50)) + ''',' + left(@hub_column_list, len(@hub_column_list) -1) + ')' + @crlf +
-			'OUTPUT $action into @rowcounts;' + @crlf + 'select @insertcount = count(*) from @rowcounts where merge_action = ''INSERT'';' + @crlf + 
-			'SELECT @load_end_datetime = sysdatetimeoffset();' + @crlf 
+			'OUTPUT $action into @rowcounts;' + @crlf + 'select @__rows_inserted = count(*) from @rowcounts where merge_action = ''INSERT'';' + @crlf + 
+			'SELECT @__load_end_date = sysdatetimeoffset();' + @crlf 
 -- Log Completion
-
-set @SQL1 += 'EXECUTE [dv_log].[dv_log_progress] ''hub'',''' + @vault_hub_name + ''',''' + @hub_schema + ''',''' +  @hub_database + ''',' 
-set @SQL1 += '''' + @vault_source_unique_name + ''',@@SPID,' + isnull(cast(@vault_runkey as varchar), 'NULL') + ', @version_date, null, @version_date, @load_end_datetime, @insertcount, 0, 0, 0' + @crlf
+set @SQL1 += 'SET @__high_water_date = @version_date' + @crlf 
+SET @SQL1 += 'SET @__vault_runkey = @vault_runkey' + @crlf 
+select @SQL1 += [dv_scripting].[fn_get_task_log_insert_statement] (@vault_source_version_key, 'hub', @hub_key, 0)
 set @SQL1 += 'COMMIT;' + @crlf
 
 CLOSE cur_hub_column   

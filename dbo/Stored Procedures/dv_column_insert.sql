@@ -8,7 +8,8 @@
     @column_precision int = NULL,
     @column_scale int = NULL,
     @Collation_Name nvarchar(128) = NULL,
-    @bk_ordinal_position int,
+	@is_derived	bit = NULL,
+	@derived_value varchar(50) = NULL,
     @source_ordinal_position int,
     @is_source_date bit,
     @is_retired bit
@@ -23,12 +24,11 @@ AS
 	set @rc = @@rowcount
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
-	INSERT INTO [dbo].[dv_column] ([table_key], [satellite_col_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [is_source_date], [is_retired],[release_key])
-	SELECT @table_key, @satellite_col_key, @column_name, @column_type, @column_length, @column_precision, @column_scale, @Collation_Name, @bk_ordinal_position, @source_ordinal_position, @is_source_date, @is_retired, @release_key
+	INSERT INTO [dbo].[dv_column] ([table_key], [satellite_col_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [is_derived], [derived_value], [source_ordinal_position], [is_source_date], [is_retired],[release_key])
+	SELECT @table_key, @satellite_col_key, @column_name, @column_type, @column_length, @column_precision, @column_scale, @Collation_Name, @is_derived, @derived_value, @source_ordinal_position, @is_source_date, @is_retired, @release_key
 	
 	-- Begin Return Select <- do not remove
-	SELECT [column_key], [table_key], [satellite_col_key], [column_name], [column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [bk_ordinal_position], [source_ordinal_position], [is_source_date], [is_retired],[release_key],[version_number], [updated_by], [update_date_time]
-	FROM   [dbo].[dv_column]
+	SELECT * FROM [dbo].[dv_column]
 	WHERE  [column_key] = SCOPE_IDENTITY()
 	-- End Return Select <- do not remove
                

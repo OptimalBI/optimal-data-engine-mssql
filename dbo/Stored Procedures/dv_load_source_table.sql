@@ -98,7 +98,7 @@ IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate inputs';
 
-IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
+IF isnull(@vault_source_load_type, '') not in ('Full', 'Delta')
 			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
 IF ((@vault_runkey is not null) and ((select count(*) from [dv_scheduler].[dv_run] where @vault_runkey = [run_key]) <> 1))
 			RAISERROR('Invalid @vault_runkey provided: %i', 16, 1, @vault_runkey);
@@ -112,8 +112,13 @@ select @stage_delta_switch		= [default_varchar] from [dbo].[dv_defaults]		where 
 select 	 @source_database			= sdb.[stage_database_name]
 		,@source_schema				= ss.[stage_schema_name]
 		,@source_table				= st.[stage_table_name]
-		,@source_load_type			= coalesce(@vault_source_load_type, st.[load_type], 'Full')
-		,@source_type				= st.[source_type]
+		--,@source_load_type			= CASE st.[load_type] 
+		--								WHEN 'Full'		THEN 'Full'     -- if the Load is set up to be full, then it will always be a Full Load
+		--                                ELSE COALESCE(@vault_source_load_type, st.[load_type], 'Full')
+		--								END										    
+		--,@source_load_type			= coalesce(@vault_source_load_type, st.[load_type], 'Full')
+		,@source_load_type			= @vault_source_load_type
+		,@source_type				= sv.[source_type]
 		,@source_table_config_key	= st.[source_table_key]
 		,@source_qualified_name		= quotename(sdb.[stage_database_name]) + '.' + quotename(ss.[stage_schema_name]) + '.' + quotename(st.[stage_table_name])
 		,@source_version			= sv.[source_version]

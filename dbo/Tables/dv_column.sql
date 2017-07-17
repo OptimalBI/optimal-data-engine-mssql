@@ -8,7 +8,8 @@
     [column_precision]        INT                NULL,
     [column_scale]            INT                NULL,
     [Collation_Name]          [sysname]          NULL,
-    [bk_ordinal_position]     INT                CONSTRAINT [DF__dv_column__bk_or__31EC6D26] DEFAULT ((0)) NOT NULL,
+    [is_derived]              BIT                NULL,
+    [derived_value]           VARCHAR (50)       NULL,
     [source_ordinal_position] INT                NOT NULL,
     [is_source_date]          BIT                CONSTRAINT [DF__dv_column__is_so__32E0915F] DEFAULT ((0)) NOT NULL,
     [is_retired]              BIT                CONSTRAINT [DF__dv_column__disca__33D4B598] DEFAULT ((0)) NOT NULL,
@@ -22,6 +23,8 @@
     CONSTRAINT [FK_dv_column_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),
     CONSTRAINT [dv_column_unique] UNIQUE NONCLUSTERED ([table_key] ASC, [column_name] ASC)
 );
+
+
 
 
 

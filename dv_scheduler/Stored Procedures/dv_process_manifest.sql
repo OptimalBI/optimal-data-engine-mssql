@@ -17,6 +17,7 @@ DECLARE @msg						XML
 	   ,@run_key					int
 	   ,@delay_in_seconds			int
 	   ,@delayChar					char(8)
+	   ,@nothing					bit
 
 
 -- Log4TSQL Journal Constants 
@@ -119,16 +120,19 @@ SET @_Step = 'Check Whether the Schedule is Complete'
 		and (isnull(r.run_status, '') = 'Failed' or isnull(m.run_status, '') = 'Failed')
 		)
 		BEGIN
--- If so, Is there anything to run, assuming that what is queued or running now will succeed?
-			if not exists(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (@run_key, 'Potential'))
-			BEGIN
--- If not, Fail the run.
-				UPDATE [dv_scheduler].[dv_run] 
-					set [run_status] = 'Failed'
-	                   ,[run_end_datetime] = SYSDATETIMEOFFSET()
-					where [run_key] = @run_key
-				BREAK
-			END
+-- If so, Is there anything left in the Queue to to run
+			IF EXISTS(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (@run_key, 'Potential'))			   
+			OR EXISTS(SELECT 1 FROM [dv_scheduler].[dv_run_manifest] WHERE [run_key] = @run_key AND [run_status] IN('Queued'))
+				  SET @nothing = 0
+			-- If not, Fail the run.
+			      ELSE
+				    BEGIN
+				  	UPDATE [dv_scheduler].[dv_run] 
+				  		set [run_status] = 'Failed'
+				             ,[run_end_datetime] = SYSDATETIMEOFFSET()
+				  		where [run_key] = @run_key
+				  	BREAK
+				  END
         END
 -- has there been a Cancellation?	
 	if exists (
@@ -189,6 +193,7 @@ SET @_Step = 'Queue as Set of Tasks'
 			MESSAGE TYPE dv_scheduler_m001 (@Msg)
 	END
 	ELSE
+	IF @queue = '002'
 	BEGIN
 		BEGIN DIALOG CONVERSATION @SBDialog
 			FROM SERVICE dv_scheduler_s002
@@ -198,6 +203,17 @@ SET @_Step = 'Queue as Set of Tasks'
 			--Send messages on Dialog
 		SEND ON CONVERSATION @SBDialog
 			MESSAGE TYPE dv_scheduler_m002 (@Msg)
+	END
+	ELSE
+	BEGIN
+		BEGIN DIALOG CONVERSATION @SBDialog
+			FROM SERVICE dv_scheduler_sAgent001
+			TO SERVICE	'dv_scheduler_sAgent001'
+			ON CONTRACT	 dv_scheduler_cAgent001
+			WITH ENCRYPTION = OFF;
+			--Send messages on Dialog
+		SEND ON CONVERSATION @SBDialog
+			MESSAGE TYPE dv_scheduler_mAgent001 (@Msg)
 	END
 	END CONVERSATION @SBDialog
 	EXECUTE[dv_scheduler].[dv_manifest_status_update] @run_key ,@source_unique_name ,'Queued'

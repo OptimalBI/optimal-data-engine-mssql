@@ -50,6 +50,7 @@ declare  @stage_database					varchar(128)
 		,@stage_qualified_name				varchar(512)
 		,@stage_load_date_time				varchar(128)
 		,@stage_payload						nvarchar(max)
+		,@stage_source_date_time			varchar(128)
 -- Hub Table
 		,@hub_database						varchar(128)
 		,@hub_schema						varchar(128)
@@ -85,6 +86,7 @@ DECLARE @sat_insert_count			int
 	   ,@sql						nvarchar(max)
 	   ,@sql1						nvarchar(max)
 	   ,@sql2						nvarchar(max)
+	   ,@sql3						nvarchar(max)
 	   ,@surrogate_key_match        varchar(1000)
 DECLARE @declare					nvarchar(512)	= ''
 DECLARE @count_rows					nvarchar(256)	= ''
@@ -106,7 +108,7 @@ DECLARE @satellite_list				table (sat_database				varchar(128)
 										  )
 
 DECLARE @wrk_link_joins			nvarchar(max)
-DECLARE @wrk_link__keys			nvarchar(max)
+DECLARE @wrk_link_keys			nvarchar(max)
 -- Log4TSQL Journal Constants 										
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
 DECLARE @SEVERITY_SEVERE        smallint = 2;
@@ -159,7 +161,7 @@ IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate inputs';
 
-IF isnull(@vault_source_load_type, 'Full') not in ('Full', 'Delta')
+IF isnull(@vault_source_load_type, '') not in ('Full', 'Delta')
 			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
 IF ((@vault_runkey is not null) and ((select count(*) from [dv_scheduler].[dv_run] where @vault_runkey = [run_key]) <> 1))
 			RAISERROR('Invalid @vault_runkey provided: %i', 16, 1, @vault_runkey);
@@ -198,12 +200,24 @@ and object_column_type = 'Version_End_Date'
 
 -- Object Specific Settings
 -- Source Table
+-- find out if a "source_date_time" column has been supplied.
+select @stage_source_date_time = [column_name]
+from [dbo].[dv_source_table] st
+inner join [dbo].[dv_column] c
+on st.[source_table_key] = c.table_key
+where 1=1
+and st.[source_unique_name] = @vault_source_unique_name
+and c.[is_source_date] = 1
+if @stage_source_date_time is NULL 
+	set @stage_source_date_time = 'SYSDATETIMEOFFSET()'
+	else 
+	set @stage_source_date_time = '[vault_load_time]' 
+-- get source table details:
 select 	 @stage_database			= sdb.[stage_database_name]
 		,@stage_schema				= ss.[stage_schema_name]
 		,@stage_table				= st.[stage_table_name]
 		,@stage_table_config_key	= st.[source_table_key]
 		,@stage_source_version_key	= isnull(@vault_source_version_key, sv.source_version_key) -- if no source version is provided, use the current source version for the source table used as source for this load.
-
 		,@stage_qualified_name		= quotename(sdb.[stage_database_name]) + '.' + quotename(ss.[stage_schema_name]) + '.' + quotename(st.[stage_table_name])
 from [dbo].[dv_source_table] st
 inner join [dbo].[dv_stage_schema] ss on ss.stage_schema_key = st.stage_schema_key
@@ -242,6 +256,9 @@ and t.[source_table_key] = @stage_table_config_key
 if (select count(distinct [sat_link_hub_flag]) from @satellite_list) <> 1 RAISERROR('Multiple Satellites in this load are mixed between Hubs and Links. This is Invalid', 16, 1); 
 select @sat_link_hub_flag = [sat_link_hub_flag] from @satellite_list 
 
+if (select count(distinct [sat_database]) from @satellite_list) <> 1 RAISERROR('Multiple Databases are in this load. This is Invalid', 16, 1); 
+select @sat_database = [sat_database] from @satellite_list 
+
 -- Owner Hub Table
 
 if @sat_link_hub_flag = 'H' 
@@ -273,17 +290,18 @@ if @sat_link_hub_flag = 'L'
  
  -- Get the SQL for the Key Lookup   
 
-EXECUTE [dbo].[dv_load_source_table_key_lookup] @vault_source_unique_name, 'N', @temp_table_name OUTPUT, @sql1 OUTPUT
+EXECUTE [dbo].[dv_load_source_table_key_lookup] @vault_source_unique_name, 'N', @vault_source_load_type, @temp_table_name OUTPUT, @sql1 OUTPUT
 
 -- Now Get the Satellite Update SQL
 
-set @sql2 =			'DECLARE @version_date_char varchar(20)' + @crlf
-set @sql2 = @sql2 + 'DECLARE @version_date datetimeoffset(7)' + @crlf
-set @sql2 = @sql2 + 'DECLARE @load_start_date datetimeoffset(7)' + @crlf
-set @sql2 = @sql2 + 'DECLARE @load_end_date datetimeoffset(7)' + @crlf
-set @sql2 = @sql2 + 'DECLARE @rows_updated int' + @crlf
-set @sql2 = @sql2 + 'select @version_date = sysdatetimeoffset()'  + @crlf 
-set @sql2 = @sql2 + 'select @version_date_char = CONVERT(varchar(50), @version_date) '  + @crlf 
+--set @sql2 =			'DECLARE @version_date_char varchar(20)' + @crlf
+set @sql2 = ''
+
+set @sql2 = @sql2 + 'SELECT @__vault_runkey = ' + ISNULL(CAST(@vault_runkey as varchar(20)), 0) + @crlf
+set @sql2 = @sql2 + 'SELECT @version_date = SYSDATETIMEOFFSET()'  + @crlf 
+set @sql2 = @sql2 + 'SELECT TOP 1 @source_date_time = ' + @stage_source_date_time + ' FROM ' + @temp_table_name + @crlf
+--print @sql2
+--set @sql2 = @sql2 + 'select @version_date_char = CONVERT(varchar(50), @version_date) '  + @crlf 
 DECLARE c_sat_list CURSOR FOR 
 select sat_table
   FROM @satellite_list
@@ -295,6 +313,8 @@ INTO @sat_table
 WHILE @@FETCH_STATUS = 0   
 BEGIN
 EXECUTE [dbo].[dv_load_sat_table] @vault_source_unique_name, @sat_table, @temp_table_name, @vault_source_load_type, @stage_source_version_key, @sql OUTPUT, @vault_runkey
+print @sat_table
+--print @sql
 set @sql2 += @sql
 FETCH NEXT FROM c_sat_list 
 INTO @sat_table	
@@ -302,13 +322,13 @@ END
 
 CLOSE c_sat_list   
 DEALLOCATE c_sat_list
-	
-set @sql = @sql1 + @sql2
+
+set @sql = @sql1 + @sql2 
 
 --/*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Load The Source into Sat(s)'
 IF @_JournalOnOff = 'ON' SET @_ProgressText += @SQL
---select @SQL
+--print @SQL
 EXECUTE(@SQL);
 /*--------------------------------------------------------------------------------------------------------------*/
 

@@ -115,7 +115,11 @@ deallocate curPar
 SET @_Step = 'Initialise Outer Loop'
 
 set @start_pos = charindex('(', @string,1)
+--Temp fix !!!
+if (@start_pos > 0)
 set @command = left(@string, @start_pos-1)
+else set @command = @string
+-------------------------
 set @snippet = @string
 insert @snippet_table select 0, @command,  @string, @snippet
 select @current_row = SCOPE_IDENTITY()

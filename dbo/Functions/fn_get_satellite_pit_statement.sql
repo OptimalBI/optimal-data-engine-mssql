@@ -1,7 +1,7 @@
 ﻿--select [dbo].[fn_get_satellite_pit statement](DEFAULT)
 --select [dbo].[fn_get_satellite_pit statement](sysdatetimeoffset())
 
-CREATE FUNCTION [dbo].[fn_get_satellite_pit statement]
+CREATE FUNCTION [dbo].[fn_get_satellite_pit_statement]
 (
 @sat_pit					datetimeoffset(7) = NULL
 )

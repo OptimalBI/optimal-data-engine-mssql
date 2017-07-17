@@ -312,13 +312,14 @@ set @link_technical_columns = @sql
 -- Compile the SQL
 --SQL to do the look up the hub keys that make up the link
 
-EXECUTE [dbo].[dv_load_source_table_key_lookup] @vault_source_unique_name, 'Y', @temp_table_name OUTPUT, @sql OUTPUT
-
+EXECUTE [dbo].[dv_load_source_table_key_lookup] @vault_source_unique_name, 'Y', 'Full', @temp_table_name OUTPUT, @sql OUTPUT  -- Note, load type is set to "Full". This is a placeholder. Link processing does not use Run Types.
 set @sql1 = @sql
+--select @sql1 += [dv_scripting].[fn_get_task_log_insert_statement] ('', '', '', 0) -- add the logging variables.
 set @sql1 += 'DECLARE @rowcounts TABLE(merge_action nvarchar(10));' + @crlf
-set @sql1 += 'DECLARE @version_date datetimeoffset(7)= sysdatetimeoffset()' + @crlf 
-set @sql1 += 'DECLARE @load_start_datetime datetimeoffset(7)= sysdatetimeoffset()' + @crlf 
-set @sql1 += 'DECLARE @load_end_datetime datetimeoffset(7)' + @crlf 
+set @sql1 += 'SELECT @version_date = sysdatetimeoffset()' + @crlf 
+set @sql1 += 'SELECT @__load_start_date = sysdatetimeoffset()' + @crlf 
+set @sql1 += 'SELECT @__vault_runkey = ' + isnull(cast(@vault_runkey as varchar(20)), '0') + @crlf 
+--set @sql1 += 'DECLARE @load_end_datetime datetimeoffset(7)' + @crlf 
 set @sql1 += 'BEGIN TRANSACTION' + @crlf 
 set @sql1 += ';WITH wBaseSet AS (SELECT ' + @wrk_link_match + ' FROM ' + quotename(@temp_table_name) + ')' + @crlf
 set @sql1 += 'MERGE ' + @link_qualified_name + ' WITH (HOLDLOCK) AS link' + @crlf
@@ -327,12 +328,12 @@ set @sql1 += 'ON' + @wrk_link_keys
 set @sql1 += 'WHEN NOT MATCHED BY TARGET THEN ' + @crlf
 set @sql1 += 'INSERT(' + @link_technical_columns + @wrk_hub_joins +  ')' + @crlf
 set @sql1 += 'VALUES(@version_date, ''' + cast(@stage_source_version_key as varchar(20)) + ''',' + @wrk_hub_joins + ')OUTPUT $action into @rowcounts;' + @crlf
-set @sql1 += 'select @insertcount = count(*) from @rowcounts;' + @crlf
-set @sql1 += 'SELECT @load_end_datetime = sysdatetimeoffset();' + @crlf
+set @sql1 += 'SELECT @__rows_inserted = count(*) from @rowcounts;' + @crlf
+set @sql1 += 'SELECT @__load_end_date = sysdatetimeoffset();' + @crlf
+set @sql1 += 'SET @__high_water_date = @version_date;' + @crlf
 -- Log Completion
-set @SQL1 += 'EXECUTE [dv_log].[dv_log_progress] ''lnk'',''' + @link_table + ''',''' + @link_schema + ''',''' +  @link_database + ''',' 
-set @SQL1 += '''' + @vault_source_unique_name + ''',@@SPID,' + isnull(cast(@vault_runkey as varchar), 'NULL') + ', @version_date, @lookup_start_date, @load_start_datetime, @load_end_datetime, @insertcount, 0, 0, 0' + @crlf
-set @SQL1 += 'COMMIT;' + @crlf
+select @sql1 += [dv_scripting].[fn_get_task_log_insert_statement] (@vault_source_version_key, 'link', @link_config_key, 0)
+set @sql1 += 'COMMIT;' + @crlf
 set @sql = @sql1
 
 /*--------------------------------------------------------------------------------------------------------------*/

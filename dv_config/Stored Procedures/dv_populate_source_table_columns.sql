@@ -159,7 +159,7 @@ declare @columns table(
 		,column_precision			int 
 		,column_scale				int 
 		,Collation_Name				nvarchar(128) 
-		,bk_ordinal_position		int
+		--,bk_ordinal_position		int
 		,source_ordinal_position	int) 
 
 SET @parm_definition = N'@schema_name varchar(128), @table_name varchar(128), @column_list_OUT xml OUTPUT'
@@ -194,7 +194,7 @@ declare
 @column_precision			int = NULL,
 @column_scale				int = NULL,
 @Collation_Name				nvarchar(128) = NULL,
-@bk_ordinal_position		int,
+--@bk_ordinal_position		int,
 @source_ordinal_position	int,
 @is_source_date				bit,
 @is_retired					bit
@@ -213,7 +213,7 @@ SELECT
        Tbl.Col.value('@column_precision', 'int')			column_precision,
        Tbl.Col.value('@column_scale', 'int')				column_scale,
 	   Tbl.Col.value('@Collation_Name', 'nvarchar(128)')	collation_name,
-	   cast(0 as int)										bk_ordinal_position,
+	   --cast(0 as int)										bk_ordinal_position,
 	   Tbl.Col.value('@source_ordinal_position', 'int')		source_ordinal_position,
 	   cast(0 as bit)										is_source_date,
 	   cast(0 as bit)										is_retired
@@ -226,7 +226,7 @@ fetch next from Col_Cursor into  @column_name
 								,@column_precision			
 								,@column_scale				
 								,@Collation_Name				
-								,@bk_ordinal_position		
+								--,@bk_ordinal_position		
 								,@source_ordinal_position	
 								,@is_source_date
 								,@is_retired	
@@ -244,7 +244,7 @@ EXECUTE [dbo].[dv_column_insert]
 	   ,@column_precision			= @column_precision			
 	   ,@column_scale				= @column_scale				
 	   ,@Collation_Name				= @Collation_Name				
-	   ,@bk_ordinal_position		= @bk_ordinal_position		
+	   --,@bk_ordinal_position		= @bk_ordinal_position		
 	   ,@source_ordinal_position	= @source_ordinal_position	
 	   ,@is_source_date				= @is_source_date	
 	   ,@is_retired			        = @is_retired
@@ -255,7 +255,7 @@ fetch next from Col_Cursor into  @column_name
 								,@column_precision			
 								,@column_scale				
 								,@Collation_Name				
-								,@bk_ordinal_position		
+								--,@bk_ordinal_position		
 								,@source_ordinal_position	
 								,@is_source_date			
 								,@is_retired

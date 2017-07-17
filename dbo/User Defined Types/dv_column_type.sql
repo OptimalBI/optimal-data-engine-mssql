@@ -8,6 +8,8 @@
     [bk_ordinal_position]        INT           DEFAULT ((0)) NOT NULL,
     [source_ordinal_position]    INT           NOT NULL,
     [satellite_ordinal_position] INT           NOT NULL,
-    [abbreviation]               VARCHAR (50)  NULL,
-    [object_type]                VARCHAR (50)  NULL);
+    [default_value]              VARCHAR (50)  NULL,
+    [has_default]                BIT           DEFAULT ((0)) NOT NULL);
+
+
 

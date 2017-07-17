@@ -205,7 +205,7 @@ and sat.[satellite_name]	 = @vault_sat_name
 
 if @sat_link_hub_flag = 'H'
 insert @payload_columns
-select top 1 k.[column_name]
+select top 1 PARSENAME(k.[column_name], 1)
        ,k.[column_type]
        ,k.[column_length]
 	   ,k.[column_precision]
@@ -225,7 +225,7 @@ select top 1 k.[column_name]
   where s.[satellite_key] = @sat_config_key
 else 
 insert @payload_columns
-select top 1 k.[column_name]
+select top 1 PARSENAME(k.[column_name], 1)
        ,k.[column_type]
        ,k.[column_length]
 	   ,k.[column_precision]
@@ -307,7 +307,7 @@ exec (@SQL)
 SET @_ProgressText  = @_ProgressText + @NEW_LINE
 				+ 'Step: [' + @_Step + '] completed ' 
 
-IF @@TRANCOUNT > 0 COMMIT TRAN;
+--IF @@TRANCOUNT > 0 COMMIT TRAN;
 
 SET @_Message   = 'Successfully Created Sat: ' + @sat_table
 
@@ -317,7 +317,7 @@ SET @_ErrorContext	= 'Failed to Create Sat: ' + @sat_table
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
-		ROLLBACK TRAN;
+		--ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
 	END
 	

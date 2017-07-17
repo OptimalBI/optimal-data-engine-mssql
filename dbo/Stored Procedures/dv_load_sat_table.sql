@@ -16,8 +16,10 @@ AS
 BEGIN
 SET NOCOUNT ON
 
--- To Do - add Logging for the Payload Parameter
---         validate Parameters properly
+/*****************************************************************************************************************************
+Generates the Merge Statement for a single Satellite.
+This Proc does not execute the code.
+*****************************************************************************************************************************/
 -- System Wide Defaults
 -- Local Defaults Values
 DECLARE @crlf								char(2)			= CHAR(13) + CHAR(10)
@@ -54,6 +56,7 @@ DECLARE
 		,@source_load_date_time				varchar(128)
 		,@source_load_type					varchar(50)
 		,@source_payload					nvarchar(max)
+		,@stage_cdc_action					varchar(128)
 -- Hub Table
 		,@hub_database						varchar(128)
 		,@hub_schema						varchar(128)
@@ -86,9 +89,6 @@ DECLARE
 
 --  Working Storage
 DECLARE @execution_id				int
-       ,@rows_inserted				int
-	   ,@rows_updated				int
-	   ,@rows_deleted				int
 	   ,@rows_affected				int
 	   ,@load_duration				int
 	   ,@load_start_time            datetimeoffset(7)
@@ -220,7 +220,8 @@ select 	 @source_database			= sdb.[stage_database_name]
 		,@source_table_config_key	= st.[source_table_key]
 		,@source_version_key		= isnull(@vault_source_version_key, sv.source_version_key) -- if no source version is provided, use the current source version for the source table used as source for this load.
 		,@source_qualified_name		= quotename(sdb.[stage_database_name]) + '.' + quotename(ss.[stage_schema_name]) + '.' + quotename(st.[stage_table_name])
-		,@source_load_type			= coalesce(@vault_source_load_type, st.[load_type]) --The Run Time Load Type, If provided, overides the Default for the Source Table
+		--,@source_load_type			= coalesce(@vault_source_load_type, st.[load_type]) --The Run Time Load Type, If provided, overides the Default for the Source Table
+		,@source_load_type			= st.[load_type]
 from [dbo].[dv_source_table] st
 inner join [dbo].[dv_stage_schema] ss on ss.stage_schema_key = st.stage_schema_key
 inner join [dbo].[dv_stage_database] sdb on sdb.stage_database_key = ss.stage_database_key
@@ -232,6 +233,11 @@ if @@ROWCOUNT <> 1 RAISERROR ('Invalid Link Parameters Supplied',16,1);
 select @rc = count(*) from [dbo].[dv_source_version] where source_version_key = @source_version_key and is_current= 1
 if @rc <> 1 RAISERROR('dv_source_table or current dv_source_version missing for: %s, source version : %i', 16, 1, @source_qualified_name, @source_version_key);
 
+select @stage_cdc_action = [column_name]
+from [dbo].[dv_default_column]
+	where 1=1
+and object_type = CASE @source_load_type when'ODEcdc' then 'CdcStgODE' else 'CdcStgMSSQL' end
+and [object_column_type]  = 'CDC_Action'
 
 -- Get Satellite Details
 select 	 @sat_database			= sat.[satellite_database]						
@@ -251,7 +257,6 @@ if @sat_link_hub_flag = 'H'
 	select   @hub_database			= h.[hub_database]
 	        ,@hub_schema			= coalesce([hub_schema], @def_hub_schema, 'dbo')				
 			,@hub_table				= h.[hub_name]
---			,@hub_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([hub_name], 'hub'),'HubSurrogate')
 			,@hub_surrogate_keyname = (select replace(replace(column_name, '[', ''), ']', '') from [dbo].[fn_get_key_definition](h.[hub_name], 'hub'))
 			,@hub_config_key		= h.[hub_key]
 			,@hub_qualified_name	= quotename([hub_database]) + '.' + quotename(coalesce([hub_schema], @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([hub_name], 'hub')))	
@@ -267,7 +272,6 @@ begin
 	select   @link_database			= l.[link_database]
 	        ,@link_schema			= coalesce(l.[link_schema], @def_link_schema, 'dbo')				
 			,@link_table			= l.[link_name]
-			--,@link_surrogate_keyname = [dbo].[fn_get_object_name] ([dbo].[fn_get_object_name] ([link_name], 'lnk'),'LnkSurrogate')
 			,@link_surrogate_keyname= (select replace(replace(column_name, '[', ''), ']', '') from [dbo].[fn_get_key_definition](l.[link_name], 'lnk'))
 			,@link_config_key		= l.[link_key]
 			,@link_qualified_name	= quotename([link_database]) + '.' + quotename(coalesce(l.[link_schema], @def_link_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] ([link_name], 'lnk')))
@@ -314,11 +318,27 @@ select @sat_payload = left(@sql, len(@sql) -1)
 -- Compile the SQL
 
 set @sql2 = ''
+--if @sat_link_hub_flag = 'H'
+--	select @sql2 += [dv_scripting].[fn_get_task_log_insert_statement] (@source_version_key, 'hublookup', @hub_config_key, 0)
+--else if @sat_link_hub_flag = 'L'
+--	select @sql2 += [dv_scripting].[fn_get_task_log_insert_statement] (@source_version_key, 'linklookup', @link_config_key, 0)
 
 -- Insert New Rows for Updates
-set @sql2 = 'BEGIN TRANSACTION' + @crlf
-set @sql2 += 'select @load_start_date = sysdatetimeoffset();' + @crlf
+
+if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta' -- only need to loop is its a cdc delta run:
+begin
+    set @sql2 += 'SET @counter = 1' + @crlf
+	set @sql2 += 'SELECT @loopmax = ISNULL(MAX(rn),1) FROM ' + @vault_temp_table_name + @crlf 
+end
+set @sql2 += 'BEGIN TRANSACTION' + @crlf
 set @sql2 += 'SELECT *  INTO #t' + @sat_table + ' FROM ' +  @sat_qualified_name + ' WHERE 1 = 0;' + @crlf
+if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta' -- only need to loop is its a cdc delta run:
+	set @sql2 += 'WHILE @counter <= @loopmax' + @crlf
+set @sql2 += 'BEGIN' + @crlf
+if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta' -- only need to loop is its a cdc delta run:
+	--set @sql2 += 'SET @counter = @counter + 1' + @crlf
+	set @sql2 += 'SELECT @version_date = SYSDATETIMEOFFSET()'  + @crlf 
+set @sql2 += 'select @__load_start_date = sysdatetimeoffset();' + @crlf
 set @sql2 += 'INSERT INTO #t' + @sat_table + @crlf
 set @sql2 += ' (' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
 set @sql2 += ',   ' + replace(@sat_technical_columns, 'sat.', '')
@@ -327,35 +347,60 @@ set @sql2 += ')' + @crlf
    
 set @sql2 += 'SELECT ' + @crlf + '  hl_driver_key' + @crlf											-- Driving Hub / Link Surrogate Key
 
-set @sql2 += ', case when MergeOutput.' + 
-			case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
-			else quotename(@link_surrogate_keyname) end + 
-			' is null then ' + @sat_end_date_col +  ' else ' + @source_load_date_time + ' end'+@crlf-- Source Load Date Time. Deletes detected by the fact that they have no source Key
-set @sql2 += ', '	+ '''' + cast(@source_version_key as varchar(128)) + '''' + @crlf			-- Source Table Reference Key
-																	-- make the row Current
-set @sql2 += ', case when MergeOutput.' + 
-			case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
-			else quotename(@link_surrogate_keyname) end + 
-			' is null then 0 else 1 end' + @crlf													-- make the row Current if it's an update. Not Current if a Delete.
-set @sql2 += ', case when MergeOutput.' + 
-			case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
-			else quotename(@link_surrogate_keyname) end + 
-			' is null then 1 else 0 end' + @crlf													-- If it is a delete tombstone, set the deleted row flag. Deletes detected by the fact that they have no source Key
-set @sql2 += ', MergeOutput.' + @sat_end_date_col + @crlf											-- Row Start Date						
+set @sql2 += ', @source_date_time' + @crlf;
+set @sql2 += ', '	+ '''' + cast(@source_version_key as varchar(128)) + '''' + @crlf				-- Source Table Reference Key
 
-set @sql2 += ', case when MergeOutput.' + 
-			case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
-			else quotename(@link_surrogate_keyname) end + 
-			' is null then MergeOutput.' + @sat_end_date_col + ' else '''	+ cast(@def_global_highdate as varchar(50)) + ''' end' + @crlf -- Row End Date
 
+--******************************************************************************************************************
+if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta'
+--If its a CDC Merge, use the "Action" to determine whether it is a tombstone or not.
+begin
+	set @sql2 += ', case when MergeOutput.' + @stage_cdc_action +										-- make the row Current
+				 ' = ''D'' then 0 else 1 end' + @crlf													-- make the row Current if it's an update. Not Current if a Delete.
+	set @sql2 += ', case when MergeOutput.' + @stage_cdc_action + 
+				' = ''D'' then 1 else 0 end' + @crlf													-- If it is a delete tombstone, set the deleted row flag. Deletes detected by the fact that they have no source Key
+	set @sql2 += ', MergeOutput.' + @sat_end_date_col + @crlf											-- Row Start Date						
+	
+	set @sql2 += ', case when MergeOutput.' + @stage_cdc_action +
+				' = ''D'' then MergeOutput.' + @sat_end_date_col + ' else '''	+ cast(@def_global_highdate as varchar(50)) + ''' end' + @crlf -- Row End Date
+end
+--******************************************************************************************************************
+-- If we are doing a NON - CDC Merge i.e we have to imply deletes:
+else
+begin																	
+	set @sql2 += ', case when MergeOutput.' +															-- make the row Current
+				case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
+				else quotename(@link_surrogate_keyname) end + 
+				' is null then 0 else 1 end' + @crlf													-- make the row Current if it's an update. Not Current if a Delete.
+	set @sql2 += ', case when MergeOutput.' + 
+				case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
+				else quotename(@link_surrogate_keyname) end + 
+				' is null then 1 else 0 end' + @crlf													-- If it is a delete tombstone, set the deleted row flag. Deletes detected by the fact that they have no source Key
+	set @sql2 += ', MergeOutput.' + @sat_end_date_col + @crlf											-- Row Start Date						
+	
+	set @sql2 += ', case when MergeOutput.' + 
+				case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) 
+				else quotename(@link_surrogate_keyname) end + 
+				' is null then MergeOutput.' + @sat_end_date_col + ' else '''	+ cast(@def_global_highdate as varchar(50)) + ''' end' + @crlf -- Row End Date
+end
+--******************************************************************************************************************
 set @sql2 += ', '	+ replace(@sat_payload, 'sat.', '')												-- Payload
-set @sql2 += 'FROM ' + @crlf + ' (MERGE '  + @sat_qualified_name + ' WITH (HOLDLOCK) AS [sat]' + @crlf 
-set @sql2 += ' USING ' + @vault_temp_table_name + ' AS [src]' + @crlf
+set @sql2 += 'FROM ' + @crlf + ' (MERGE '  + @sat_qualified_name + ' WITH (HOLDLOCK) AS [sat]' + @crlf
+if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta' -- if it's a cdc delta, only pick the correct rows for the loop:
+	set @sql2 += ' USING (SELECT * FROM ' + @vault_temp_table_name + ' WHERE rn = @counter) AS [src]' + @crlf
+else
+	set @sql2 += ' USING ' + @vault_temp_table_name + ' AS [src]' + @crlf
 set @sql2 += ' ON sat.' + case when @sat_link_hub_flag = 'H' then  @hub_surrogate_keyname else @link_surrogate_keyname end + ' = src.' +  case when @sat_link_hub_flag = 'H' then  @hub_surrogate_keyname else @link_surrogate_keyname end + @crlf
 set @sql2 += ' AND sat.' + @sat_current_row_col + ' = 1' + @crlf
 
 -- End Date Rows for Updates
-set @sql2 += ' WHEN MATCHED AND EXISTS ' + @crlf
+--******************************************************************************************************************
+if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta'
+--If its a CDC Merge, use the "Action" to determine how to merge.
+	set @sql2 += ' WHEN MATCHED AND [src].' + @stage_cdc_action + ' = ''D'' OR EXISTS ' +@crlf
+else 
+	set @sql2 += ' WHEN MATCHED AND EXISTS ' + @crlf
+--******************************************************************************************************************
 set @sql2 += '  (SELECT ' + @crlf
 set @sql2 += '  src.' + case when @sat_link_hub_flag = 'H' then  @hub_surrogate_keyname else @link_surrogate_keyname end + @crlf + ', '
 set @sql2 += @source_payload 
@@ -367,7 +412,13 @@ set @sql2 += @sat_current_row_col + '  = 0' + @crlf
 
 set @sql2 += ',  ' + @sat_end_date_col + ' = iif(@version_date > sat.' + @sat_start_date_col + ', @version_date, dateadd(ms,1, sat.' + @sat_start_date_col + '))' + @crlf
 --Insert New Rows for New Keys:
-set @sql2 += 'WHEN NOT MATCHED BY TARGET ' + @crlf
+--******************************************************************************************************************
+ if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta'
+--If its a CDC Merge, use the "Action" to determine how to merge.
+	set @sql2 += 'WHEN NOT MATCHED BY TARGET AND ([src].' + @stage_cdc_action + ' <> ''D'')' + @crlf
+else 
+	set @sql2 += 'WHEN NOT MATCHED BY TARGET ' + @crlf
+--******************************************************************************************************************
 set @sql2 += '  THEN INSERT ( ' + @crlf
 set @sql2 += '  ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
 set @sql2 += ', ' + replace(@sat_technical_columns, 'sat.', '')
@@ -380,10 +431,10 @@ set @sql2 += ', 0' + @crlf
 set @sql2 += ', @version_date ' + @crlf
 set @sql2 += ', ''' + cast(@def_global_highdate as varchar(50)) + '''' + @crlf
 set @sql2 += ', ' +@source_payload + ')' + @crlf
--- End Date Deleted Rows
+-- When it is a Full (Snapshot) type of load, infer deleted rows where there is no incoming key:
 if @source_load_type = 'Full'
 begin
-	set @sql2 += 'WHEN NOT MATCHED BY SOURCE AND sat.' + @sat_current_row_col + ' = 1' +@crlf
+	set @sql2 += 'WHEN NOT MATCHED BY SOURCE AND sat.' + @sat_current_row_col + ' = 1' + @crlf
 	set @sql2 += 'THEN UPDATE SET ' + @crlf
 	set @sql2 += '  ' + @sat_current_row_col + ' = 0' + @crlf
 	set @sql2 += ', ' + @sat_end_date_col + ' = iif(@version_date > sat.' + @sat_start_date_col + ', @version_date, dateadd(ms,1, sat.' + @sat_end_date_col + ')'+ @crlf
@@ -391,7 +442,7 @@ begin
 end
 -- Output End Dated Rows for Insert by the Outer Query. 
 -- Also output the End Date, for use as the next start date.
-set @sql2 += '  OUTPUT $action AS Action' + @crlf
+set @sql2 += '  OUTPUT $action AS dv_load_sat_table__action' + @crlf
 set @sql2 += '        ,inserted.' + @sat_end_date_col + @crlf
 set @sql2 += '        ,inserted.' + @sat_current_row_col + @crlf  --------------------------------
 set @sql2 += '        ,inserted.' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + ' as hl_driver_key' + @crlf
@@ -399,7 +450,7 @@ set @sql2 += '        ,inserted.' + @sat_source_date_time + @crlf
 set @sql2 += '        ,[src].*' + @crlf
 set @sql2 += ') AS MergeOutput' + @crlf
 set @sql2 += '  WHERE 1=1' + @crlf
-set @sql2 += '  AND MergeOutput.Action = ''UPDATE''' + @crlf
+set @sql2 += '  AND MergeOutput.dv_load_sat_table__action = ''UPDATE''' + @crlf
 set @sql2 += ';' + @crlf-- Merge Statement Must end with ';'
 
 -- Insert the Tombstones:
@@ -412,18 +463,24 @@ set @sql2 += 'SELECT ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub
 set @sql2 += ',' + replace(@sat_technical_columns, 'sat.', '')
 set @sql2 += replace(@sat_payload, 'sat.', '')  + @crlf
 set @sql2 += 'FROM #t' + @sat_table + ';' + @crlf
-set @sql2 += 'SELECT @rows_updated = @@ROWCOUNT;' + @crlf
-set @sql2 += 'SELECT @load_end_date = sysdatetimeoffset();' + @crlf
+--set @sql2 += 'SELECT @rows_updated = @@ROWCOUNT;' + @crlf
+set @sql2 += 'SELECT @__load_end_date = sysdatetimeoffset()' + @crlf 
+set @sql2 += '      ,@__high_water_date = @version_date' + @crlf 
+set @sql2 += '      ,@__rows_inserted = 0;' + @crlf 
 
 -- Log Completion
-set @sql2 += 'EXECUTE [dv_log].[dv_log_progress] ''sat'',''' + @sat_table + ''',''' + @sat_schema + ''',''' +  @sat_database + ''',' 
-set @sql2 += '''' + @vault_source_unique_name + ''',' 
-set @sql2 += '@@SPID,' + isnull(cast(@vault_runkey as varchar), 'NULL') + ', @version_date, @lookup_start_date, @load_start_date, @load_end_date, 0, @rows_updated, 0, 0' + @crlf
+select @sql2 += [dv_scripting].[fn_get_task_log_insert_statement] (@source_version_key, 'sat', @sat_config_key, 0)
+if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta' -- only need to loop is its a cdc delta run:
+begin
+	set @sql2 += 'SET @counter = @counter + 1' + @crlf
+	set @sql2 += 'TRUNCATE TABLE #t' + @sat_table + @crlf
+end
+--print @sql2
+set @sql2 += 'END' + @crlf
 set @sql2 += 'COMMIT;' + @crlf
 select @vault_sql_statement = @sql2
 IF @_JournalOnOff = 'ON' SET @_ProgressText = @crlf + @vault_sql_statement + @crlf
 /*--------------------------------------------------------------------------------------------------------------*/
-
 --print @vault_sql_statement
 --select @vault_sql_statement
 /*--------------------------------------------------------------------------------------------------------------*/

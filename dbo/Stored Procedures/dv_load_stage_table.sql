@@ -103,8 +103,8 @@ select 	 @source_database				= sdb.[stage_database_name]
 		,@source_schema					= ss.[stage_schema_name]
 		,@source_table					= st.[stage_table_name]
 		,@source_unique_name			= st.[source_unique_name]
-		,@source_load_type				= coalesce(@vault_source_load_type, st.[load_type], 'Full')
-		,@source_type					= st.[source_type]
+		,@source_load_type				= coalesce(@vault_source_load_type, 'Full')
+		,@source_type					= sv.[source_type]
 		,@source_table_config_key		= st.[source_table_key]
 		,@source_qualified_name			= quotename(sdb.[stage_database_name]) + '.' + quotename(ss.[stage_schema_name]) + '.' + quotename(st.[stage_table_name])
 		,@source_version				= sv.[source_version]
@@ -123,15 +123,19 @@ if @@ROWCOUNT <> 1 RAISERROR('dv_source_table or current dv_source_version missi
 SET @_Step = 'Validate the Source Types'
 print @source_unique_name
 print @source_type
-IF @source_type NOT IN ('BespokeProc', 'ExternalStage')
+IF @source_type NOT IN ('BespokeProc', 'ExternalStage','SSISPackage')
 	EXECUTE [dbo].[dv_create_stage_table] @vault_source_unique_name	= @source_unique_name ,@recreate_flag = 'Y'
 if @source_type ='ExternalStage' set @source_type = @source_type     -- The Stage Table was provided by an outside process. Nothing to do except return the Source Version Key.
 
-else if @source_type = 'BespokeProc' EXECUTE [dbo].[dv_load_stage_table_BespokeProcedure] 
+else if @source_type = 'BespokeProc'    EXECUTE [dbo].[dv_load_stage_table_BespokeProcedure] 
 										@vault_source_version_key	= @vault_source_version_key
 									   ,@vault_source_load_type		= @source_load_type
 									   ,@vault_runkey				= @vault_runkey
 else if @source_type = 'LeftrightComparison' EXECUTE [dbo].[dv_load_stage_table_LeftrightComparison] 
+										@vault_source_version_key	= @vault_source_version_key
+									   ,@vault_source_load_type		= @source_load_type
+									   ,@vault_runkey				= @vault_runkey
+else if @source_type = 'SSISPackage'    EXECUTE [dbo].[dv_load_stage_table_SSISPackage] 
 										@vault_source_version_key	= @vault_source_version_key
 									   ,@vault_source_load_type		= @source_load_type
 									   ,@vault_runkey				= @vault_runkey

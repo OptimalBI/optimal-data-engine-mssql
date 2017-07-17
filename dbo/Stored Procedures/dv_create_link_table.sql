@@ -90,7 +90,7 @@ where 1=1
 
 insert @payload_columns
 select  DISTINCT 
-        column_name = case when lkc.link_key_column_name is null then hd.[column_name] else hd1.[column_name] end
+        column_name = PARSENAME(case when lkc.link_key_column_name is null then hd.[column_name] else hd1.[column_name] end, 1)
        ,hd.[column_type]
        ,hd.[column_length]
 	   ,hd.[column_precision]
@@ -136,7 +136,7 @@ SET @_Step = 'Index the Link on the Hub Keys'
 select @SQL = ''
 select @SQL += 'CREATE UNIQUE NONCLUSTERED INDEX ' + quotename('UX__' + @varobject_name + cast(newid() as varchar(56))) 
 select @SQL += ' ON ' + @table_name + '(' + @crlf + ' '
-select @SQL = @SQL + rtrim(column_name) + @crlf +  ','
+select @SQL = @SQL + QUOTENAME(rtrim(column_name)) + @crlf +  ','
 	from @payload_columns
 	order by column_name
 select @SQL = left(@SQL, len(@SQL) -1) + ') '
@@ -151,7 +151,7 @@ IF @_JournalOnOff = 'ON'
 exec (@SQL)
 
 /*--------------------------------------------------------------------------------------------------------------*/
-IF @@TRANCOUNT > 0 COMMIT TRAN;
+--IF @@TRANCOUNT > 0 COMMIT TRAN;
 
 SET @_Message   = 'Successfully Created link: ' + @table_name
 
@@ -161,7 +161,7 @@ SET @_ErrorContext	= 'Failed to Create link: ' + @table_name
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
-		ROLLBACK TRAN;
+		--ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
 	END
 	

@@ -61,7 +61,7 @@ SET @_ProgressText      = ''
 SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
 
 select @payload_columns_string =''
-select @payload_columns_string +=  [column_name] + ',' + 'column_type: ' +[column_type] + ', column_length:' + isnull(cast([column_length] as varchar(128)), '<NULL>') + ', column_precision:' + isnull(cast([column_precision] as varchar(128)),'<NULL>') + ', column_scale;' + isnull(cast([column_scale] as varchar(128)), '<NULL>') + ', Collation_Name:' + isnull([Collation_Name], '<NULL>') + @crlf
+select @payload_columns_string +=  QUOTENAME([column_name]) + ',' + 'column_type: ' +[column_type] + ', column_length:' + isnull(cast([column_length] as varchar(128)), '<NULL>') + ', column_precision:' + isnull(cast([column_precision] as varchar(128)),'<NULL>') + ', column_scale;' + isnull(cast([column_scale] as varchar(128)), '<NULL>') + ', Collation_Name:' + isnull([Collation_Name], '<NULL>') + @crlf
       from @payload_columns
 -- set the Parameters for logging:
 
@@ -129,28 +129,29 @@ select @SQL += 'CREATE TABLE ' + @table_name + '(' + @crlf + ' '
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Add the Columns'
---1. Primary Key
-select @SQL = @SQL + column_name + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 0, 1, 0, 1) + @crlf + ',' 
+--Primary Key
+select @SQL = @SQL + [column_name] + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 0, NULL, 0, 1, 0, 1) + @crlf + ',' 
 from [fn_get_key_definition](@object_name, @object_type)
 
---Payload
-select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0, 0, 1) + @crlf + ',' 
+--Technical Columns
+select @SQL = @SQL + QUOTENAME([column_name]) + ' ' + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 0, NULL, 1, 0, 0, 1) + @crlf + ',' 
 from
 (select *
 from @default_columns) a
-order by source_ordinal_position
+order by [source_ordinal_position]
 
-select @SQL = @SQL + column_name + ' ' + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], 1, 0, 0, 1) + @crlf + ',' 
+--Payload Columns
+select @SQL = @SQL + QUOTENAME([column_name]) + ' ' + dbo.[fn_build_column_definition]('',[column_type], [column_length], [column_precision], [column_scale], [Collation_Name], [has_default], [default_value], 1, 0, 0, 1) + @crlf + ',' 
 from
 (select *
 from @payload_columns) a
-order by satellite_ordinal_position, column_name
+order by [satellite_ordinal_position], [column_name]
 
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Add the Primary Key'
 if @is_columnstore = 0
 	begin
-	select @pk_name = column_name from [fn_get_key_definition](@object_name, @object_type)
+	select @pk_name = [column_name] from [fn_get_key_definition](@object_name, @object_type)
 	select @SQL += 'PRIMARY KEY CLUSTERED (' + @pk_name + ') ON ' + quotename(@object_filegroup) + @crlf
 	end
 select @SQL += ') '	
@@ -171,7 +172,7 @@ exec (@SQL)
 SET @_ProgressText  = @_ProgressText + @NEW_LINE
 				+ 'Step: [' + @_Step + '] completed ' 
 
-IF @@TRANCOUNT > 0 COMMIT TRAN;
+--IF @@TRANCOUNT > 0 COMMIT TRAN;
 
 SET @_Message   = 'Successfully Created Object: ' + @table_name
 

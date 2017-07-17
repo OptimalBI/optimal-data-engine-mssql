@@ -1,9 +1,10 @@
 ﻿
 
 CREATE PROC [dbo].[dv_stage_database_insert] 
-    @stage_database_name varchar(128),
-	@is_retired bit,
-	@release_number int
+    @stage_database_name	varchar(128),
+	@stage_connection_name	varchar(50),
+	@is_retired				bit,
+	@release_number			int
 AS 
 	SET NOCOUNT ON 
 	SET XACT_ABORT ON  
@@ -17,8 +18,8 @@ AS
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 
-	INSERT INTO [dbo].[dv_stage_database]([stage_database_name],[is_retired],[release_key])
-    SELECT @stage_database_name, @is_retired, @release_key
+	INSERT INTO [dbo].[dv_stage_database]([stage_database_name],[stage_connection_name], [is_retired],[release_key])
+    SELECT @stage_database_name, @stage_connection_name, @is_retired, @release_key
 	
 	-- Begin Return Select <- do not remove
 	SELECT *

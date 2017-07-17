@@ -153,7 +153,7 @@ exec (@SQL)
 SET @_ProgressText  = @_ProgressText + @NEW_LINE
 				+ 'Step: [' + @_Step + '] completed ' 
 
-IF @@TRANCOUNT > 0 COMMIT TRAN;
+--IF @@TRANCOUNT > 0 COMMIT TRAN;
 
 SET @_Message   = 'Successfully Created Hub: ' + @table_name
 
@@ -163,7 +163,7 @@ SET @_ErrorContext	= 'Failed to Create Hub: ' + @table_name
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
-		ROLLBACK TRAN;
+		--ROLLBACK TRAN;
 		SET @_ErrorContext = @_ErrorContext + ' (Forced rolled back of all changes)';
 	END
 	

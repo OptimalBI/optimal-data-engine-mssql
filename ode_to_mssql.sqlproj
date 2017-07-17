@@ -314,7 +314,6 @@
     <Build Include="dbo\Stored Procedures\dv_ref_function_delete.sql">
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
-    <Build Include="ODE_Release\Tables\dv_release_004_001_001.sql" />
     <Build Include="dbo\Tables\dv_stage_schema.sql" />
     <Build Include="dbo\Tables\dv_stage_database.sql" />
     <Build Include="dbo\Tables\dv_source_version.sql" />
@@ -324,7 +323,6 @@
     <Build Include="dv_log\Views\dv_dv_load_state_current.sql" />
     <Build Include="dbo\Views\vw_stage_table.sql" />
     <Build Include="dbo\Views\vw_LR_match_config_details.sql" />
-    <Build Include="dbo\Functions\fn_get_satellite_pit statement.sql" />
     <Build Include="dbo\Functions\fn_get_sat_pit statement.sql" />
     <Build Include="dbo\Functions\fn_get_object_join_statement.sql" />
     <Build Include="dbo\Functions\fn_get_object_from_statement.sql" />
@@ -374,6 +372,29 @@
     <Build Include="dbo\Stored Procedures\dv_column_match_delete.sql" />
     <Build Include="dbo\User Defined Types\dv_column_matching_list.sql" />
     <Build Include="dbo\User Defined Types\dv_column_list.sql" />
+    <Build Include="ODE_Release\Tables\dv_release_005_001_001.sql" />
+    <Build Include="dbo\Tables\dv_connection.sql" />
+    <Build Include="dv_log\Views\dv_dv_load_state_history.sql" />
+    <Build Include="dv_scripting\Functions\fn_get_task_log_insert_statement.sql" />
+    <Build Include="dv_scripting\Functions\fn_get_task_log_create_statement.sql" />
+    <Build Include="dv_scripting\Functions\fn_get_SSIS select_statement.sql" />
+    <Build Include="dv_scripting\Functions\fn_get_source_high_water_statement.sql" />
+    <Build Include="dv_scripting\Functions\fn_get_ODE_function_name.sql" />
+    <Build Include="dv_scripting\Functions\fn_get_MSSQL_function_name.sql" />
+    <Build Include="dv_scripting\Functions\fn_get_local_high_water_statement.sql" />
+    <Build Include="dv_scripting\Functions\dv_int_to_date.sql" />
+    <Build Include="dbo\Functions\fn_get_satellite_pit_statement.sql" />
+    <Build Include="dbo\Functions\fn_get_satellite_cdc_all_statement.sql" />
+    <Build Include="dv_scheduler\Stored Procedures\dv_process_queued_Agent001.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_stage_table_SSISPackage.sql" />
+    <Build Include="dbo\Stored Procedures\dv_load_hub_table_MSSQL_except.sql" />
+    <Build Include="dbo\Stored Procedures\dv_connection_update.sql" />
+    <Build Include="dbo\Stored Procedures\dv_connection_insert.sql" />
+    <Build Include="dbo\Stored Procedures\dv_connection_delete.sql" />
+    <Build Include="Service Broker\dv_scheduler_cAgent001.sql" />
+    <Build Include="Service Broker\dv_scheduler_mAgent001.sql" />
+    <Build Include="Service Broker\dv_scheduler_qAgent001.sql" />
+    <Build Include="Service Broker\dv_scheduler_sAgent001.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment1.sql" />

@@ -177,6 +177,7 @@ SET IDENTITY_INSERT [dbo].[dv_link] OFF;
 GO
 
 
+
 MERGE INTO [dbo].[dv_defaults] AS trgt 
 USING (VALUES	('Global','LowDate',1,'datetime',NULL,NULL,'Jan  1 1900 12:00:00:000AM',0),
 				('Global','HighDate',1,'datetime',NULL,NULL,'Dec 31 9999 12:00:00:000AM',0),
@@ -202,8 +203,15 @@ USING (VALUES	('Global','LowDate',1,'datetime',NULL,NULL,'Jan  1 1900 12:00:00:0
 				('Scheduler','PollDelayInSeconds',1,'int',30,NULL,NULL,0),
 				('stg','Filegroup',1,'varchar',NULL,'PRIMARY',NULL,0),
 				('stg','Prefix',1,'varchar',NULL,'',NULL,0),
-				('stg','Schema',1,'varchar',NULL,'Stage',NULL,0)
-
+				('stg','Schema',1,'varchar',NULL,'Stage',NULL,0),
+				('Scheduler','RetrySSISParameters',1,'int',5,' ',NULL,0),
+				('ODE_AccessFunction','Schema',1,'varchar',NULL,'Access',NULL,0),
+				('ODE_AccessFunction','Prefix',1,'varchar',NULL,'get_',NULL,0),
+				('ODE_AccessFunction','Suffix_pit',1,'varchar',NULL,'_pit',NULL,0),
+				('ODE_AccessFunction','Suffix_all',1,'varchar',NULL,'_all',NULL,0),
+				('MSSQL_AccessFunction','Schema',1,'varchar',NULL,'cdc',NULL,0),
+				('MSSQL_AccessFunction','Prefix',1,'varchar',NULL,'fn_cdc_get_all_changes_',NULL,0),
+				('MSSQL_AccessFunction','Suffix_all',1,'varchar',NULL,'_all_CT',NULL,0)
 			) AS src([default_type],[default_subtype],[default_sequence],[data_type],[default_integer],[default_varchar],[default_dateTime],[release_key])
 	ON
 		trgt.[default_type]     = src.[default_type] and 
@@ -242,7 +250,17 @@ USING	(VALUES ('Hub','Object_Key',1,'h_','%','_key','int',NULL,NULL,NULL,NULL,0,
 			    ('Stg','Load_Date_Time',2,NULL,'dv_stage_date_time',NULL,'datetimeoffset',NULL,7,NULL,NULL,0,0,0,0),
 			    ('Stg','Source_Version_Key',3,NULL,'dv_source_version_key',NULL,'varchar',50,NULL,NULL,NULL,0,0,0,0),
 				('Mtc','MasterTableColumn',1,NULL,'_master_table',NULL,'varchar',128,NULL,NULL,NULL,0,0,0,0),
-				('Mtc','MatchKeyColumn',2,NULL,'_match_row',NULL,'int',NULL,NULL,NULL,NULL,0,0,0,0)						  
+				('Mtc','MatchKeyColumn',2,NULL,'_match_row',NULL,'bigint',NULL,NULL,NULL,NULL,0,0,0,0),
+				('CdcStgODE','CDC_Action',51,NULL,'dv_cdc_action',NULL,'varchar',2, NULL,NULL,NULL,0,0,0,0),
+				('CdcStgODE','CDC_HighWaterDate',52,NULL,'dv_cdc_high_water_date',NULL,'datetimeoffset',NULL,7,NULL,NULL,1,0,0,0),
+				('CdcStgODE','CDC_StartDate',53,NULL,'dv_cdc_start_date',NULL,'datetimeoffset',NULL,7,NULL,NULL,1,0,0,0),
+				('CdcStgMSSQL','CDC_Action',51,NULL,'dv_cdc_action',NULL,'varchar',2,NULL,NULL,NULL,0,0,0,0),
+				('CdcStgMSSQL','CDC_HighWaterLSN',52,NULL,'dv_cdc_high_water_lsn',NULL,'varchar',50,NULL,NULL,NULL,1,0,0,0),
+				('CdcStgMSSQL','CDC_StartLSN',53,NULL,'dv_cdc_start_lsn',NULL,'varchar',50,NULL,NULL,NULL,1,0,0,0),
+				('CdcSrcMSSQL','CDC_Action',51,NULL,'__$operation',NULL,'int',NULL,NULL,NULL,NULL,1,0,0,0),
+				('CdcSrcMSSQL','CDC_StartLSN',52,NULL,'__$start_lsn',NULL,'binary',10,NULL,NULL,NULL,1,0,0,0),
+				('CdcSrcMSSQL','CDC_Sequence',53,NULL,'__$seqval',NULL,'binary',10,NULL,NULL,NULL,1,0,0,0),
+				('CdcStgMSSQL','CDC_Sequence',53,NULL,'dv_cdc_sequence',NULL,'varchar',50,NULL,NULL,NULL,1,0,0,0)
 			) AS src([object_type],[object_column_type],[ordinal_position],[column_prefix],[column_name],[column_suffix],[column_type],[column_length],[column_precision],[column_scale],[collation_Name],[is_nullable],[is_pk],[discard_flag],[release_key])
 	ON
 		trgt.[object_type]			= src.[object_type] and 

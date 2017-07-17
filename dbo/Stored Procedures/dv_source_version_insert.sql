@@ -1,9 +1,12 @@
 ﻿
 
+
 CREATE PROC [dbo].[dv_source_version_insert] 
     @source_table_key			int,
 	@source_version				int,
+	@source_type				varchar(50),
 	@source_procedure_name		varchar(128),
+	@source_filter              nvarchar(max),
     @pass_load_type_to_proc		bit,
 	@is_current					bit,
 	@release_number				int
@@ -20,8 +23,8 @@ AS
 	if @rc <> 1 
 		RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 	
-	INSERT INTO [dbo].[dv_source_version] ([source_table_key],[source_version],[source_procedure_name],[pass_load_type_to_proc],[is_current],[release_key])
-	SELECT @source_table_key, @source_version, @source_procedure_name, @pass_load_type_to_proc, @is_current, @release_key
+	INSERT INTO [dbo].[dv_source_version] ([source_table_key],[source_version],[source_type],[source_procedure_name],[source_filter],[pass_load_type_to_proc],[is_current],[release_key])
+	SELECT @source_table_key, @source_version, @source_type, @source_procedure_name, @pass_load_type_to_proc, @source_filter, @is_current, @release_key
 	
 	-- Begin Return Select <- do not remove
 	SELECT *
