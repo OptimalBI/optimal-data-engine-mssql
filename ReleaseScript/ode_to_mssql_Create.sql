@@ -3700,13 +3700,13 @@ CREATE QUEUE [dbo].[dv_scheduler_qAgent001];
 
 
 GO
-PRINT N'Creating [dv_scheduler_c002]...';
+PRINT N'Creating [dv_scheduler_cAgent001]...';
 
 
 GO
-CREATE CONTRACT [dv_scheduler_c002]
-    AUTHORIZATION [SBLogin]
-    ([dv_scheduler_m002] SENT BY ANY);
+CREATE CONTRACT [dv_scheduler_cAgent001]
+    AUTHORIZATION [dbo]
+    ([dv_scheduler_mAgent001] SENT BY ANY);
 
 
 GO
@@ -3715,18 +3715,18 @@ PRINT N'Creating [dv_scheduler_c001]...';
 
 GO
 CREATE CONTRACT [dv_scheduler_c001]
-    AUTHORIZATION [SBLogin]
+    AUTHORIZATION [dbo]
     ([dv_scheduler_m001] SENT BY ANY);
 
 
 GO
-PRINT N'Creating [dv_scheduler_cAgent001]...';
+PRINT N'Creating [dv_scheduler_c002]...';
 
 
 GO
-CREATE CONTRACT [dv_scheduler_cAgent001]
+CREATE CONTRACT [dv_scheduler_c002]
     AUTHORIZATION [dbo]
-    ([dv_scheduler_mAgent001] SENT BY ANY);
+    ([dv_scheduler_m002] SENT BY ANY);
 
 
 GO
