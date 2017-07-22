@@ -15,7 +15,7 @@
     [rows_updated]           INT                NULL,
     [rows_deleted]           INT                NULL,
     [rows_affected]          INT                NULL,
-    [updated_by]             VARCHAR (30)       NULL,
+    [updated_by]             VARCHAR (128)      NULL,
     [update_date_time]       DATETIMEOFFSET (7) NULL,
     PRIMARY KEY CLUSTERED ([load_state_history_key] ASC)
 );

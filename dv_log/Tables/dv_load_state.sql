@@ -13,7 +13,7 @@
     [rows_updated]          INT                DEFAULT ((0)) NULL,
     [rows_deleted]          INT                DEFAULT ((0)) NULL,
     [rows_affected]         INT                DEFAULT ((0)) NULL,
-    [updated_by]            VARCHAR (30)       DEFAULT (suser_name()) NULL,
+    [updated_by]            VARCHAR (128)      DEFAULT (suser_name()) NULL,
     [update_date_time]      DATETIMEOFFSET (7) DEFAULT (sysdatetimeoffset()) NULL,
     PRIMARY KEY CLUSTERED ([load_state_key] ASC)
 );

@@ -5,7 +5,7 @@
     [column_key]          INT                NOT NULL,
     [release_key]         INT                CONSTRAINT [DF_dv_hub_column_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]      INT                CONSTRAINT [DF__dv_hub_co__versi__2AD55B43] DEFAULT ((1)) NOT NULL,
-    [updated_by]          VARCHAR (30)       CONSTRAINT [DF__dv_hub_co__updat__2BC97F7C] DEFAULT (suser_name()) NULL,
+    [updated_by]          VARCHAR (128)      CONSTRAINT [DF__dv_hub_co__updat__2BC97F7C] DEFAULT (suser_name()) NULL,
     [updated_datetime]    DATETIMEOFFSET (7) CONSTRAINT [DF__dv_hub_co__updat__2CBDA3B5] DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_hub_c__1990F0D2AC6D4CF1] PRIMARY KEY CLUSTERED ([hub_col_key] ASC),
     CONSTRAINT [FK__dv_hub_column__dv_column] FOREIGN KEY ([column_key]) REFERENCES [dbo].[dv_column] ([column_key]),

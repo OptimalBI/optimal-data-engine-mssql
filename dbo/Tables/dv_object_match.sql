@@ -6,7 +6,7 @@
     [is_retired]         BIT                DEFAULT ((0)) NOT NULL,
     [release_key]        INT                DEFAULT ((0)) NOT NULL,
     [version_number]     INT                DEFAULT ((1)) NOT NULL,
-    [updated_by]         VARCHAR (30)       DEFAULT (suser_name()) NULL,
+    [updated_by]         VARCHAR (128)      DEFAULT (suser_name()) NULL,
     [updated_datetime]   DATETIMEOFFSET (7) DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_object_match] PRIMARY KEY CLUSTERED ([match_key] ASC),
     CONSTRAINT [FK_dv_object_match__dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),

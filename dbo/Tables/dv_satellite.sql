@@ -13,7 +13,7 @@
     [is_retired]                  BIT                DEFAULT ((0)) NOT NULL,
     [release_key]                 INT                CONSTRAINT [DF_dv_satellite_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]              INT                CONSTRAINT [DF__dv_satell__versi__76969D2E] DEFAULT ((1)) NOT NULL,
-    [updated_by]                  VARCHAR (30)       CONSTRAINT [DF__dv_satell__updat__778AC167] DEFAULT (suser_name()) NULL,
+    [updated_by]                  VARCHAR (128)      CONSTRAINT [DF__dv_satell__updat__778AC167] DEFAULT (suser_name()) NULL,
     [updated_datetime]            DATETIMEOFFSET (7) CONSTRAINT [DF__dv_satell__updat__787EE5A0] DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_satel__591F7B98AC67FA20] PRIMARY KEY CLUSTERED ([satellite_key] ASC),
     CONSTRAINT [CK_dv_satellite__link_hub_flag] CHECK ([link_hub_satellite_flag]='H' OR [link_hub_satellite_flag]='L'),

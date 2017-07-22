@@ -9,7 +9,7 @@
     [is_retired]              BIT                DEFAULT ((0)) NOT NULL,
     [release_key]             INT                CONSTRAINT [DF_dv_source_system_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]          INT                CONSTRAINT [DF__dv_source__versi__02084FDA] DEFAULT ((1)) NULL,
-    [updated_by]              VARCHAR (30)       CONSTRAINT [DF__dv_source__updat__02FC7413] DEFAULT (suser_name()) NULL,
+    [updated_by]              VARCHAR (128)      CONSTRAINT [DF__dv_source__updat__02FC7413] DEFAULT (suser_name()) NULL,
     [update_date_time]        DATETIMEOFFSET (7) CONSTRAINT [DF__dv_source__updat__03F0984C] DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_sourc__B5998963B2793DE4] PRIMARY KEY CLUSTERED ([source_system_key] ASC),
     CONSTRAINT [FK_dv_source_system_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),

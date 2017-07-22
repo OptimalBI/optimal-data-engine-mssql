@@ -8,7 +8,7 @@
     [is_cancelled]              BIT                CONSTRAINT [DF_dv_schedule_source_table_is_deleted] DEFAULT ((0)) NOT NULL,
     [release_key]               INT                CONSTRAINT [DF__dv_schedule_source_table_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]            INT                CONSTRAINT [DF__dv_schedule_source_table__version___534D60F1] DEFAULT ((1)) NOT NULL,
-    [updated_by]                VARCHAR (30)       CONSTRAINT [DF__dv_schedule_source_table__updated___5441852A] DEFAULT (suser_name()) NOT NULL,
+    [updated_by]                VARCHAR (128)      CONSTRAINT [DF__dv_schedule_source_table__updated___5441852A] DEFAULT (suser_name()) NOT NULL,
     [updated_datetime]          DATETIMEOFFSET (7) CONSTRAINT [DF__dv_schedule_source_table__updated___5535A963] DEFAULT (sysdatetimeoffset()) NOT NULL,
     CONSTRAINT [PK__dv_sched__5FF3626055109B18] PRIMARY KEY CLUSTERED ([schedule_source_table_key] ASC),
     CONSTRAINT [CK_dv_schedule_source_table__priority] CHECK ([priority]='Low' OR [priority]='High'),

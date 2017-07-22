@@ -9,7 +9,7 @@
     [is_current]             BIT                CONSTRAINT [DF__dv_source__is_cu__414EAC47] DEFAULT ((1)) NOT NULL,
     [release_key]            INT                CONSTRAINT [DF__dv_source__relea__4242D080] DEFAULT ((0)) NOT NULL,
     [version_number]         INT                CONSTRAINT [DF__dv_source__versi__4336F4B9] DEFAULT ((1)) NULL,
-    [updated_by]             VARCHAR (30)       CONSTRAINT [DF__dv_source__updat__442B18F2] DEFAULT (suser_name()) NULL,
+    [updated_by]             VARCHAR (128)      CONSTRAINT [DF__dv_source__updat__442B18F2] DEFAULT (suser_name()) NULL,
     [update_date_time]       DATETIMEOFFSET (7) CONSTRAINT [DF__dv_source__updat__451F3D2B] DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_source_version] PRIMARY KEY CLUSTERED ([source_version_key] ASC),
     CONSTRAINT [CK_dv_source_version__source_type] CHECK ([source_type]='BespokeProc' OR [source_type]='SourceTable' OR [source_type]='ExternalStage' OR [source_type]='LeftRightComparison' OR [source_type]='SSISPackage'),

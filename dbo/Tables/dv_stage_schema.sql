@@ -5,7 +5,7 @@
     [is_retired]         BIT                DEFAULT ((0)) NOT NULL,
     [release_key]        INT                DEFAULT ((0)) NOT NULL,
     [version_number]     INT                DEFAULT ((1)) NULL,
-    [updated_by]         VARCHAR (30)       DEFAULT (suser_name()) NULL,
+    [updated_by]         VARCHAR (128)      DEFAULT (suser_name()) NULL,
     [update_date_time]   DATETIMEOFFSET (7) DEFAULT (sysdatetimeoffset()) NULL,
     PRIMARY KEY CLUSTERED ([stage_schema_key] ASC),
     CONSTRAINT [FK_dv_stage_schema__dv_stage_database] FOREIGN KEY ([stage_database_key]) REFERENCES [dbo].[dv_stage_database] ([stage_database_key]),

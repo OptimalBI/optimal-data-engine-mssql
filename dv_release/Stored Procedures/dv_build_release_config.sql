@@ -100,7 +100,7 @@ update [dv_release].[dv_release_master]
 set [build_number]		= [build_number] + 1,
     [build_date]		= SYSDATETIMEOFFSET(),
 	[build_server]		= @@SERVERNAME,
-	[release_built_by]	= user_name()
+	[release_built_by]	= suser_name()
 where [release_key] = @release_key
 
 -- Extract the Release Master Details

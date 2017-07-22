@@ -7,12 +7,12 @@
     [build_number]              INT                CONSTRAINT [DF_release.dv_release_master_build_number] DEFAULT ((0)) NOT NULL,
     [build_date]                DATETIMEOFFSET (7) NULL,
     [build_server]              VARCHAR (256)      NULL,
-    [release_built_by]          VARCHAR (30)       NULL,
+    [release_built_by]          VARCHAR (128)      NULL,
     [release_start_datetime]    DATETIMEOFFSET (7) NULL,
     [release_complete_datetime] DATETIMEOFFSET (7) NULL,
     [release_count]             INT                CONSTRAINT [DF_release.dv_release_master_release_count] DEFAULT ((0)) NOT NULL,
     [version_number]            INT                CONSTRAINT [DF_release.dv_release_master_version_number] DEFAULT ((1)) NOT NULL,
-    [updated_by]                VARCHAR (30)       CONSTRAINT [DF_release.dv_release_master_updated_by] DEFAULT (suser_name()) NOT NULL,
+    [updated_by]                VARCHAR (128)      CONSTRAINT [DF_release.dv_release_master_updated_by] DEFAULT (suser_name()) NOT NULL,
     [updated_datetime]          DATETIMEOFFSET (7) CONSTRAINT [DF_release.dv_release_master_updated_datetime] DEFAULT (sysdatetimeoffset()) NOT NULL,
     CONSTRAINT [PK__dv_relea__7B7C0773AC625D81] PRIMARY KEY CLUSTERED ([release_key] ASC)
 );

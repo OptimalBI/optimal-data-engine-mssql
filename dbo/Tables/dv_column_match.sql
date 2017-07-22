@@ -11,7 +11,7 @@
     [right_column_key]          INT                NULL,
     [release_key]               INT                DEFAULT ((0)) NOT NULL,
     [version_number]            INT                DEFAULT ((1)) NOT NULL,
-    [updated_by]                VARCHAR (30)       DEFAULT (suser_name()) NULL,
+    [updated_by]                VARCHAR (128)      DEFAULT (suser_name()) NULL,
     [updated_datetime]          DATETIMEOFFSET (7) DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_column_match] PRIMARY KEY CLUSTERED ([col_match_key] ASC),
     CONSTRAINT [FK__dv_column_match__dv_column_left] FOREIGN KEY ([left_column_key]) REFERENCES [dbo].[dv_column] ([column_key]),

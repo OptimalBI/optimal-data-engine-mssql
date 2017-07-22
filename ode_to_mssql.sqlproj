@@ -105,13 +105,11 @@
     <Build Include="dbo\Tables\dv_satellite_column.sql" />
     <Build Include="dbo\Tables\dv_satellite.sql" />
     <Build Include="dbo\Tables\dv_link.sql" />
-    <Build Include="dbo\Tables\dv_hub_link.sql" />
     <Build Include="dbo\Tables\dv_hub_key_column.sql" />
     <Build Include="dbo\Tables\dv_hub_column.sql" />
     <Build Include="dbo\Tables\dv_hub.sql" />
     <Build Include="dbo\Tables\dv_defaults.sql" />
     <Build Include="dbo\Tables\dv_default_column.sql" />
-    <Build Include="dbo\Tables\dv_column_relationship.sql" />
     <Build Include="dbo\Tables\dv_column.sql" />
     <Build Include="log4\Tables\Exception.sql" />
     <Build Include="log4\Tables\Journal.sql" />
@@ -135,8 +133,6 @@
     <Build Include="dv_scheduler\Views\vw_manifest_status.sql" />
     <Build Include="dv_scheduler\Views\vw_queue_status.sql" />
     <Build Include="dv_scheduler\Views\vw_running_processes.sql" />
-    <Build Include="Security\SBLogin.sql" />
-    <Build Include="Security\RoleMemberships.sql" />
     <Build Include="dbo\Functions\fn_proper_case.sql" />
     <Build Include="dbo\Functions\fn_get_object_name.sql" />
     <Build Include="dbo\Functions\fn_Get_Next_Abbreviation.sql" />
@@ -300,7 +296,6 @@
     <Build Include="Security\dv_config.sql" />
     <Build Include="Service Broker\dv_scheduler_s002.sql" />
     <Build Include="Service Broker\dv_scheduler_s001.sql" />
-    <Build Include="Security\SBLogin_Login.sql" />
     <Build Include="dbo\Tables\dv_ref_function.sql" />
     <Build Include="dv_scripting\Functions\dv_int_to_string.sql" />
     <Build Include="dv_scripting\Functions\dv_concat.sql" />
@@ -395,6 +390,9 @@
     <Build Include="Service Broker\dv_scheduler_mAgent001.sql" />
     <Build Include="Service Broker\dv_scheduler_qAgent001.sql" />
     <Build Include="Service Broker\dv_scheduler_sAgent001.sql" />
+    <Build Include="Security\SBLogin_Login.sql" />
+    <Build Include="Security\SBLogin.sql" />
+    <Build Include="Security\RoleMemberships.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment1.sql" />
@@ -410,5 +408,8 @@
       <SuppressMissingDependenciesErrors>False</SuppressMissingDependenciesErrors>
       <DatabaseVariableLiteralValue>msdb</DatabaseVariableLiteralValue>
     </ArtifactReference>
+  </ItemGroup>
+  <ItemGroup>
+    <PreDeploy Include="Script.PreDeployment1.sql" />
   </ItemGroup>
 </Project>

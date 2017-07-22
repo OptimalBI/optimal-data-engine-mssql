@@ -4,7 +4,7 @@
     [link_key_column_name] VARCHAR (128)      NOT NULL,
     [release_key]          INT                CONSTRAINT [DF_dv_link_key_column_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]       INT                CONSTRAINT [DF__dv_link_key_column__version] DEFAULT ((1)) NOT NULL,
-    [updated_by]           VARCHAR (30)       CONSTRAINT [DF__dv_link_key_column__updated_by] DEFAULT (suser_name()) NULL,
+    [updated_by]           VARCHAR (128)      CONSTRAINT [DF__dv_link_key_column__updated_by] DEFAULT (suser_name()) NULL,
     [updated_datetime]     DATETIMEOFFSET (7) CONSTRAINT [DF__dv_link_key_column__updated_datetime] DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_link_key_column] PRIMARY KEY CLUSTERED ([link_key_column_key] ASC),
     CONSTRAINT [FK__dv_link_key_column__dv_link] FOREIGN KEY ([link_key]) REFERENCES [dbo].[dv_link] ([link_key]),

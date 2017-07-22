@@ -5,7 +5,7 @@
     [is_retired]        BIT                CONSTRAINT [DF_dv_ref_function_is_retired] DEFAULT ((0)) NOT NULL,
     [release_key]       INT                CONSTRAINT [DF_dv_ref_function_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]    INT                CONSTRAINT [DF_dv_ref_function_version] DEFAULT ((1)) NOT NULL,
-    [updated_by]        VARCHAR (30)       CONSTRAINT [DF_dv_ref_function_updated] DEFAULT (suser_name()) NULL,
+    [updated_by]        VARCHAR (128)      CONSTRAINT [DF_dv_ref_function_updated] DEFAULT (suser_name()) NULL,
     [updated_datetime]  DATETIMEOFFSET (7) CONSTRAINT [DF_dv_ref_function_updated_datetime] DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_ref_function] PRIMARY KEY CLUSTERED ([ref_function_key] ASC),
     CONSTRAINT [FK_dv_ref_function_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key])

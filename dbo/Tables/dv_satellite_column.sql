@@ -13,7 +13,7 @@
     [func_ordinal_position]      INT                CONSTRAINT [DF_dv_satellite_column_func_ordinal_position] DEFAULT ((0)) NOT NULL,
     [release_key]                INT                CONSTRAINT [DF_dv_satellite_column_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]             INT                CONSTRAINT [DF_dv_satellite_column_version_number] DEFAULT ((1)) NOT NULL,
-    [updated_by]                 VARCHAR (30)       CONSTRAINT [DF_dv_satellite_column_updated_by] DEFAULT (suser_name()) NULL,
+    [updated_by]                 VARCHAR (128)      CONSTRAINT [DF_dv_satellite_column_updated_by] DEFAULT (suser_name()) NULL,
     [updated_datetime]           DATETIMEOFFSET (7) CONSTRAINT [DF_dv_satellite_column_updated_datetime] DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_satellite_column] PRIMARY KEY CLUSTERED ([satellite_col_key] ASC),
     CONSTRAINT [FK__dv_satellite_column__dv_ref_function] FOREIGN KEY ([ref_function_key]) REFERENCES [dbo].[dv_ref_function] ([ref_function_key]),

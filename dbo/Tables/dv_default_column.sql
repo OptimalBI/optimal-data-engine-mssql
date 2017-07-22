@@ -16,7 +16,7 @@
     [discard_flag]       BIT                CONSTRAINT [DF__dv_defaul__disca__24285DB4] DEFAULT ((0)) NOT NULL,
     [release_key]        INT                CONSTRAINT [DF_dv_default_column_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]     INT                CONSTRAINT [DF__dv_defaul__versi__251C81ED] DEFAULT ((1)) NOT NULL,
-    [updated_by]         VARCHAR (30)       CONSTRAINT [DF__dv_defaul__updat__2610A626] DEFAULT (suser_name()) NULL,
+    [updated_by]         VARCHAR (128)      CONSTRAINT [DF__dv_defaul__updat__2610A626] DEFAULT (suser_name()) NULL,
     [update_date_time]   DATETIMEOFFSET (7) CONSTRAINT [DF__dv_defaul__updat__2704CA5F] DEFAULT (sysdatetimeoffset()) NULL,
     CONSTRAINT [PK__dv_defau__56A78F2CAD0ED7B9] PRIMARY KEY CLUSTERED ([default_column_key] ASC),
     CONSTRAINT [FK_dv_default_column_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]),
