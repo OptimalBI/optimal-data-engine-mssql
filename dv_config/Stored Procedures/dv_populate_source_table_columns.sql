@@ -5,13 +5,15 @@ CREATE PROCEDURE [dv_config].[dv_populate_source_table_columns]
     ,@vault_stage_schema					varchar(128)
 	,@vault_stage_table						varchar(128)
 	,@vault_source_unique_name				varchar(128)
-	,@vault_source_type						varchar(50)
+--	,@vault_source_type						varchar(50)
 	,@vault_stage_table_load_type			varchar(50)
 	,@vault_source_system_name				varchar(128)
-	--,@vault_source_procedure_schema			varchar(128)	= Null		
-	--,@vault_source_procedure_name			varchar(128)	= Null
+	,@vault_source_table_schema				varchar(128)	= Null		
+	,@vault_source_table_name				varchar(128)	= Null
 	,@vault_release_number					int				= 0
 	,@vault_rerun_column_insert				bit				= 0
+	,@is_columnstore						bit				= 1
+	,@is_compressed							bit				= 0
 	,@DoGenerateError						bit				= 0
 	,@DoThrowError							bit				= 1
 )
@@ -69,15 +71,17 @@ SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_Spr
 						+ @NEW_LINE + '    @vault_stage_schema           : ' + COALESCE(@vault_stage_schema						    , '<NULL>')
 						+ @NEW_LINE + '    @vault_stage_table            : ' + COALESCE(@vault_stage_table							, '<NULL>')
 						+ @NEW_LINE + '    @vault_source_unique_name     : ' + COALESCE(@vault_source_unique_name					, '<NULL>')
-						+ @NEW_LINE + '    @vault_source_type            : ' + COALESCE(@vault_source_type							, '<NULL>')
+--						+ @NEW_LINE + '    @vault_source_type            : ' + COALESCE(@vault_source_type							, '<NULL>')
 						+ @NEW_LINE + '    @vault_stage_table_load_type  : ' + COALESCE(@vault_stage_table_load_type				, '<NULL>')
 						+ @NEW_LINE + '    @vault_source_system_name     : ' + COALESCE(@vault_source_system_name					, '<NULL>')
-						--+ @NEW_LINE + '    @vault_source_procedure_schema: ' + COALESCE(@vault_source_procedure_schema				, '<NULL>')
-						--+ @NEW_LINE + '    @vault_source_procedure_name  : ' + COALESCE(@vault_source_procedure_name				, '<NULL>')
-						+ @NEW_LINE + '    @vault_release_number         : ' + COALESCE(cast(@vault_release_number as varchar)		, '<NULL>')
-						+ @NEW_LINE + '    @vault_rerun_column_insert    : ' + COALESCE(cast(@vault_rerun_column_insert as varchar)	, '<NULL>')
-						+ @NEW_LINE + '    @DoGenerateError : ' + COALESCE(CAST(@DoGenerateError AS varchar)						, '<NULL>')
-						+ @NEW_LINE + '    @DoThrowError    : ' + COALESCE(CAST(@DoThrowError AS varchar)							, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_table_schema	 : ' + COALESCE(@vault_source_table_schema					, '<NULL>')
+						+ @NEW_LINE + '    @vault_source_table_name		 : ' + COALESCE(@vault_source_table_name					, '<NULL>')
+						+ @NEW_LINE + '    @vault_release_number         : ' + COALESCE(cast(@vault_release_number as varchar(50))	, '<NULL>')
+						+ @NEW_LINE + '    @vault_rerun_column_insert    : ' + COALESCE(cast(@vault_rerun_column_insert as varchar(10)), '<NULL>')
+						+ @NEW_LINE + '	   @is_columnstore				 : ' + COALESCE(cast(@is_columnstore as varchar(10))		, '<NULL>')
+						+ @NEW_LINE + '	   @is_compressed				 : ' + COALESCE(cast(@is_compressed as varchar(10))			, '<NULL>')
+						+ @NEW_LINE + '    @DoGenerateError : ' + COALESCE(CAST(@DoGenerateError AS varchar(10))					, '<NULL>')
+						+ @NEW_LINE + '    @DoThrowError    : ' + COALESCE(CAST(@DoThrowError AS varchar(10))						, '<NULL>')
 						+ @NEW_LINE
 
 BEGIN TRANSACTION
@@ -113,13 +117,15 @@ if @@ROWCOUNT = 0  -- Table doesn't exist in Config.
 	begin
 	EXECUTE @stage_table_key = [dbo].[dv_source_table_insert] 
 				 @source_unique_name     = @vault_source_unique_name
-				,@source_type			 = @vault_source_type         
+				--,@source_type			 = @vault_source_type         
 				,@load_type              = @vault_stage_table_load_type             
 				,@system_key			 = @system_key    
-				,@source_table_schema    = null    
-				,@source_table_name      = ''    
+				,@source_table_schema    = @vault_source_table_schema   
+				,@source_table_name      = @vault_source_table_name    
 				,@stage_schema_key       = @stage_schema_key	    
-				,@stage_table_name       = @vault_stage_table	
+				,@stage_table_name       = @vault_stage_table
+				,@is_columnstore		 = @is_columnstore
+				,@is_compressed			 = @is_compressed
 				,@is_retired			 = 0
 				,@release_number		 = @vault_release_number
 	end
@@ -132,14 +138,17 @@ if @@ROWCOUNT = 0  -- Table doesn't exist in Config.
 		EXECUTE [dbo].[dv_source_table_update] 
 			     @source_table_key		 = @stage_table_key					
 		        ,@source_unique_name     = @vault_source_unique_name
-				,@source_type			 = @vault_source_type         
-				,@load_type              = @vault_stage_table_load_type             
+				,@load_type              = @vault_stage_table_load_type   
 				,@system_key			 = @system_key   
-				,@source_table_schema    = null    
-				,@source_table_name      = ''    
+				,@source_table_schema    = @vault_source_table_schema    
+				,@source_table_name      = @vault_source_table_name   
 				,@stage_schema_key       = @stage_schema_key	    
-				,@stage_table_name       = @vault_stage_table	
+				,@stage_table_name       = @vault_stage_table
+				,@is_columnstore		 = @is_columnstore
+				,@is_compressed			 = @is_compressed
 				,@is_retired			 = 0
+				--,@source_type			 = @vault_source_type         
+
 		end
 	else
 		begin
