@@ -432,7 +432,7 @@ set @sql2 += ', @version_date ' + @crlf
 set @sql2 += ', ''' + cast(@def_global_highdate as varchar(50)) + '''' + @crlf
 set @sql2 += ', ' +@source_payload + ')' + @crlf
 -- When it is a Full (Snapshot) type of load, infer deleted rows where there is no incoming key:
-if @source_load_type = 'Full'
+if @vault_source_load_type = 'Full'
 begin
 	set @sql2 += 'WHEN NOT MATCHED BY SOURCE AND sat.' + @sat_current_row_col + ' = 1' + @crlf
 	set @sql2 += 'THEN UPDATE SET ' + @crlf
