@@ -4,8 +4,10 @@
 , @vault_config_table_name		varchar(128)	= NULL
 , @vault_release_number			int				= NULL
 , @vault_exclude_columnsCSV		nvarchar(4000)	= null
+, @vault_start_pk				int				= -2147483648 
 , @vault_statement				nvarchar(max)	output
 , @vault_change_count			int				output
+, @vault_end_pk					int				output
 , @DoGenerateError              bit				= 0
 , @DoThrowError                 bit				= 1
 )
@@ -28,16 +30,18 @@ Notes:			Tables without a primary key are not supported.
 
 -- Internal use variables
 DECLARE @ExcludeColumns table(column_name sysname)
-insert @ExcludeColumns values ('version_number'), ('updated_by') ,('update_date_time')
+insert @ExcludeColumns values ('version_number'), ('updated_by') ,('update_date_time'), ('updated_datetime')
 if isnull(@vault_exclude_columnsCSV, '') <> ''
-	insert @ExcludeColumns SELECT Item FROM [dbo].[fn_split_strings] (@vault_exclude_columnsCSV, ',')
+	insert @ExcludeColumns SELECT * FROM [dbo].[fn_split_strings] (@vault_exclude_columnsCSV, ',')
 
 DECLARE
 	@delete_unmatched_rows	BIT = 0,	-- enable/disable DELETION of rows
 	@debug_mode				BIT = 0,	-- enable/disable debug mode
 	@include_timestamp		BIT = 0,	-- include timestamp columns or not
 	@omit_computed_cols		BIT = 1,	-- omit computed columns or not (in case target table doesn't have computed columns)
-	@top_clause				NVARCHAR(4000)	= N'TOP 100 PERCENT' , -- you can use this to limit number of generated rows (e.g. TOP 200)
+	--@top_clause				NVARCHAR(4000)	= N'TOP 100 PERCENT' , -- you can use this to limit number of generated rows (e.g. TOP 200)
+	@top_clause				NVARCHAR(4000)	= N'TOP 100' , -- Note that this value is set below using [dbo].[fn_get_default_value] ('StatementBatch','Release')
+	@top_count				INT,
 	@MergeStmnt				NVARCHAR(MAX),	
 	@CurrColumnId			INT,
 	@CurrColumnName			SYSNAME,
@@ -45,14 +49,16 @@ DECLARE
 	@ColumnList				NVARCHAR(MAX),
 	@UpdateSet				NVARCHAR(MAX),
 	@PKJoinClause			NVARCHAR(MAX),
+	@PKColumn				NVARCHAR(512),
 	@HasIdentity			BIT,
 	@GetValues				NVARCHAR(MAX),
 	@Values					NVARCHAR(MAX),
-	@release_key			int,
-	@change_count			int = 0,
+	@TopKey					INT,
+	@release_key			INT,
+	@change_count			INT = 0,
 	@currtable				SYSNAME,
 	@currschema				SYSNAME,
-	@release_number			int
+	@release_number			INT
 
 -- Log4TSQL Journal Constants 
 DECLARE @SEVERITY_CRITICAL      smallint = 1;
@@ -88,12 +94,15 @@ SET @_Severity          = @SEVERITY_INFORMATION;
 SET @_SprocStartTime    = sysdatetimeoffset();
 SET @_ProgressText      = '' 
 SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- left Group Name as HOWTO for now.
+ 
 
 -- set the Parameters for logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
 						+ @NEW_LINE + '    @vault_config_table_schema    : ' + COALESCE(@vault_config_table_schema, '<NULL>')
 						+ @NEW_LINE + '    @vault_config_table_name      : ' + COALESCE(@vault_config_table_name, '<NULL>')
 						+ @NEW_LINE + '    @vault_release_number         : ' + COALESCE(cast(@vault_release_number as varchar(20)), '<NULL>')
+						+ @NEW_LINE + '    @vault_exclude_columnsCSV     : ' + COALESCE(@vault_exclude_columnsCSV, '<NULL>')
+						+ @NEW_LINE + '    @vault_start_pk               : ' + COALESCE(cast(@vault_start_pk as varchar(20)), '<NULL>')
 						+ @NEW_LINE + '    @DoGenerateError              : ' + COALESCE(CAST(@DoGenerateError AS varchar), '<NULL>')
 						+ @NEW_LINE + '    @DoThrowError                 : ' + COALESCE(CAST(@DoThrowError AS varchar), '<NULL>')
 						+ @NEW_LINE
@@ -121,7 +130,10 @@ SELECT
 SELECT
     @currtable		=	@vault_config_table_name,
 	@currschema		=	@vault_config_table_schema,
-	@release_number	=	@vault_release_number 
+	@release_number	=	@vault_release_number
+
+SELECT @top_count = ISNULL(CAST([dbo].[fn_get_default_value] ('StatementBatch','Release') as INTEGER), 100) 
+SET @top_clause = 'TOP ' + cast(@top_count AS VARCHAR(50))
 			
 SET @_Step = 'Get Release Header';
 select @release_key = release_key from [dv_release].[dv_release_master] where release_number = @release_number
@@ -129,7 +141,8 @@ select @release_key = release_key from [dv_release].[dv_release_master] where re
 -- Find the table's Primary Key column(s) to build a JOIN clause
 
 SELECT 
-	@PKJoinClause = ISNULL(@PKJoinClause + N'
+    @PKColumn = col.name
+   ,@PKJoinClause = ISNULL(@PKJoinClause + N'
 AND ',N'') + 'trgt.' + QUOTENAME(col.name) + N' = src.' + QUOTENAME(col.name)
 FROM
 	sys.indexes AS ind
@@ -298,19 +311,32 @@ IF @debug_mode = 1
 DECLARE @Params NVARCHAR(MAX)
 DECLARE @CMD NVARCHAR(MAX);
 
-SET @Params = N'@Result NVARCHAR(MAX) OUTPUT'
-SET @CMD = 'SELECT ' + @top_clause + N' 
+--SET @Params = N'@Result NVARCHAR(MAX) OUTPUT'
+SET @Params = N'@Result NVARCHAR(MAX) OUTPUT, @vtop_key INT OUTPUT'
+
+SET @CMD = 
+        'DECLARE @top_key INT 
+		 SELECT @top_key = MAX('+ QUOTENAME(@PKColumn) +') FROM(SELECT ' + @top_clause + QUOTENAME(@PKColumn) + ' FROM ' + QUOTENAME(@CurrSchema) + '.' + QUOTENAME(@CurrTable) + 
+		' WHERE release_key = ' + cast(@release_key as varchar(20)) + '  
+		  AND ' + QUOTENAME(@PKColumn) + '>= ' + CAST(@vault_start_pk AS VARCHAR(50))
+		  + ' ORDER BY ' + QUOTENAME(@PKColumn)
+		  + ') zz
+		  SELECT @vtop_key = @top_key
+	  '
+SET @CMD += 
+    'SELECT ' + @top_clause + N' 
 	@Result = ISNULL(@Result + '',
 		'','''') + ' + @GetValues + ' FROM ' + QUOTENAME(@CurrSchema) + '.' + QUOTENAME(@CurrTable) + 
-		' WHERE release_key = ' + cast(@release_key as varchar(20))
+		' WHERE release_key = ' + cast(@release_key as varchar(20)) + '  
+		    AND ' + QUOTENAME(@PKColumn) + ' BETWEEN ' + CAST(@vault_start_pk AS VARCHAR(50)) + ' AND CAST(@top_key AS VARCHAR(50))'
 
 IF @debug_mode = 1
 	SELECT @CMD;
 
 -- Execute command and get the @Values parameter as output
-
-EXECUTE sp_executesql @CMD, @Params, @Values OUTPUT
-select @change_count = @@rowcount
+--PRINT @CMD
+EXECUTE sp_executesql @CMD, @Params, @Values OUTPUT, @TopKey OUTPUT
+SELECT @change_count = @@rowcount, @vault_end_pk = @TopKey
 
 SET @_Step = 'If table returned no rows'
 
@@ -343,7 +369,8 @@ BEGIN
 	-- Build the MERGE statement using all the parts we found
 
 	SET @MergeStmnt = @MergeStmnt + N' MERGE INTO ' + QUOTENAME(@CurrSchema) + N'.' + QUOTENAME(@CurrTable) + N' AS trgt ' +
-	'USING	(VALUES ' + @Values + N'
+	'USING	
+(VALUES ' + @Values + N'
 			) AS src(' + @ColumnList + N')
 	ON
 		' + @PKJoinClause + N'
@@ -373,7 +400,12 @@ Quit:
 
 
 SET @_Step = 'Output the final statement'
-
+IF @_JournalOnOff = 'ON' 
+	BEGIN
+	SET @_ProgressText += @NEW_LINE + '    @change_count                 : ' + COALESCE(cast(@change_count as varchar(20)), '<NULL>')
+	SET @_ProgressText += @NEW_LINE + '    @vault_end_pk                 : ' + COALESCE(cast(@vault_end_pk as varchar(20)), '<NULL>')
+	SET @_ProgressText += @NEW_LINE + '    @vault_statement              : ' + @NEW_LINE + COALESCE(@MergeStmnt, '<NULL>') + @NEW_LINE	
+	END
 SELECT @vault_statement		= @MergeStmnt
       ,@vault_change_count	= @change_count
 /*--------------------------------------------------------------------------------------------------------------*/

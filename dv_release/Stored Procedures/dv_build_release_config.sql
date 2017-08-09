@@ -9,6 +9,11 @@
 AS
 BEGIN
 SET NOCOUNT ON
+/*========================================================================================================================
+Description:	This script uses [dv_release].[fn_config_table_list] () to generate a list of Config Tables, to be included in the release.
+				It then calls [dv_release].[dv_build_release_config_table] for the Release Header and for each table, building up the complete release.
+=========================================================================================================================*/
+
 
 -- Internal use variables
 DECLARE @IncludeTables table(dv_schema_name sysname, dv_table_name sysname, dv_load_order int)
@@ -22,6 +27,8 @@ FROM [dv_release].[fn_config_table_list] ()
 DECLARE
     @vault_statement		nvarchar(max),
 	@vault_change_count		int,
+	@vault_start_pk			int,
+	@vault_end_pk		    int,
 	@release_key			int,
 	@release_number			int,
 	@change_count			int = 0,
@@ -104,7 +111,7 @@ set [build_number]		= [build_number] + 1,
 where [release_key] = @release_key
 
 -- Extract the Release Master Details
-EXECUTE [dv_release].[dv_build_release_config_table] 'dv_release', 'dv_release_master', @vault_release_number, 'release_start_datetime,release_complete_datetime,release_count', @vault_statement OUTPUT, @vault_change_count OUTPUT
+EXECUTE [dv_release].[dv_build_release_config_table] 'dv_release', 'dv_release_master', @vault_release_number, 'release_start_datetime,release_complete_datetime,release_count', -2147483648, @vault_statement OUTPUT, @vault_change_count OUTPUT, @vault_end_pk OUTPUT
 insert #dv_release_build([release_build_key], [release_number], [release_statement_type], [release_statement], [affected_row_count])values(@release_key, @vault_release_number, 'Header', @vault_statement, @vault_change_count)
 
 -- Extract the Changes per Table
@@ -115,14 +122,19 @@ order by dv_load_order
 
 OPEN dv_table_cursor
 FETCH NEXT FROM dv_table_cursor INTO @dv_schema_name, @dv_table_name
-
+SET @vault_start_pk = -2147483648 
 WHILE @@FETCH_STATUS = 0   
 BEGIN   
- --      print @dv_table_name
-	   EXECUTE [dv_release].[dv_build_release_config_table] @dv_schema_name, @dv_table_name, @vault_release_number, '', @vault_statement OUTPUT, @vault_change_count OUTPUT
+	SET @vault_change_count = 9999
+	WHILE @vault_change_count > 0
+	BEGIN
+	   EXECUTE [dv_release].[dv_build_release_config_table] @dv_schema_name, @dv_table_name, @vault_release_number, '', @vault_start_pk, @vault_statement OUTPUT, @vault_change_count OUTPUT, @vault_end_pk OUTPUT
 	   if isnull(@vault_change_count, 0) > 0
 			insert #dv_release_build([release_build_key], [release_number], [release_statement_type], [release_statement], [affected_row_count]) values(@release_key, @vault_release_number, 'Table', @vault_statement, @vault_change_count)
-       FETCH NEXT FROM dv_table_cursor INTO @dv_schema_name, @dv_table_name   
+	   SET @vault_start_pk = @vault_end_pk + 1 
+	END
+	FETCH NEXT FROM dv_table_cursor INTO @dv_schema_name, @dv_table_name
+	SET @vault_start_pk = -2147483648
 END   
 
 CLOSE dv_table_cursor   
