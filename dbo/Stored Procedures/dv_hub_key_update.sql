@@ -15,7 +15,14 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_hub_key_column]
-	SET    [hub_key] = @hub_key, [hub_key_column_name] = @hub_key_column_name, [hub_key_column_type] = @hub_key_column_type, [hub_key_column_length] = @hub_key_column_length, [hub_key_column_precision] = @hub_key_column_precision, [hub_key_column_scale] = @hub_key_column_scale, [hub_key_Collation_Name] = @hub_key_Collation_Name, [hub_key_ordinal_position] = @hub_key_ordinal_position 
+	SET    [hub_key] = @hub_key
+	, [hub_key_column_name] = @hub_key_column_name
+	, [hub_key_column_type] = @hub_key_column_type
+	, [hub_key_column_length] = @hub_key_column_length
+	, [hub_key_column_precision] = @hub_key_column_precision
+	, [hub_key_column_scale] = @hub_key_column_scale
+	, [hub_key_Collation_Name] = @hub_key_Collation_Name
+	, [hub_key_ordinal_position] = @hub_key_ordinal_position 
 	WHERE  [hub_key_column_key] = @hub_key_column_key
 	
 	-- Begin Return Select <- do not remove

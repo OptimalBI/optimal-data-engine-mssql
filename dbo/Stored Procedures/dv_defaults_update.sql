@@ -14,7 +14,13 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_defaults]
-	SET    [default_type] = @default_type, [default_subtype] = @default_subtype, [default_sequence] = @default_sequence, [data_type] = @data_type, [default_integer] = @default_integer, [default_varchar] = @default_varchar, [default_dateTime] = @default_dateTime
+	SET    [default_type] = @default_type
+	, [default_subtype] = @default_subtype
+	, [default_sequence] = @default_sequence
+	, [data_type] = @data_type
+	, [default_integer] = @default_integer
+	, [default_varchar] = @default_varchar
+	, [default_dateTime] = @default_dateTime
 	WHERE  [default_key] = @default_key
 	
 	-- Begin Return Select <- do not remove

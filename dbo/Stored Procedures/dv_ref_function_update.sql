@@ -11,7 +11,9 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_ref_function]
-	SET    [ref_function_name] = @ref_function_name,[ref_function] = @ref_function, [is_retired] = @is_retired
+	SET    [ref_function_name] = @ref_function_name
+	,[ref_function] = @ref_function
+	, [is_retired] = @is_retired
 	WHERE  [ref_function_key] = @ref_function_key
 	
 	-- Begin Return Select <- do not remove

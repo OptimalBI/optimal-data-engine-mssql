@@ -20,7 +20,19 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_column]
-	SET    [table_key] = @table_key, [satellite_col_key] = @satellite_col_key, [column_name] = @column_name, [column_type] = @column_type, [column_length] = @column_length, [column_precision] = @column_precision, [column_scale] = @column_scale, [Collation_Name] = @Collation_Name, @is_derived = [is_derived], @derived_value = [derived_value], [source_ordinal_position] = @source_ordinal_position, [is_source_date] = @is_source_date, [is_retired] = @is_retired
+	SET    [table_key] = @table_key
+	, [satellite_col_key] = @satellite_col_key
+	, [column_name] = @column_name
+	, [column_type] = @column_type
+	, [column_length] = @column_length
+	, [column_precision] = @column_precision
+	, [column_scale] = @column_scale
+	, [Collation_Name] = @Collation_Name
+	, [is_derived] = @is_derived
+	, [derived_value] = @derived_value
+	, [source_ordinal_position] = @source_ordinal_position
+	, [is_source_date] = @is_source_date
+	, [is_retired] = @is_retired
 	WHERE  [column_key] = @column_key
 	
 	-- Begin Return Select <- do not remove

@@ -21,7 +21,20 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_default_column]
-	SET    [object_type] = @object_type, [object_column_type] = @object_column_type, [ordinal_position] = @ordinal_position, [column_prefix] = @column_prefix, [column_name] = @column_name, [column_suffix] = @column_suffix, [column_type] = @column_type, [column_length] = @column_length, [column_precision] = @column_precision, [column_scale] = @column_scale, [collation_Name] = @collation_Name, [is_nullable] = @is_nullable, [is_pk] = @is_pk, [discard_flag] = @discard_flag
+	SET    [object_type] = @object_type
+	, [object_column_type] = @object_column_type
+	, [ordinal_position] = @ordinal_position
+	, [column_prefix] = @column_prefix
+	, [column_name] = @column_name
+	, [column_suffix] = @column_suffix
+	, [column_type] = @column_type
+	, [column_length] = @column_length
+	, [column_precision] = @column_precision
+	, [column_scale] = @column_scale
+	, [collation_Name] = @collation_Name
+	, [is_nullable] = @is_nullable
+	, [is_pk] = @is_pk
+	, [discard_flag] = @discard_flag
 	WHERE  [default_column_key] = @default_column_key
 	
 	-- Begin Return Select <- do not remove

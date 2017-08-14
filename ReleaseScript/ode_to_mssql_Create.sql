@@ -5787,46 +5787,6 @@ left join [dbo].[vw_stage_table]      r_st  on r_st.source_table_key		= r_c.tabl
 
 where st.source_type = 'LeftRightComparison'
 GO
-PRINT N'Creating [dbo].[dv_link_update]...';
-
-
-GO
-SET ANSI_NULLS ON;
-
-SET QUOTED_IDENTIFIER OFF;
-
-
-GO
-CREATE PROC [dbo].[dv_link_update] 
-    @link_key int,
-    @link_name varchar(128),
-    @link_abbreviation varchar(4) = NULL,
-    @link_schema varchar(128),
-    @link_database varchar(128),
-	@is_compressed bit,
-	@is_retired bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_link]
-	SET    [link_name] = @link_name, [link_abbreviation] = @link_abbreviation, [link_schema] = @link_schema, [link_database] = @link_database, [is_compressed] = @is_compressed, [is_retired] = @is_retired
-	WHERE  [link_key] = @link_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT *
-	FROM   [dbo].[dv_link]
-	WHERE  [link_key] = @link_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
-SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
-
-
-GO
 PRINT N'Creating [dbo].[dv_satellite_column_delete]...';
 
 
@@ -5898,42 +5858,6 @@ SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
 
 
 GO
-PRINT N'Creating [dbo].[dv_satellite_column_update]...';
-
-
-GO
-CREATE PROC [dbo].[dv_satellite_column_update] 
-    @satellite_col_key int,
-    @satellite_key int,
-	@column_name [varchar](128),
-	@column_type [varchar](30),
-	@column_length [int],
-	@column_precision [int],
-	@column_scale [int],
-	@Collation_Name [sysname],
-	@satellite_ordinal_position [int],
-	@ref_function_key [int],
-    @func_arguments [nvarchar](512),
-	@func_ordinal_position [int]
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_satellite_column]
-	SET    [satellite_key] = @satellite_key, [column_name] = @column_name,[column_type] = @column_type,[column_length] = @column_length,[column_precision] = @column_precision, [column_scale] = @column_scale, [Collation_Name] = @Collation_Name, [func_arguments] = @func_arguments,[satellite_ordinal_position] = @satellite_ordinal_position, [ref_function_key] = @ref_function_key, [func_ordinal_position] = @func_ordinal_position
-	
-	WHERE  [satellite_col_key] = @satellite_col_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [satellite_col_key], [satellite_key],[column_name],[column_type],[column_length],[column_precision],[column_scale],[Collation_Name],[satellite_ordinal_position],[ref_function_key],[func_arguments], [func_ordinal_position],[release_key], [version_number], [updated_by], [updated_datetime]
-	FROM   [dbo].[dv_satellite_column]
-	WHERE  [satellite_col_key] = @satellite_col_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
 PRINT N'Creating [dbo].[dv_satellite_delete]...';
 
 
@@ -6003,41 +5927,6 @@ AS
                
 	COMMIT
        RETURN SCOPE_IDENTITY()
-GO
-PRINT N'Creating [dbo].[dv_satellite_update]...';
-
-
-GO
-CREATE PROC [dbo].[dv_satellite_update] 
-    @satellite_key int,
-    @hub_key int,
-    @link_key int,
-    @link_hub_satellite_flag char(1),
-    @satellite_name varchar(128),
-    @satellite_abbreviation varchar(4) = NULL,
-    @satellite_schema varchar(128),
-    @satellite_database varchar(128),
-	@duplicate_removal_threshold	int,
-    @is_columnstore bit,
-	@is_compressed bit,
-	@is_retired bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_satellite]
-	SET    [hub_key] = @hub_key, [link_key] = @link_key, [link_hub_satellite_flag] = @link_hub_satellite_flag, [satellite_name] = @satellite_name, [satellite_abbreviation] = @satellite_abbreviation, [satellite_schema] = @satellite_schema, [satellite_database] = @satellite_database, [duplicate_removal_threshold] = @duplicate_removal_threshold, [is_columnstore] = @is_columnstore, [is_compressed] = @is_compressed, [is_retired] = @is_retired
-	WHERE  [satellite_key] = @satellite_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT *
-	FROM   [dbo].[dv_satellite]
-	WHERE  [satellite_key] = @satellite_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
 GO
 PRINT N'Creating [dbo].[dv_source_system_delete]...';
 
@@ -6188,76 +6077,6 @@ AS
 	COMMIT
        RETURN SCOPE_IDENTITY()
 GO
-PRINT N'Creating [dbo].[dv_source_table_update]...';
-
-
-GO
-CREATE PROC [dbo].[dv_source_table_update] 
-    @source_table_key		int,
-    @source_unique_name     varchar(128),   
-    @load_type              varchar(50),             
-    @system_key				int,            
-    @source_table_schema    varchar(128),    
-    @source_table_name      varchar(128),    
-    @stage_schema_key       int,
-	@is_columnstore			bit,
-	@is_compressed			bit,	    
-    @stage_table_name       varchar(128),		
-	@is_retired				bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_source_table]
-	SET    [source_unique_name] = @source_unique_name,[load_type] = @load_type,[system_key] = @system_key,[source_table_schma] = @source_table_schema,[source_table_nme] = @source_table_name,[stage_schema_key] = @stage_schema_key,[stage_table_name] = @stage_table_name, [is_columnstore] = @is_columnstore , [is_compressed] = @is_compressed ,[is_retired] = @is_retired
-	WHERE  [source_table_key] = @source_table_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT *
-	FROM   [dbo].[dv_source_table]
-	WHERE  [source_table_key] = @source_table_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
-PRINT N'Creating [dbo].[dv_column_update]...';
-
-
-GO
-CREATE PROC [dbo].[dv_column_update] 
-    @column_key int,
-    @table_key int,
-	@satellite_col_key int,
-    @column_name varchar(128),
-    @column_type varchar(30),
-    @column_length int = NULL,
-    @column_precision int = NULL,
-    @column_scale int = NULL,
-    @Collation_Name nvarchar(128) = NULL,
-	@is_derived	bit = NULL,
-	@derived_value varchar(50) = NULL,
-    @source_ordinal_position int,
-    @is_source_date bit,
-    @is_retired bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_column]
-	SET    [table_key] = @table_key, [satellite_col_key] = @satellite_col_key, [column_name] = @column_name, [column_type] = @column_type, [column_length] = @column_length, [column_precision] = @column_precision, [column_scale] = @column_scale, [Collation_Name] = @Collation_Name, @is_derived = [is_derived], @derived_value = [derived_value], [source_ordinal_position] = @source_ordinal_position, [is_source_date] = @is_source_date, [is_retired] = @is_retired
-	WHERE  [column_key] = @column_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT * FROM   [dbo].[dv_column]
-	WHERE  [column_key] = @column_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
 PRINT N'Creating [dbo].[dv_default_column_delete]...';
 
 
@@ -6340,54 +6159,6 @@ SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
 
 
 GO
-PRINT N'Creating [dbo].[dv_default_column_update]...';
-
-
-GO
-SET ANSI_NULLS ON;
-
-SET QUOTED_IDENTIFIER OFF;
-
-
-GO
-CREATE PROC [dbo].[dv_default_column_update] 
-    @default_column_key int,
-    @object_type varchar(30),
-    @object_column_type varchar(30),
-    @ordinal_position int,
-    @column_prefix varchar(30) = NULL,
-    @column_name varchar(256),
-    @column_suffix varchar(30) = NULL,
-    @column_type varchar(30),
-    @column_length int = NULL,
-    @column_precision int = NULL,
-    @column_scale int = NULL,
-    @collation_Name nvarchar(128) = NULL,
-    @is_nullable bit,
-    @is_pk bit,
-    @discard_flag bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_default_column]
-	SET    [object_type] = @object_type, [object_column_type] = @object_column_type, [ordinal_position] = @ordinal_position, [column_prefix] = @column_prefix, [column_name] = @column_name, [column_suffix] = @column_suffix, [column_type] = @column_type, [column_length] = @column_length, [column_precision] = @column_precision, [column_scale] = @column_scale, [collation_Name] = @collation_Name, [is_nullable] = @is_nullable, [is_pk] = @is_pk, [discard_flag] = @discard_flag
-	WHERE  [default_column_key] = @default_column_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [default_column_key], [object_type], [object_column_type], [ordinal_position], [column_prefix], [column_name], [column_suffix], [column_type], [column_length], [column_precision], [column_scale], [collation_Name], [is_nullable], [is_pk], [discard_flag], [version_number], [updated_by], [update_date_time]
-	FROM   [dbo].[dv_default_column]
-	WHERE  [default_column_key] = @default_column_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
-SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
-
-
-GO
 PRINT N'Creating [dbo].[dv_defaults_delete]...';
 
 
@@ -6463,47 +6234,6 @@ SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
 
 
 GO
-PRINT N'Creating [dbo].[dv_defaults_update]...';
-
-
-GO
-SET ANSI_NULLS ON;
-
-SET QUOTED_IDENTIFIER OFF;
-
-
-GO
-CREATE PROC [dbo].[dv_defaults_update] 
-    @default_key int,
-    @default_type varchar(50),
-    @default_subtype varchar(50),
-    @default_sequence int,
-    @data_type varchar(50),
-    @default_integer int = NULL,
-    @default_varchar varchar(128) = NULL,
-    @default_dateTime datetime = NULL
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_defaults]
-	SET    [default_type] = @default_type, [default_subtype] = @default_subtype, [default_sequence] = @default_sequence, [data_type] = @data_type, [default_integer] = @default_integer, [default_varchar] = @default_varchar, [default_dateTime] = @default_dateTime
-	WHERE  [default_key] = @default_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [default_key], [default_type], [default_subtype], [default_sequence], [data_type], [default_integer], [default_varchar], [default_dateTime], [version_number], [updated_by], [updated_datetime]
-	FROM   [dbo].[dv_defaults]
-	WHERE  [default_key] = @default_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
-SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
-
-
-GO
 PRINT N'Creating [dbo].[dv_hub_column_delete]...';
 
 
@@ -6565,33 +6295,6 @@ GO
 SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
 
 
-GO
-PRINT N'Creating [dbo].[dv_hub_column_update]...';
-
-
-GO
-CREATE PROC [dbo].[dv_hub_column_update] 
-    @hub_col_key int,
-    @hub_key_column_key int,
-	@link_key_column_key int,
-    @column_key int
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_hub_column]
-	SET    [hub_key_column_key] = @hub_key_column_key, [link_key_column_key] = @link_key_column_key, [column_key] = @column_key
-	WHERE  [hub_col_key] = @hub_col_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [hub_col_key], [hub_key_column_key], [link_key_column_key], [column_key], [version_number], [updated_by], [updated_datetime]
-	FROM   [dbo].[dv_hub_column]
-	WHERE  [hub_col_key] = @hub_col_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
 GO
 PRINT N'Creating [dbo].[dv_hub_delete]...';
 
@@ -6740,88 +6443,6 @@ AS
                
 	COMMIT
        RETURN SCOPE_IDENTITY()
-GO
-SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
-
-
-GO
-PRINT N'Creating [dbo].[dv_hub_key_update]...';
-
-
-GO
-SET ANSI_NULLS ON;
-
-SET QUOTED_IDENTIFIER OFF;
-
-
-GO
-CREATE PROC [dbo].[dv_hub_key_update] 
-    @hub_key_column_key int,
-    @hub_key int,
-    @hub_key_column_name varchar(128),
-    @hub_key_column_type varchar(30),
-    @hub_key_column_length int = NULL,
-    @hub_key_column_precision int = NULL,
-    @hub_key_column_scale int = NULL,
-    @hub_key_Collation_Name nvarchar(128) = NULL,
-    @hub_key_ordinal_position int
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_hub_key_column]
-	SET    [hub_key] = @hub_key, [hub_key_column_name] = @hub_key_column_name, [hub_key_column_type] = @hub_key_column_type, [hub_key_column_length] = @hub_key_column_length, [hub_key_column_precision] = @hub_key_column_precision, [hub_key_column_scale] = @hub_key_column_scale, [hub_key_Collation_Name] = @hub_key_Collation_Name, [hub_key_ordinal_position] = @hub_key_ordinal_position 
-	WHERE  [hub_key_column_key] = @hub_key_column_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [hub_key_column_key], [hub_key], [hub_key_column_name], [hub_key_column_type], [hub_key_column_length], [hub_key_column_precision], [hub_key_column_scale], [hub_key_Collation_Name], [hub_key_ordinal_position], [version_number], [updated_by], [updated_datetime]
-	FROM   [dbo].[dv_hub_key_column]
-	WHERE  [hub_key_column_key] = @hub_key_column_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
-SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
-
-
-GO
-PRINT N'Creating [dbo].[dv_hub_update]...';
-
-
-GO
-SET ANSI_NULLS ON;
-
-SET QUOTED_IDENTIFIER OFF;
-
-
-GO
-CREATE PROC [dbo].[dv_hub_update] 
-    @hub_key int,
-    @hub_name varchar(128),
-    @hub_abbreviation varchar(4) = NULL,
-    @hub_schema varchar(128),
-    @hub_database varchar(128),
-	@is_compressed bit,
-	@is_retired bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_hub]
-	SET    [hub_name] = @hub_name, [hub_abbreviation] = @hub_abbreviation, [hub_schema] = @hub_schema, [hub_database] = @hub_database, [is_compressed] = @is_compressed, [is_retired] = @is_retired
-	WHERE  [hub_key] = @hub_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT *
-	FROM   [dbo].[dv_hub]
-	WHERE  [hub_key] = @hub_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
 GO
 SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
 
@@ -7035,34 +6656,6 @@ GO
 SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
 
 
-GO
-PRINT N'Creating [dbo].[dv_ref_function_update]...';
-
-
-GO
-
-CREATE PROC [dbo].[dv_ref_function_update] 
-    @ref_function_key int, 
-	@ref_function_name varchar(128),
-	@ref_function [nvarchar](4000),
-    @is_retired bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_ref_function]
-	SET    [ref_function_name] = @ref_function_name,[ref_function] = @ref_function, [is_retired] = @is_retired
-	WHERE  [ref_function_key] = @ref_function_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT [ref_function_key],[ref_function_name],[ref_function],[is_retired],[release_key],[version_number],[updated_by],[updated_datetime] 
-	FROM [dbo].[dv_ref_function]
-	WHERE  [ref_function_key] = @ref_function_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
 GO
 PRINT N'Creating [dbo].[dv_link_key_insert]...';
 
@@ -7323,38 +6916,6 @@ AS
 	COMMIT
        RETURN SCOPE_IDENTITY()
 GO
-PRINT N'Creating [dbo].[dv_source_version_update]...';
-
-
-GO
-
-CREATE PROC [dbo].[dv_source_version_update] 
-    @source_version_key		int,
-    @source_table_key		int,
-	@source_version			int,
-	@source_type			varchar(50),
-	@source_procedure_name	varchar(128),
-	@source_filter          nvarchar(max),
-	@pass_load_type_to_proc	bit,
-	@is_current				bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_source_version]
-	SET    [source_table_key] = @source_table_key, [source_version] = @source_version, [source_type] = @source_type,[source_procedure_name] = @source_procedure_name , [source_filter] = @source_filter, [pass_load_type_to_proc] = @pass_load_type_to_proc, [is_current] = @is_current
-	WHERE  [source_version_key] = @source_version_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT *
-	FROM   [dbo].[dv_source_version]
-	WHERE  [source_version_key] = @source_version_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
 PRINT N'Creating [dbo].[dv_stage_database_delete]...';
 
 
@@ -7506,44 +7067,6 @@ AS
                
 	COMMIT
        RETURN SCOPE_IDENTITY()
-GO
-PRINT N'Creating [dbo].[dv_stage_schema_update]...';
-
-
-GO
-SET ANSI_NULLS ON;
-
-SET QUOTED_IDENTIFIER OFF;
-
-
-GO
-
-CREATE PROC [dbo].[dv_stage_schema_update]
-    @stage_schema_key int, 
-    @stage_database_key int,
-    @stage_schema_name varchar(128),
-	@is_retired bit
-AS 
-	SET NOCOUNT ON 
-	SET XACT_ABORT ON  
-	
-	BEGIN TRAN
-
-	UPDATE [dbo].[dv_stage_schema]
-	SET [stage_database_key] = @stage_database_key, [stage_schema_name] = @stage_schema_name, [is_retired] = @is_retired
-	WHERE  [stage_schema_key] = @stage_schema_key
-	
-	-- Begin Return Select <- do not remove
-	SELECT *
-	FROM   [dbo].[dv_stage_schema]
-	WHERE  [stage_schema_key] = @stage_schema_key	
-	-- End Return Select <- do not remove
-
-	COMMIT
-GO
-SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
-
-
 GO
 PRINT N'Creating [dbo].[dv_column_match_delete]...';
 
@@ -7800,6 +7323,571 @@ SELECT *
   WHERE  [connection_key] = @connection_key
 	-- End Return Select <- do not remove
 COMMIT
+GO
+PRINT N'Creating [dbo].[dv_column_update]...';
+
+
+GO
+CREATE PROC [dbo].[dv_column_update] 
+    @column_key int,
+    @table_key int,
+	@satellite_col_key int,
+    @column_name varchar(128),
+    @column_type varchar(30),
+    @column_length int = NULL,
+    @column_precision int = NULL,
+    @column_scale int = NULL,
+    @Collation_Name nvarchar(128) = NULL,
+	@is_derived	bit = NULL,
+	@derived_value varchar(50) = NULL,
+    @source_ordinal_position int,
+    @is_source_date bit,
+    @is_retired bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_column]
+	SET    [table_key] = @table_key
+	, [satellite_col_key] = @satellite_col_key
+	, [column_name] = @column_name
+	, [column_type] = @column_type
+	, [column_length] = @column_length
+	, [column_precision] = @column_precision
+	, [column_scale] = @column_scale
+	, [Collation_Name] = @Collation_Name
+	, [is_derived] = @is_derived
+	, [derived_value] = @derived_value
+	, [source_ordinal_position] = @source_ordinal_position
+	, [is_source_date] = @is_source_date
+	, [is_retired] = @is_retired
+	WHERE  [column_key] = @column_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT * FROM   [dbo].[dv_column]
+	WHERE  [column_key] = @column_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+PRINT N'Creating [dbo].[dv_default_column_update]...';
+
+
+GO
+SET ANSI_NULLS ON;
+
+SET QUOTED_IDENTIFIER OFF;
+
+
+GO
+CREATE PROC [dbo].[dv_default_column_update] 
+    @default_column_key int,
+    @object_type varchar(30),
+    @object_column_type varchar(30),
+    @ordinal_position int,
+    @column_prefix varchar(30) = NULL,
+    @column_name varchar(256),
+    @column_suffix varchar(30) = NULL,
+    @column_type varchar(30),
+    @column_length int = NULL,
+    @column_precision int = NULL,
+    @column_scale int = NULL,
+    @collation_Name nvarchar(128) = NULL,
+    @is_nullable bit,
+    @is_pk bit,
+    @discard_flag bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_default_column]
+	SET    [object_type] = @object_type
+	, [object_column_type] = @object_column_type
+	, [ordinal_position] = @ordinal_position
+	, [column_prefix] = @column_prefix
+	, [column_name] = @column_name
+	, [column_suffix] = @column_suffix
+	, [column_type] = @column_type
+	, [column_length] = @column_length
+	, [column_precision] = @column_precision
+	, [column_scale] = @column_scale
+	, [collation_Name] = @collation_Name
+	, [is_nullable] = @is_nullable
+	, [is_pk] = @is_pk
+	, [discard_flag] = @discard_flag
+	WHERE  [default_column_key] = @default_column_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT [default_column_key], [object_type], [object_column_type], [ordinal_position], [column_prefix], [column_name], [column_suffix], [column_type], [column_length], [column_precision], [column_scale], [collation_Name], [is_nullable], [is_pk], [discard_flag], [version_number], [updated_by], [update_date_time]
+	FROM   [dbo].[dv_default_column]
+	WHERE  [default_column_key] = @default_column_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
+
+
+GO
+PRINT N'Creating [dbo].[dv_defaults_update]...';
+
+
+GO
+SET ANSI_NULLS ON;
+
+SET QUOTED_IDENTIFIER OFF;
+
+
+GO
+CREATE PROC [dbo].[dv_defaults_update] 
+    @default_key int,
+    @default_type varchar(50),
+    @default_subtype varchar(50),
+    @default_sequence int,
+    @data_type varchar(50),
+    @default_integer int = NULL,
+    @default_varchar varchar(128) = NULL,
+    @default_dateTime datetime = NULL
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_defaults]
+	SET    [default_type] = @default_type
+	, [default_subtype] = @default_subtype
+	, [default_sequence] = @default_sequence
+	, [data_type] = @data_type
+	, [default_integer] = @default_integer
+	, [default_varchar] = @default_varchar
+	, [default_dateTime] = @default_dateTime
+	WHERE  [default_key] = @default_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT [default_key], [default_type], [default_subtype], [default_sequence], [data_type], [default_integer], [default_varchar], [default_dateTime], [version_number], [updated_by], [updated_datetime]
+	FROM   [dbo].[dv_defaults]
+	WHERE  [default_key] = @default_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
+
+
+GO
+PRINT N'Creating [dbo].[dv_hub_column_update]...';
+
+
+GO
+CREATE PROC [dbo].[dv_hub_column_update] 
+    @hub_col_key int,
+    @hub_key_column_key int,
+	@link_key_column_key int,
+    @column_key int
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_hub_column]
+	SET    [hub_key_column_key] = @hub_key_column_key
+	, [link_key_column_key] = @link_key_column_key
+	, [column_key] = @column_key
+	WHERE  [hub_col_key] = @hub_col_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT [hub_col_key], [hub_key_column_key], [link_key_column_key], [column_key], [version_number], [updated_by], [updated_datetime]
+	FROM   [dbo].[dv_hub_column]
+	WHERE  [hub_col_key] = @hub_col_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+PRINT N'Creating [dbo].[dv_hub_key_update]...';
+
+
+GO
+SET ANSI_NULLS ON;
+
+SET QUOTED_IDENTIFIER OFF;
+
+
+GO
+CREATE PROC [dbo].[dv_hub_key_update] 
+    @hub_key_column_key int,
+    @hub_key int,
+    @hub_key_column_name varchar(128),
+    @hub_key_column_type varchar(30),
+    @hub_key_column_length int = NULL,
+    @hub_key_column_precision int = NULL,
+    @hub_key_column_scale int = NULL,
+    @hub_key_Collation_Name nvarchar(128) = NULL,
+    @hub_key_ordinal_position int
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_hub_key_column]
+	SET    [hub_key] = @hub_key
+	, [hub_key_column_name] = @hub_key_column_name
+	, [hub_key_column_type] = @hub_key_column_type
+	, [hub_key_column_length] = @hub_key_column_length
+	, [hub_key_column_precision] = @hub_key_column_precision
+	, [hub_key_column_scale] = @hub_key_column_scale
+	, [hub_key_Collation_Name] = @hub_key_Collation_Name
+	, [hub_key_ordinal_position] = @hub_key_ordinal_position 
+	WHERE  [hub_key_column_key] = @hub_key_column_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT [hub_key_column_key], [hub_key], [hub_key_column_name], [hub_key_column_type], [hub_key_column_length], [hub_key_column_precision], [hub_key_column_scale], [hub_key_Collation_Name], [hub_key_ordinal_position], [version_number], [updated_by], [updated_datetime]
+	FROM   [dbo].[dv_hub_key_column]
+	WHERE  [hub_key_column_key] = @hub_key_column_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
+
+
+GO
+PRINT N'Creating [dbo].[dv_hub_update]...';
+
+
+GO
+SET ANSI_NULLS ON;
+
+SET QUOTED_IDENTIFIER OFF;
+
+
+GO
+CREATE PROC [dbo].[dv_hub_update] 
+    @hub_key int,
+    @hub_name varchar(128),
+    @hub_abbreviation varchar(4) = NULL,
+    @hub_schema varchar(128),
+    @hub_database varchar(128),
+	@is_compressed bit,
+	@is_retired bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_hub]
+	SET    [hub_name] = @hub_name
+	, [hub_abbreviation] = @hub_abbreviation
+	, [hub_schema] = @hub_schema
+	, [hub_database] = @hub_database
+	, [is_compressed] = @is_compressed
+	, [is_retired] = @is_retired
+	WHERE  [hub_key] = @hub_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT *
+	FROM   [dbo].[dv_hub]
+	WHERE  [hub_key] = @hub_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
+
+
+GO
+PRINT N'Creating [dbo].[dv_link_update]...';
+
+
+GO
+SET ANSI_NULLS ON;
+
+SET QUOTED_IDENTIFIER OFF;
+
+
+GO
+CREATE PROC [dbo].[dv_link_update] 
+    @link_key int,
+    @link_name varchar(128),
+    @link_abbreviation varchar(4) = NULL,
+    @link_schema varchar(128),
+    @link_database varchar(128),
+	@is_compressed bit,
+	@is_retired bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_link]
+	SET    [link_name] = @link_name
+	, [link_abbreviation] = @link_abbreviation
+	, [link_schema] = @link_schema
+	, [link_database] = @link_database
+	, [is_compressed] = @is_compressed
+	, [is_retired] = @is_retired
+	WHERE  [link_key] = @link_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT *
+	FROM   [dbo].[dv_link]
+	WHERE  [link_key] = @link_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
+
+
+GO
+PRINT N'Creating [dbo].[dv_ref_function_update]...';
+
+
+GO
+
+CREATE PROC [dbo].[dv_ref_function_update] 
+    @ref_function_key int, 
+	@ref_function_name varchar(128),
+	@ref_function [nvarchar](4000),
+    @is_retired bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_ref_function]
+	SET    [ref_function_name] = @ref_function_name
+	,[ref_function] = @ref_function
+	, [is_retired] = @is_retired
+	WHERE  [ref_function_key] = @ref_function_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT [ref_function_key],[ref_function_name],[ref_function],[is_retired],[release_key],[version_number],[updated_by],[updated_datetime] 
+	FROM [dbo].[dv_ref_function]
+	WHERE  [ref_function_key] = @ref_function_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+PRINT N'Creating [dbo].[dv_satellite_column_update]...';
+
+
+GO
+CREATE PROC [dbo].[dv_satellite_column_update] 
+    @satellite_col_key int,
+    @satellite_key int,
+	@column_name [varchar](128),
+	@column_type [varchar](30),
+	@column_length [int],
+	@column_precision [int],
+	@column_scale [int],
+	@Collation_Name [sysname],
+	@satellite_ordinal_position [int],
+	@ref_function_key [int],
+    @func_arguments [nvarchar](512),
+	@func_ordinal_position [int]
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_satellite_column]
+	SET    [satellite_key] = @satellite_key
+	, [column_name] = @column_name
+	,[column_type] = @column_type
+	,[column_length] = @column_length
+	,[column_precision] = @column_precision
+	, [column_scale] = @column_scale
+	, [Collation_Name] = @Collation_Name
+	, [func_arguments] = @func_arguments
+	,[satellite_ordinal_position] = @satellite_ordinal_position
+	, [ref_function_key] = @ref_function_key
+	, [func_ordinal_position] = @func_ordinal_position
+	WHERE  [satellite_col_key] = @satellite_col_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT [satellite_col_key], [satellite_key],[column_name],[column_type],[column_length],[column_precision],[column_scale],[Collation_Name],[satellite_ordinal_position],[ref_function_key],[func_arguments], [func_ordinal_position],[release_key], [version_number], [updated_by], [updated_datetime]
+	FROM   [dbo].[dv_satellite_column]
+	WHERE  [satellite_col_key] = @satellite_col_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+PRINT N'Creating [dbo].[dv_satellite_update]...';
+
+
+GO
+CREATE PROC [dbo].[dv_satellite_update] 
+    @satellite_key int,
+    @hub_key int,
+    @link_key int,
+    @link_hub_satellite_flag char(1),
+    @satellite_name varchar(128),
+    @satellite_abbreviation varchar(4) = NULL,
+    @satellite_schema varchar(128),
+    @satellite_database varchar(128),
+	@duplicate_removal_threshold	int,
+    @is_columnstore bit,
+	@is_compressed bit,
+	@is_retired bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_satellite]
+	SET    [hub_key] = @hub_key
+	, [link_key] = @link_key
+	, [link_hub_satellite_flag] = @link_hub_satellite_flag
+	, [satellite_name] = @satellite_name
+	, [satellite_abbreviation] = @satellite_abbreviation
+	, [satellite_schema] = @satellite_schema
+	, [satellite_database] = @satellite_database
+	, [duplicate_removal_threshold] = @duplicate_removal_threshold
+	, [is_columnstore] = @is_columnstore
+	, [is_compressed] = @is_compressed
+	, [is_retired] = @is_retired
+	WHERE  [satellite_key] = @satellite_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT *
+	FROM   [dbo].[dv_satellite]
+	WHERE  [satellite_key] = @satellite_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+PRINT N'Creating [dbo].[dv_source_table_update]...';
+
+
+GO
+CREATE PROC [dbo].[dv_source_table_update] 
+    @source_table_key		int,
+    @source_unique_name     varchar(128),   
+    @load_type              varchar(50),             
+    @system_key				int,            
+    @source_table_schema    varchar(128),    
+    @source_table_name      varchar(128),    
+    @stage_schema_key       int,
+	@is_columnstore			bit,
+	@is_compressed			bit,	    
+    @stage_table_name       varchar(128),		
+	@is_retired				bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_source_table]
+	SET    [source_unique_name] = @source_unique_name
+	,[load_type] = @load_type
+	,[system_key] = @system_key
+	,[source_table_schma] = @source_table_schema
+	,[source_table_nme] = @source_table_name
+	,[stage_schema_key] = @stage_schema_key
+	,[stage_table_name] = @stage_table_name
+	, [is_columnstore] = @is_columnstore 
+	, [is_compressed] = @is_compressed 
+	,[is_retired] = @is_retired
+	WHERE  [source_table_key] = @source_table_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT *
+	FROM   [dbo].[dv_source_table]
+	WHERE  [source_table_key] = @source_table_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+PRINT N'Creating [dbo].[dv_source_version_update]...';
+
+
+GO
+
+CREATE PROC [dbo].[dv_source_version_update] 
+    @source_version_key		int,
+    @source_table_key		int,
+	@source_version			int,
+	@source_type			varchar(50),
+	@source_procedure_name	varchar(128),
+	@source_filter          nvarchar(max),
+	@pass_load_type_to_proc	bit,
+	@is_current				bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_source_version]
+	SET    [source_table_key] = @source_table_key
+	, [source_version] = @source_version
+	, [source_type] = @source_type
+	,[source_procedure_name] = @source_procedure_name 
+	, [source_filter] = @source_filter
+	, [pass_load_type_to_proc] = @pass_load_type_to_proc
+	, [is_current] = @is_current
+	WHERE  [source_version_key] = @source_version_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT *
+	FROM   [dbo].[dv_source_version]
+	WHERE  [source_version_key] = @source_version_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+PRINT N'Creating [dbo].[dv_stage_schema_update]...';
+
+
+GO
+SET ANSI_NULLS ON;
+
+SET QUOTED_IDENTIFIER OFF;
+
+
+GO
+
+CREATE PROC [dbo].[dv_stage_schema_update]
+    @stage_schema_key int, 
+    @stage_database_key int,
+    @stage_schema_name varchar(128),
+	@is_retired bit
+AS 
+	SET NOCOUNT ON 
+	SET XACT_ABORT ON  
+	
+	BEGIN TRAN
+
+	UPDATE [dbo].[dv_stage_schema]
+	SET [stage_database_key] = @stage_database_key
+	, [stage_schema_name] = @stage_schema_name
+	, [is_retired] = @is_retired
+	WHERE  [stage_schema_key] = @stage_schema_key
+	
+	-- Begin Return Select <- do not remove
+	SELECT *
+	FROM   [dbo].[dv_stage_schema]
+	WHERE  [stage_schema_key] = @stage_schema_key	
+	-- End Return Select <- do not remove
+
+	COMMIT
+GO
+SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
+
+
 GO
 PRINT N'Creating [dv_config].[dv_populate_hub_key_columns]...';
 

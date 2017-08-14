@@ -13,7 +13,12 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_link]
-	SET    [link_name] = @link_name, [link_abbreviation] = @link_abbreviation, [link_schema] = @link_schema, [link_database] = @link_database, [is_compressed] = @is_compressed, [is_retired] = @is_retired
+	SET    [link_name] = @link_name
+	, [link_abbreviation] = @link_abbreviation
+	, [link_schema] = @link_schema
+	, [link_database] = @link_database
+	, [is_compressed] = @is_compressed
+	, [is_retired] = @is_retired
 	WHERE  [link_key] = @link_key
 	
 	-- Begin Return Select <- do not remove

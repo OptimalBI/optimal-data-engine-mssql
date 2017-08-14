@@ -10,7 +10,9 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_hub_column]
-	SET    [hub_key_column_key] = @hub_key_column_key, [link_key_column_key] = @link_key_column_key, [column_key] = @column_key
+	SET    [hub_key_column_key] = @hub_key_column_key
+	, [link_key_column_key] = @link_key_column_key
+	, [column_key] = @column_key
 	WHERE  [hub_col_key] = @hub_col_key
 	
 	-- Begin Return Select <- do not remove

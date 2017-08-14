@@ -13,7 +13,12 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_hub]
-	SET    [hub_name] = @hub_name, [hub_abbreviation] = @hub_abbreviation, [hub_schema] = @hub_schema, [hub_database] = @hub_database, [is_compressed] = @is_compressed, [is_retired] = @is_retired
+	SET    [hub_name] = @hub_name
+	, [hub_abbreviation] = @hub_abbreviation
+	, [hub_schema] = @hub_schema
+	, [hub_database] = @hub_database
+	, [is_compressed] = @is_compressed
+	, [is_retired] = @is_retired
 	WHERE  [hub_key] = @hub_key
 	
 	-- Begin Return Select <- do not remove

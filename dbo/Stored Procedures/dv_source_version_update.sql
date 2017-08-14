@@ -15,7 +15,13 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_source_version]
-	SET    [source_table_key] = @source_table_key, [source_version] = @source_version, [source_type] = @source_type,[source_procedure_name] = @source_procedure_name , [source_filter] = @source_filter, [pass_load_type_to_proc] = @pass_load_type_to_proc, [is_current] = @is_current
+	SET    [source_table_key] = @source_table_key
+	, [source_version] = @source_version
+	, [source_type] = @source_type
+	,[source_procedure_name] = @source_procedure_name 
+	, [source_filter] = @source_filter
+	, [pass_load_type_to_proc] = @pass_load_type_to_proc
+	, [is_current] = @is_current
 	WHERE  [source_version_key] = @source_version_key
 	
 	-- Begin Return Select <- do not remove

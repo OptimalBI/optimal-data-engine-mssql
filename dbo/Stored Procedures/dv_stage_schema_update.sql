@@ -11,7 +11,9 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_stage_schema]
-	SET [stage_database_key] = @stage_database_key, [stage_schema_name] = @stage_schema_name, [is_retired] = @is_retired
+	SET [stage_database_key] = @stage_database_key
+	, [stage_schema_name] = @stage_schema_name
+	, [is_retired] = @is_retired
 	WHERE  [stage_schema_key] = @stage_schema_key
 	
 	-- Begin Return Select <- do not remove

@@ -18,8 +18,17 @@ AS
 	BEGIN TRAN
 
 	UPDATE [dbo].[dv_satellite_column]
-	SET    [satellite_key] = @satellite_key, [column_name] = @column_name,[column_type] = @column_type,[column_length] = @column_length,[column_precision] = @column_precision, [column_scale] = @column_scale, [Collation_Name] = @Collation_Name, [func_arguments] = @func_arguments,[satellite_ordinal_position] = @satellite_ordinal_position, [ref_function_key] = @ref_function_key, [func_ordinal_position] = @func_ordinal_position
-	
+	SET    [satellite_key] = @satellite_key
+	, [column_name] = @column_name
+	,[column_type] = @column_type
+	,[column_length] = @column_length
+	,[column_precision] = @column_precision
+	, [column_scale] = @column_scale
+	, [Collation_Name] = @Collation_Name
+	, [func_arguments] = @func_arguments
+	,[satellite_ordinal_position] = @satellite_ordinal_position
+	, [ref_function_key] = @ref_function_key
+	, [func_ordinal_position] = @func_ordinal_position
 	WHERE  [satellite_col_key] = @satellite_col_key
 	
 	-- Begin Return Select <- do not remove
