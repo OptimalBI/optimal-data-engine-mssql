@@ -32,7 +32,7 @@ Notes:			Tables without a primary key are not supported.
 DECLARE @ExcludeColumns table(column_name sysname)
 insert @ExcludeColumns values ('version_number'), ('updated_by') ,('update_date_time'), ('updated_datetime')
 if isnull(@vault_exclude_columnsCSV, '') <> ''
-	insert @ExcludeColumns SELECT * FROM [dbo].[fn_split_strings] (@vault_exclude_columnsCSV, ',')
+	insert @ExcludeColumns SELECT Item FROM [dbo].[fn_split_strings] (@vault_exclude_columnsCSV, ',')
 
 DECLARE
 	@delete_unmatched_rows	BIT = 0,	-- enable/disable DELETION of rows
