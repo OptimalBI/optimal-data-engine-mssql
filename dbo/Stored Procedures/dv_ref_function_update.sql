@@ -12,7 +12,7 @@ AS
 
 	UPDATE [dbo].[dv_ref_function]
 	SET    [ref_function_name] = @ref_function_name
-	,[ref_function] = @ref_function
+	, [ref_function] = @ref_function
 	, [is_retired] = @is_retired
 	WHERE  [ref_function_key] = @ref_function_key
 	
