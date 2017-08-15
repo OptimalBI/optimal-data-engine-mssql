@@ -288,6 +288,7 @@ END
 
 select @sat_loop_key = case when isnull(@satellite_key, 0) = 0 then max(satellite_key) else @satellite_key end 
 	from [dbo].[dv_satellite] 
+	where is_retired = 0
 set @sat_loop_stop_key = isnull(@satellite_key, 0)
 while @sat_loop_key >= @sat_loop_stop_key
 /**********************************************************************************************************************/
