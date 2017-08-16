@@ -2,6 +2,7 @@
 CREATE Procedure [dv_scripting].[dv_build_snippet] 
 (@input_string nvarchar(4000)
 ,@argument_list nvarchar(512)
+,@snippet_type nvarchar(50)
 ,@output_string nvarchar(4000) output
 ,@dogenerateerror				bit				= 0
 ,@dothrowerror					bit				= 1
@@ -25,7 +26,8 @@ declare @start_pos int,
 		@snippet nvarchar(4000),
 		@resultvar nvarchar(4000),
 		@param nvarchar(512)
-	   ,@replace nvarchar(512)
+	    ,@replace nvarchar(512)
+	    ,@default_func nvarchar(512)
 
 declare @snippet_table TABLE 
        ([id] integer NOT NULL identity(1,1),
@@ -96,8 +98,20 @@ IF isnull(@input_string, '') = ''
 SET @_Step = 'Replace Arguments in the string by ##number'
 
 set @string = ltrim(rtrim(@input_string))
-set @string = right(@string, len(@string) - charindex('[dv_scripting].[dv_', @string,1)+1) --trim off any superfluous stuff from the head of the command - command must start with a function!
+
+-- set default func snippet
+-- potentially could be replaced with somwthing else
+set @default_func='[dv_scripting].[dv_'
+
+-- identify string in case of ode scripting function 
+--if (@snippet_type ='default')
+ --set @string = right(@string, len(@string) - charindex( @default_func, @string,1)+1) 
+
+ --trim off any superfluous stuff from the head of the command - command must start with a function!
 insert @source_arg_list select * from [dbo].[fn_split_strings] (@argument_list, ',')
+
+
+-- replace all #i argument in the func call/code by function parameter
 declare curPar CURSOR LOCAL for
 select '##' + cast(ItemNumber as varchar(100)) as func_string
 		,arg as replace_string
@@ -112,24 +126,33 @@ while @@FETCH_STATUS = 0
 close curPar
 deallocate curPar
 
+
 SET @_Step = 'Initialise Outer Loop'
 
-set @start_pos = charindex('(', @string,1)
---Temp fix !!!
-if (@start_pos > 0)
-set @command = left(@string, @start_pos-1)
-else set @command = @string
--------------------------
+if (@snippet_type ='dv_scripting')
+begin
+    set @string = right(@string, len(@string) - charindex( @default_func, @string,1)+1)
+    set @start_pos = charindex('(', @string,1);
+    -- function name as command
+    set @command = left(@string, @start_pos-1);
+end
+else 
+    set @command = @string
+
+
 set @snippet = @string
+
 insert @snippet_table select 0, @command,  @string, @snippet
 select @current_row = SCOPE_IDENTITY()
 set @open_pos = 1
+
+
 
 while @current_row <= (select max([id]) from @snippet_table)
 begin
     -- Initialise second loop - works through a single row, pulling out each first level function call, into a new row in the table
 	SET @_Step = 'Initialise Second Loop'
-	set @start_pos = charindex('[dv_scripting].[dv_', @string,@open_pos )
+	set @start_pos = charindex( @default_func, @string, @open_pos )
 	while @start_pos > 0
 	begin
 		set @open_pos =  charindex('(', @string,@start_pos)
@@ -142,10 +165,12 @@ begin
 		end
 
 		set @commandstring = substring(@string,@start_pos,@open_pos-@start_pos+ 1) 
+		
 		set @command = left(@commandstring,charindex('(', @commandstring,1)-1)
 		set @snippet = left(right(@commandstring, len(@commandstring) - charindex('(', @commandstring, 1)), len(right(@commandstring, len(@commandstring) - charindex('(', @commandstring, 1))) -1)
+		
 		insert @snippet_table select @current_row, @command, @commandstring, @snippet
-		set @start_pos = charindex('[dv_scripting].[dv_', @string,@open_pos )
+		set @start_pos = charindex( @default_func, @string,@open_pos )
 	end
 	set @open_pos = 0
 	set @current_row = @current_row + 1
@@ -156,26 +181,39 @@ end
 SET @_Step = 'Replace Commands with Snippets'
 set @parm_definition = N'@codesnippet nvarchar(4000) OUTPUT'
 select @commandstring = expression from @snippet_table where parent = 0
+
+
 select @current_row = max([id]) from @snippet_table
 select @parent = parent 
       ,@command = 'SELECT @codesnippet = ' + command + '(' + snippet + ')'
 	  ,@expression = expression
 	  from @snippet_table where [id] = @current_row
--- Loop through the scripts, replacing the snippets in the parent
+
+	-- Loop through the scripts, replacing the snippets in the parent
+	-- alows nesting
+
+
+
 while @current_row > 1
 begin
     
 	EXECUTE sp_executesql @command, @parm_definition, @codesnippet = @snippet OUTPUT
+
 	--if its the master row, just replace the whole snippet
 	update @snippet_table set snippet = replace(snippet,@expression, @snippet) where [id] = case when @parent = 0 then @current_row else @parent end
 	set @current_row = @current_row -1
+
 	
+
 	select @parent = parent
 	      ,@command = 'SELECT @codesnippet = ' + command + '(' + snippet + ')'
 		  ,@expression = expression
 		  from @snippet_table where [id] = @current_row
 end
+
 select @output_string = replace(snippet, '#', '''') from @snippet_table where parent = 0
+
+
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE

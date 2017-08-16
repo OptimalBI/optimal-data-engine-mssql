@@ -2,6 +2,7 @@
     [ref_function_key]  INT                IDENTITY (1, 1) NOT NULL,
     [ref_function_name] VARCHAR (128)      NOT NULL,
     [ref_function]      NVARCHAR (4000)    NOT NULL,
+    [ref_func_type]     nvarchar (50) NULL,
     [is_retired]        BIT                CONSTRAINT [DF_dv_ref_function_is_retired] DEFAULT ((0)) NOT NULL,
     [release_key]       INT                CONSTRAINT [DF_dv_ref_function_release_key] DEFAULT ((0)) NOT NULL,
     [version_number]    INT                CONSTRAINT [DF_dv_ref_function_version] DEFAULT ((1)) NOT NULL,
