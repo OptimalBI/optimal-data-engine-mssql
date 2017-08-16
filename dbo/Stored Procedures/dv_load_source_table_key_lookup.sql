@@ -14,27 +14,9 @@ AS
 BEGIN
 SET NOCOUNT ON
 
-/**************************************************************************************************************************************************************
-Creates a Code Block which takes the incoming stage table, adds the required Key Lookups and instantiates the result in a Temp Table.
-Returns the Code Block plus the name of the Temp Table.
-This Proc does not execute any code.
-
-DECLARE @vault_source_unique_name varchar(128) = 'DLR_DTABN'
-DECLARE @link_load_only char(1) = 'N'
-DECLARE @vault_source_load_type varchar(50) = 'Delta'
-DECLARE @vault_temp_table_name varchar(116)
-DECLARE @vault_sql_statement nvarchar(max)
-
-EXECUTE [dbo].[dv_load_source_table_key_lookup] 
-   @vault_source_unique_name
-  ,@link_load_only
-  ,@vault_source_load_type
-  ,@vault_temp_table_name OUTPUT
-  ,@vault_sql_statement OUTPUT
-
-PRINT @vault_temp_table_name
-PRINT @vault_sql_statement
-**************************************************************************************************************************************************************/
+-- To Do - add Logging for the Payload Parameter
+--         validate Parameters properly
+--declare @sat_name varchar(100) =  'AdventureWorks2014_production_productinventory'
 
 -- System Wide Defaults
 -- Local Defaults Values
@@ -60,25 +42,16 @@ DECLARE
                 ,@sat_start_date_col                    varchar(128)
                 ,@sat_end_date_col                      varchar(128)
 
-
 -- Object Specific Settings
 -- Source Table
-                ,@stage_system                          varchar(128)
-				,@stage_database                        varchar(128)
-                ,@stage_schema                          varchar(128)
-                ,@stage_table                           varchar(128)
-				,@stage_load_type					    varchar(50)
-                ,@stage_table_config_key                int
-				,@source_version_key				    int
-                ,@stage_qualified_name                  varchar(512)
-                ,@stage_load_date_time                  varchar(128)
-                ,@stage_payload                         nvarchar(max)
-				,@stage_hw_date_col						varchar(128)
-				,@stage_hw_lsn_col						varchar(128)
-				,@stage_cdc_start_date_col				varchar(128)
-				,@stage_cdc_start_lsn					varchar(128)
-				,@stage_cdc_sequence				varchar(128)
-				,@stage_cdc_action						varchar(128)
+                ,@stage_system                         varchar(128)
+				,@stage_database                       varchar(128)
+                ,@stage_schema                         varchar(128)
+                ,@stage_table                          varchar(128)
+                ,@stage_table_config_key               int
+                ,@stage_qualified_name                 varchar(512)
+                ,@stage_load_date_time                 varchar(128)
+                ,@stage_payload                        nvarchar(max)
 -- Hub Table
                 ,@hub_database                          varchar(128)
                 ,@hub_schema                            varchar(128)
@@ -109,6 +82,10 @@ DECLARE
                 ,@sat_technical_columns                 nvarchar(max)
                 ,@sat_payload                           nvarchar(max)
 
+
+
+
+
 --  Working Storage
 DECLARE @sat_insert_count								int
        ,@temp_table_name_001							varchar(116)
@@ -135,6 +112,7 @@ DECLARE @ref_function_seq								int
 	   ,@ref_function_name								varchar(128)
 	   ,@ref_function									nvarchar(4000)
 	   ,@func_arguments									nvarchar(512)
+	 ,  @ref_func_type varchar(50)
 	   ,@func_ordinal_position							int
 declare @input_string									nvarchar(4000)
        ,@output_string									nvarchar(4000)
@@ -154,7 +132,8 @@ declare @ref_function_list table (ref_function_seq		int identity(1,1)
 								 ,ref_function			nvarchar(4000)
 								 ,[func_arguments]		nvarchar(512)
 								 ,func_ordinal_position int
-								 ,with_statement		nvarchar(4000))
+								 ,with_statement		nvarchar(4000),
+								 ref_func_type varchar(50))
 
 -- Log4TSQL Journal Constants
 DECLARE @SEVERITY_CRITICAL								smallint = 1;
@@ -195,7 +174,6 @@ SET @_JournalOnOff      = log4.GetJournalControl(@_FunctionName, 'HOWTO');  -- l
 SET @_ProgressText              = @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
                                                  + @NEW_LINE + '    @vault_source_unique_name  : ' + COALESCE(@vault_source_unique_name, 'NULL')
                                                  + @NEW_LINE + '    @link_load_only            : ' + COALESCE(@link_load_only, 'NULL')
-												 + @NEW_LINE + '    @vault_source_load_type    : ' + COALESCE(@vault_source_load_type, 'NULL')
                                                  + @NEW_LINE + '    @DoGenerateError           : ' + COALESCE(CAST(@DoGenerateError AS varchar), 'NULL')
                                                  + @NEW_LINE + '    @DoThrowError              : ' + COALESCE(CAST(@DoThrowError AS varchar), 'NULL')
                                                  + @NEW_LINE
@@ -207,8 +185,8 @@ IF @DoGenerateError = 1
    select 1 / 0
 SET @_Step = 'Validate inputs';
 
-IF isnull(@vault_source_load_type, '') not in ('Full', 'Delta')
-			RAISERROR('Invalid Load Type: %s', 16, 1, @vault_source_load_type);
+--IF (select count(*) from [dbo].[dv_sat] where sat_name = @sat_name) <> 1
+--                      RAISERROR('Invalid sat Name: %s', 16, 1, @sat_name);
 --IF isnull(@recreate_flag, '') not in ('Y', 'N')
 --                      RAISERROR('Valid values for recreate_flag are Y or N : %s', 16, 1, @recreate_flag);
 /*--------------------------------------------------------------------------------------------------------------*/
@@ -243,35 +221,6 @@ from [dbo].[dv_default_column]
 where 1=1
 and object_type = 'sat'
 and object_column_type = 'Version_End_Date'
-select @stage_hw_date_col = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type = 'CdcStgODE'
-and object_column_type = 'CDC_HighWaterDate'
-select @stage_hw_lsn_col = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type = 'CdcStgMSSQL'
-and object_column_type = 'CDC_HighWaterlsn'
-select @stage_cdc_start_date_col = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type = 'CdcStgODE'
-and object_column_type = 'CDC_StartDate'
-
-select @stage_cdc_start_lsn = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type = 'CdcStgMSSQL'
-and object_column_type = 'CDC_StartLSN'
-select @stage_cdc_sequence = quotename(column_name)
-from [dbo].[dv_default_column]
-where 1=1
-and object_type = 'CdcStgMSSQL'
-and object_column_type = 'CDC_Sequence'
-
-
-
 
 -- Object Specific Settings
 -- Source Table
@@ -280,24 +229,11 @@ select   @stage_database                        = sdb.[stage_database_name]
         ,@stage_table                           = st.[stage_table_name]
         ,@stage_table_config_key				= st.[source_table_key]
         ,@stage_qualified_name					= quotename(sdb.[stage_database_name]) + '.' + quotename(ss.[stage_schema_name]) + '.' + quotename(st.[stage_table_name])
-		,@stage_load_type						= st.load_type
-		,@source_version_key                    = sv.source_version_key
 from [dbo].[dv_source_table] st
 inner join [dbo].[dv_stage_schema] ss on ss.stage_schema_key = st.stage_schema_key
 inner join [dbo].[dv_stage_database] sdb on sdb.stage_database_key = ss.stage_database_key
-left join  [dbo].[dv_source_version] sv on sv.source_table_key = st.source_table_key
-										and sv.is_current = 1
 where 1=1
 and st.[source_unique_name]						= @vault_source_unique_name
-
-
-
-select @stage_cdc_action = [column_name]
-from [dbo].[dv_default_column]
-	where 1=1
-and object_type = CASE @stage_load_type when'ODEcdc' then 'CdcStgODE' else 'CdcStgMSSQL' end
-and [object_column_type]  = 'CDC_Action'
-
 
 -- Satellite
 select	   @sat_config_key						= sat.[satellite_key]
@@ -360,7 +296,8 @@ begin
 		  ,h.[hub_database]
 		  ,[link_key_name] = isnull(lkc.[link_key_column_name],h.[hub_name])
 		  ,lkc.link_key_column_key 
-    FROM [dbo].[dv_link] l
+		  --,[dbo].[fn_build_column_definition] ('', hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0,0,0)
+	FROM [dbo].[dv_link] l
 	inner join [dbo].[dv_link_key_column] lkc on lkc.link_key = l.link_key
 	inner join [dbo].[dv_hub_column] hc on hc.link_key_column_key = lkc.link_key_column_key
 	inner join [dbo].[dv_hub_key_column] hkc on hkc.hub_key_column_key = hc.hub_key_column_key
@@ -385,7 +322,9 @@ begin
 			select @wrk_link_keys  += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + 
 				     				  ' = link.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + @crlf + ' AND '
 			select @wrk_link_joins += @c_link_key_name + '.' + quotename(hkc.[hub_key_column_name]) + ' = ' +
+			                         ---case when  @c_hub_data_type <> col_data_type
 									 case when  hub_data_type <> col_data_type
+									      --then ' = CAST(src.' + quotename(hkc.[column_name]) + ' as ' + @c_hub_data_type + ')' 
 										  then col_data_type_cast
 										  else 'src.' + quotename(hkc.[column_name])
 										  end + @crlf + ' AND '  
@@ -393,9 +332,9 @@ begin
 			 from (
 			 select distinct 
 			 h.[hub_name]
-			,col_data_type = [dbo].[fn_build_column_definition] ('',c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,NULL,0,0,0,0)
-			,col_data_type_cast = [dbo].[fn_build_column_definition] ('src.' + quotename(c.[column_name]), hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,NULL,0,0,1,0) 
-			,hub_data_type = [dbo].[fn_build_column_definition] ('', hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,NULL,0,0,0,0)
+			,col_data_type = [dbo].[fn_build_column_definition] ('',c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0,0,0)
+			,col_data_type_cast = [dbo].[fn_build_column_definition] ('src.' + quotename(c.[column_name]), hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0,1,0) 
+			,hub_data_type = [dbo].[fn_build_column_definition] ('', hkc.[hub_key_column_type],hkc.[hub_key_column_length],hkc.[hub_key_column_precision],hkc.[hub_key_column_scale],hkc.[hub_key_Collation_Name],0,0,0,0)
 			,hkc.[hub_key_column_name]
 			,hkc.hub_key_ordinal_position
 			,c.[column_name]
@@ -467,10 +406,10 @@ set @sql = ''
 select @sql += quotename(sc.column_name) + ' = ' + 
            case when c.[is_retired] = 1 
 				then 'NULL'
-		        when  [dbo].[fn_build_column_definition] ('',c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,NULL,0,0,0,0)
-		            = [dbo].[fn_build_column_definition] ('',sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,NULL,0,0,0,0)
+		        when  [dbo].[fn_build_column_definition] ('',c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0,0,0)
+		            = [dbo].[fn_build_column_definition] ('',sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0,0,0)
 				then 'src.' + quotename(c.[column_name])
-				else [dbo].[fn_build_column_definition] ('src.' + quotename(c.[column_name]),sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,NULL,0,0,1,0)
+				else [dbo].[fn_build_column_definition] ('src.' + quotename(c.[column_name]),sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,0,1,0)
 				end 
 			+ @crlf +', '
 from [dbo].[dv_column] c
@@ -504,10 +443,10 @@ if @sat_link_hub_flag = 'H'
 begin
         select @sql = ''
         select @sql += 'hub.' + quotename(hkc.[hub_key_column_name]) + ' = ' +
-		       case when  [dbo].[fn_build_column_definition] ('',c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,NULL,0,0,0,0)
-		                = [dbo].[fn_build_column_definition] ('',[hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,NULL,0,0,0,0)
+		       case when  [dbo].[fn_build_column_definition] ('',c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,0,0,0)
+		                = [dbo].[fn_build_column_definition] ('',[hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0,0,0)
 				then 'src.' + quotename(c.[column_name])
-				else [dbo].[fn_build_column_definition] ('src.' + quotename(c.[column_name]),[hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,NULL,0,0,1,0)
+				else [dbo].[fn_build_column_definition] ('src.' + quotename(c.[column_name]),[hub_key_column_type],[hub_key_column_length],[hub_key_column_precision],[hub_key_column_scale],[hub_key_Collation_Name],0,0,1,0)
 				end  
 		        + @crlf + ' AND '
         from [dbo].[dv_hub] h
@@ -529,29 +468,7 @@ end
 
 -- Compile the SQL
 -- If it is a link, create the temp table with all Hub keys plus a dummy for the Link Keys.
---set @sql1 = 'DECLARE @lookup_start_date datetimeoffset(7) = sysdatetimeoffset()' + @crlf 
-set @sql1 = ''
-select @sql1 = @sql1 + [dv_scripting].[fn_get_task_log_insert_statement] ('', '', '', 1)  -- get the logging variables.
-
-
-
-if @stage_load_type in('ODEcdc', 'MSSQLcdc')
-	begin
-	set @sql1 = @sql1 + 'DECLARE @counter			INT' + @crlf
-	set @sql1 = @sql1 + '		,@loopmax			INT' + @crlf
-	if @stage_load_type = 'ODEcdc'
-		set @sql1 = @sql1 + 'select top 1 @__source_high_water_date = CAST(' + @stage_hw_date_col + ' AS VARCHAR(50)) FROM ' + @stage_qualified_name + @crlf
-	else 
-		--set @sql1 = @sql1 + 'select top 1 @__source_high_water_lsn = CAST(' + @stage_hw_lsn_col + ' AS BINARY(10)) FROM ' + @stage_qualified_name + @crlf
-		set @sql1 = @sql1 + 'select top 1 @__source_high_water_lsn = ' + @stage_hw_lsn_col + ' FROM ' + @stage_qualified_name + @crlf
-	end
-
-set @sql1 = @sql1 + 'DECLARE @version_date DATETIMEOFFSET(7)' + @crlf
-set @sql1 = @sql1 + '       ,@source_date_time DATETIMEOFFSET(7)' + @crlf
-set @sql1 = @sql1 + 'SELECT @__load_start_date = SYSDATETIMEOFFSET()' + @crlf
-
-set @sql1 = @sql1 +  ';WITH wBaseSet as (' + @crlf
-
+set @sql1 = 'DECLARE @lookup_start_date datetimeoffset(7) = sysdatetimeoffset()' + @crlf + ';WITH wBaseSet as (' + @crlf
 if @sat_link_hub_flag = 'H'
         set @sql1 += 'SELECT ' + quotename(@hub_surrogate_keyname) + ' = isnull(hub.' + quotename(@hub_surrogate_keyname) + ', ' + cast(@def_global_failed_lookup_key as varchar(50)) + ')' + @crlf
 
@@ -559,26 +476,11 @@ if @sat_link_hub_flag = 'L'
     begin
         set @sql1 += 'SELECT DISTINCT ' + quotename(@link_surrogate_keyname) + ' = cast(0 as integer) ' + @crlf
         set @sql1 = @sql1 + @wrk_hub_joins
-    end
+        end
 
 if not (@link_load_only = 'Y' and @sat_link_hub_flag = 'L')
         set @sql1 = @sql1 + ', ' + @stage_payload
 set @sql1 = @sql1 + ', [vault_load_time] = ' + @stage_load_date_time + @crlf
-
---**********************************************************************************************************************************************************************************
--- If its a CDC Load (and Delta / Increment) then 
---     add in the "Action" column and
---     number the updates per key for later processing of multiple updates.
-
-if @stage_load_type IN('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta'
-    begin
-	set @sql1 = @sql1 + ', ' + @stage_cdc_action + @crlf
-	set @sql1 = @sql1 + ', [rn] = ROW_NUMBER() OVER (PARTITION BY ' + 
-	     'isnull(' + case when @sat_link_hub_flag = 'H' then 'hub.' + quotename(@hub_surrogate_keyname) else 'link.' + quotename(@link_surrogate_keyname) end + ', ' + cast(@def_global_failed_lookup_key as varchar(50)) + ')' +
-		 ' ORDER BY ' + 
-		 case when @stage_load_type = 'ODEcdc' then @stage_cdc_start_date_col else @stage_cdc_start_lsn + ', ' + @stage_cdc_sequence end
-		 + ')' + @crlf
-	end
 set @sql1 = @sql1 + 'FROM ' + @stage_qualified_name + ' src' + @crlf
 
 if @sat_link_hub_flag = 'H'
@@ -595,7 +497,7 @@ select sc.column_name
          ,f.ref_function
          ,sc.[func_arguments]
          ,sc.func_ordinal_position
-         ,'' 
+         ,'' , f.ref_func_type
 from [dbo].[dv_satellite_column] sc
 inner join [dbo].[dv_ref_function] f
 on f.[ref_function_key] = sc.[ref_function_key]
@@ -612,23 +514,25 @@ order by sc.func_ordinal_position
 declare curFunc CURSOR LOCAL for
 select [ref_function_seq]
       ,[column_name]
-	  ,[ref_function]
-	  ,[func_arguments]
+	 ,[ref_function]
+	 ,[func_arguments]
+      ,[ref_func_type]
 from @ref_function_list
 open curFunc
-fetch next from curFunc into  @ref_function_seq,@column_name, @ref_function, @func_arguments
+fetch next from curFunc into  @ref_function_seq,@column_name, @ref_function, @func_arguments, @ref_func_type
 while @@FETCH_STATUS = 0 
 BEGIN
     set @input_string = @ref_function
 	EXECUTE [dv_scripting].[dv_build_snippet] 
-		@input_string
+	    @input_string
 	   ,@func_arguments
+        ,@ref_func_type
 	   ,@output_string OUTPUT
 	
     select @output_string = ', w' + cast(@ref_function_seq as varchar(10)) + ' as (select *, '  + @output_string + ' as ' + quotename(@column_name) + ' from w' + 
 							case when @ref_function_seq = 1 then 'BaseSet' else cast(@ref_function_seq -1 as varchar(10)) end + ')' + @crlf
 	update @ref_function_list set with_statement = @output_string where ref_function_seq = @ref_function_seq
-	fetch next from curFunc into @ref_function_seq,@column_name, @ref_function, @func_arguments
+	fetch next from curFunc into @ref_function_seq,@column_name, @ref_function, @func_arguments, @ref_func_type
 END
 close curFunc
 deallocate curFunc
@@ -646,14 +550,13 @@ if (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y')
         set @sql1 = @sql1 + 'FROM ' + @temp_table_name_001 + ' tmp' + @crlf
         set @sql1 = @sql1 + 'LEFT JOIN ' + @link_qualified_name + ' link ' + @crlf + ' ON ' + @wrk_link_keys + ';'
         end
-set @sql1 = @sql1 + @crlf + 'SELECT @__rows_inserted = @@ROWCOUNT' + @crlf
-set @sql1 = @sql1 + 'SELECT @__load_end_date = SYSDATETIMEOFFSET()' + @crlf
+
 
 /****************************************************************************************************************************************/
 -- Duplicate Checking
--- Note - add checking for Delta / Incremental Run when CDC - full CDC runs can still check for duplicates.
+set @sql1 = @sql1 + @crlf
 
-if (@sat_link_hub_flag = 'H' or (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y')) and not (@stage_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta')
+if (@sat_link_hub_flag = 'H' or (@sat_link_hub_flag = 'L' and @link_load_only <> 'Y'))
         begin
         if @sat_duplicate_removal_threshold > 0
         begin
@@ -684,11 +587,6 @@ if (@sat_link_hub_flag = 'H' or (@sat_link_hub_flag = 'L' and @link_load_only <>
         else
                 set @sql1 = @sql1 + 'if exists (select 1 from ' + @temp_table_name_001 + ' group by ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' having count(*) > 1)' + @crlf + '    raiserror (''Duplicate Keys Detected while Loading ' + @stage_qualified_name + '''' + ', 16, 1)' + @crlf + @crlf
         end
-
-if @sat_link_hub_flag = 'H'
-	select @sql1 += [dv_scripting].[fn_get_task_log_insert_statement] (@source_version_key, 'hublookup', @hub_config_key, 0)
-else if @sat_link_hub_flag = 'L'
-	select @sql1 += [dv_scripting].[fn_get_task_log_insert_statement] (@source_version_key, 'linklookup', @link_config_key, 0)		
 /****************************************************************************************************************************************/
 set @vault_sql_statement        = @sql1
 select @vault_temp_table_name   = @temp_table_name_001
