@@ -1,8 +1,7 @@
 ﻿
-CREATE Procedure [dv_scripting].[dv_build_snippet] 
+create Procedure [dv_scripting].[dv_build_snippet] 
 (@input_string nvarchar(4000)
 ,@argument_list nvarchar(512)
-,@snippet_type nvarchar(50)
 ,@output_string nvarchar(4000) output
 ,@dogenerateerror				bit				= 0
 ,@dothrowerror					bit				= 1
@@ -129,6 +128,7 @@ deallocate curPar
 
 SET @_Step = 'Initialise Outer Loop'
 
+/*
 if (@snippet_type ='dv_scripting')
 begin
     set @string = right(@string, len(@string) - charindex( @default_func, @string,1)+1)
@@ -138,15 +138,15 @@ begin
 end
 else 
     set @command = @string
+ */
 
-
+set @command = @string
 set @snippet = @string
 
 insert @snippet_table select 0, @command,  @string, @snippet
+
 select @current_row = SCOPE_IDENTITY()
 set @open_pos = 1
-
-
 
 while @current_row <= (select max([id]) from @snippet_table)
 begin
@@ -170,6 +170,7 @@ begin
 		set @snippet = left(right(@commandstring, len(@commandstring) - charindex('(', @commandstring, 1)), len(right(@commandstring, len(@commandstring) - charindex('(', @commandstring, 1))) -1)
 		
 		insert @snippet_table select @current_row, @command, @commandstring, @snippet
+
 		set @start_pos = charindex( @default_func, @string,@open_pos )
 	end
 	set @open_pos = 0
@@ -212,7 +213,6 @@ begin
 end
 
 select @output_string = replace(snippet, '#', '''') from @snippet_table where parent = 0
-
 
 /*--------------------------------------------------------------------------------------------------------------*/
 

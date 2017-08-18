@@ -135,7 +135,6 @@ DECLARE @ref_function_seq								int
 	   ,@ref_function_name								varchar(128)
 	   ,@ref_function									nvarchar(4000)
 	   ,@func_arguments									nvarchar(512)
-	   ,@ref_func_type nvarchar(50)
 	   ,@func_ordinal_position							int
 declare @input_string									nvarchar(4000)
        ,@output_string									nvarchar(4000)
@@ -596,8 +595,7 @@ select sc.column_name
          ,f.ref_function
          ,sc.[func_arguments]
          ,sc.func_ordinal_position
-         ,'' , 
-	    f.ref_func_type
+         ,'' 
 from [dbo].[dv_satellite_column] sc
 inner join [dbo].[dv_ref_function] f
 on f.[ref_function_key] = sc.[ref_function_key]
@@ -616,23 +614,21 @@ select [ref_function_seq]
       ,[column_name]
 	  ,[ref_function]
 	  ,[func_arguments]
-	  ,[ref_func_type]
 from @ref_function_list
 open curFunc
-fetch next from curFunc into  @ref_function_seq,@column_name, @ref_function, @func_arguments, @ref_func_type
+fetch next from curFunc into  @ref_function_seq,@column_name, @ref_function, @func_arguments
 while @@FETCH_STATUS = 0 
 BEGIN
     set @input_string = @ref_function
 	EXECUTE [dv_scripting].[dv_build_snippet] 
 		@input_string
 	   ,@func_arguments
-	   ,@ref_func_type
 	   ,@output_string OUTPUT
 	
     select @output_string = ', w' + cast(@ref_function_seq as varchar(10)) + ' as (select *, '  + @output_string + ' as ' + quotename(@column_name) + ' from w' + 
 							case when @ref_function_seq = 1 then 'BaseSet' else cast(@ref_function_seq -1 as varchar(10)) end + ')' + @crlf
 	update @ref_function_list set with_statement = @output_string where ref_function_seq = @ref_function_seq
-	fetch next from curFunc into @ref_function_seq,@column_name, @ref_function, @func_arguments, @ref_func_type
+	fetch next from curFunc into @ref_function_seq,@column_name, @ref_function, @func_arguments
 END
 close curFunc
 deallocate curFunc
