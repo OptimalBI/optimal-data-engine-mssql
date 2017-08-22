@@ -303,6 +303,8 @@ and [object_column_type]  = 'CDC_Action'
 select	   @sat_config_key						= sat.[satellite_key]
           ,@sat_link_hub_flag					= sat.[link_hub_satellite_flag]
 		  ,@sat_duplicate_removal_threshold		= sat.[duplicate_removal_threshold]
+		  ,@sat_database						= sat.[satellite_database]
+			-- @sat_database added in to help with the later generation of code to check the high water marks.
 from [dbo].[dv_source_table] t
 inner join [dbo].[dv_column] c
 on c.table_key = t.[source_table_key]
@@ -533,18 +535,92 @@ end
 set @sql1 = ''
 select @sql1 = @sql1 + [dv_scripting].[fn_get_task_log_insert_statement] ('', '', '', 1)  -- get the logging variables.
 
-
-
 if @stage_load_type in('ODEcdc', 'MSSQLcdc')
-	begin
+begin
 	set @sql1 = @sql1 + 'DECLARE @counter			INT' + @crlf
 	set @sql1 = @sql1 + '		,@loopmax			INT' + @crlf
+	
+	/*
+	  The following if statement for the different cdc types has been modified to accomodate the situation
+	  where a staging table can be empty.  In the previous incarnation the code would return a NULL High
+	  Water Mark which would result in the next Staging extract using the default Low value and returning
+	  all data from the Source.  This in turn would get the Satellite data retired and then re-inserted.
+	  We wouldn't lose any data, but the historical view of data change becomes useless.
+	  The new version of the code falls back to the most recent successful loads High Water Mark value
+	  from the dbo.dv_task_state table in the Satellite database if the Staging table is empty.
+	*/
+	/*
+	Sample code
+	============
+
+	;WITH StageTable AS (
+		SELECT 'Sales' AS STG_unique, dv_cdc_high_water_date AS STG_hwm, dv_stage_date_time AS STG_dt
+		FROM #Sample_Stage_ODEcdc
+	), PreviousLoad AS (
+		SELECT source_unique_name AS SAT_unique, source_high_water_date AS SAT_hwm, task_start_datetime AS SAT_dt
+		FROM #Sample_TaskState_ODEcdc
+		WHERE Object_type  = 'sat'
+			AND source_unique_name = 'Sales'
+	)
+	SELECT TOP 1 @__source_high_water_date = COALESCE(ST.STG_hwm, PL.SAT_hwm)
+	FROM StageTable AS ST
+	RIGHT OUTER JOIN PreviousLoad AS PL
+		ON ST.STG_unique = PL.SAT_unique
+	ORDER BY COALESCE(ST.STG_dt, PL.SAT_dt) DESC	
+	*/
+
+
 	if @stage_load_type = 'ODEcdc'
-		set @sql1 = @sql1 + 'select top 1 @__source_high_water_date = CAST(' + @stage_hw_date_col + ' AS VARCHAR(50)) FROM ' + @stage_qualified_name + @crlf
-	else 
-		--set @sql1 = @sql1 + 'select top 1 @__source_high_water_lsn = CAST(' + @stage_hw_lsn_col + ' AS BINARY(10)) FROM ' + @stage_qualified_name + @crlf
-		set @sql1 = @sql1 + 'select top 1 @__source_high_water_lsn = ' + @stage_hw_lsn_col + ' FROM ' + @stage_qualified_name + @crlf
+	begin
+		-- Original Incarnation of High Water Mark Code for ODEcdc
+		--set @sql1 = @sql1 + 'select top 1 @__source_high_water_date = CAST(' + @stage_hw_date_col + ' AS VARCHAR(50)) FROM ' + @stage_qualified_name + @crlf
+
+		-- Revised High Water Mark code with last successful load fallback. 
+		set @sql1 = @sql1 + ';WITH StageTable AS (' + @crlf
+		set @sql1 = @sql1 + 'SELECT ''' + @vault_source_unique_name + ''' AS STG_unique, ' + @stage_hw_date_col + ' AS STG_hwm, dv_stage_date_time AS STG_dt' + @crlf
+		set @sql1 = @sql1 + 'FROM ' + @stage_qualified_name + @crlf
+		set @sql1 = @sql1 + '), PreviousLoad AS ('+ @crlf	
+		set @sql1 = @sql1 + '	SELECT source_unique_name AS SAT_unique, source_high_water_date AS SAT_hwm, task_start_datetime AS SAT_dt'+ @crlf
+		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@sat_database) + '.[dbo].[dv_task_state]' + @crlf	
+		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf	
+		set @sql1 = @sql1 + ')'+ @crlf	
+		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_date = COALESCE(ST.STG_hwm, PL.SAT_hwm)'+ @crlf	
+		set @sql1 = @sql1 + 'FROM StageTable AS ST'+ @crlf
+		set @sql1 = @sql1 + 'RIGHT OUTER JOIN PreviousLoad AS PL'+ @crlf
+		set @sql1 = @sql1 + '	ON ST.STG_unique = PL.SAT_unique'+ @crlf	
+		set @sql1 = @sql1 + 'ORDER BY COALESCE(ST.STG_dt, PL.SAT_dt) DESC'+ @crlf	
+
+		-- Adding in an error check to fail loading for this table if we can't find a water mark and it's not a full load.
+		set @sql1 = @sql1 + 'if (@__source_high_water_date is null AND (''' + @vault_source_load_type + ''' = ''Delta''))' + @crlf	
+		set @sql1 = @sql1 + '	raiserror (''No High Water Mark Detected while Loading ' + @vault_source_unique_name + ', Run Full load for this table''' + ', 16, 1)' + @crlf						
+
 	end
+	else 
+	begin
+		-- Original Incarnation of High Water Mark Code for MSSQLcdc
+		--set @sql1 = @sql1 + 'select top 1 @__source_high_water_lsn = ' + @stage_hw_lsn_col + ' FROM ' + @stage_qualified_name + @crlf
+
+		-- Revised High Water Mark code with last successful load fallback. 
+		set @sql1 = @sql1 + ';WITH StageTable AS (' + @crlf
+		set @sql1 = @sql1 + 'SELECT ''' + @vault_source_unique_name + ''' AS STG_unique, ' + @stage_hw_lsn_col + ' AS STG_hwm, dv_stage_date_time AS STG_dt' + @crlf
+		set @sql1 = @sql1 + 'FROM ' + @stage_qualified_name + @crlf
+		set @sql1 = @sql1 + '), PreviousLoad AS ('+ @crlf	
+		set @sql1 = @sql1 + '	SELECT source_unique_name AS SAT_unique, source_high_water_lsn AS SAT_hwm, task_start_datetime AS SAT_dt'+ @crlf
+		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@sat_database) + '.[dbo].[dv_task_state]' + @crlf	
+		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf
+		set @sql1 = @sql1 + ')'+ @crlf	
+		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_lsn = COALESCE(ST.STG_hwm, PL.SAT_hwm)'+ @crlf	
+		set @sql1 = @sql1 + 'FROM StageTable AS ST'+ @crlf
+		set @sql1 = @sql1 + 'RIGHT OUTER JOIN PreviousLoad AS PL'+ @crlf
+		set @sql1 = @sql1 + '	ON ST.STG_unique = PL.SAT_unique'+ @crlf	
+		set @sql1 = @sql1 + 'ORDER BY COALESCE(ST.STG_dt, PL.SAT_dt) DESC'+ @crlf	
+
+		-- Adding in an error check to fail loading for this table if we can't find a water mark and it's not a full load.
+		set @sql1 = @sql1 + 'if (@__source_high_water_lsn is null AND (''' + @vault_source_load_type + ''' = ''Delta''))' + @crlf
+		set @sql1 = @sql1 + '	raiserror (''No High Water Mark Detected while Loading ' + @vault_source_unique_name + ', Run Full load for this table''' + ', 16, 1)' + @crlf						
+
+	end
+end
 
 set @sql1 = @sql1 + 'DECLARE @version_date DATETIMEOFFSET(7)' + @crlf
 set @sql1 = @sql1 + '       ,@source_date_time DATETIMEOFFSET(7)' + @crlf
