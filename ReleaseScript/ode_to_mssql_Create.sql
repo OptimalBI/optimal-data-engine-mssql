@@ -557,34 +557,6 @@ CREATE TABLE [dbo].[dv_link] (
 
 
 GO
-PRINT N'Creating [dbo].[dv_satellite]...';
-
-
-GO
-CREATE TABLE [dbo].[dv_satellite] (
-    [satellite_key]               INT                IDENTITY (1, 1) NOT NULL,
-    [hub_key]                     INT                NOT NULL,
-    [link_key]                    INT                NOT NULL,
-    [link_hub_satellite_flag]     CHAR (1)           NOT NULL,
-    [satellite_name]              VARCHAR (128)      NOT NULL,
-    [satellite_abbreviation]      VARCHAR (4)        NULL,
-    [satellite_schema]            VARCHAR (128)      NOT NULL,
-    [satellite_database]          VARCHAR (128)      NOT NULL,
-    [duplicate_removal_threshold] INT                NOT NULL,
-    [is_columnstore]              BIT                NOT NULL,
-    [is_compressed]               BIT                NOT NULL,
-    [is_retired]                  BIT                NOT NULL,
-    [release_key]                 INT                NOT NULL,
-    [version_number]              INT                NOT NULL,
-    [updated_by]                  VARCHAR (128)      NULL,
-    [updated_datetime]            DATETIMEOFFSET (7) NULL,
-    CONSTRAINT [PK__dv_satel__591F7B98AC67FA20] PRIMARY KEY CLUSTERED ([satellite_key] ASC),
-    CONSTRAINT [dv_sat_abr_unique] UNIQUE NONCLUSTERED ([satellite_abbreviation] ASC),
-    CONSTRAINT [dv_satellite_unique] UNIQUE NONCLUSTERED ([satellite_name] ASC)
-);
-
-
-GO
 PRINT N'Creating [dbo].[dv_satellite_column]...';
 
 
@@ -853,6 +825,34 @@ PRINT N'Creating [dbo].[dv_ref_function].[dv_ref_function_name_unique]...';
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [dv_ref_function_name_unique]
     ON [dbo].[dv_ref_function]([ref_function_name] ASC);
+
+
+GO
+PRINT N'Creating [dbo].[dv_satellite]...';
+
+
+GO
+CREATE TABLE [dbo].[dv_satellite] (
+    [satellite_key]               INT                IDENTITY (1, 1) NOT NULL,
+    [hub_key]                     INT                NOT NULL,
+    [link_key]                    INT                NOT NULL,
+    [link_hub_satellite_flag]     CHAR (1)           NOT NULL,
+    [satellite_name]              VARCHAR (128)      NOT NULL,
+    [satellite_abbreviation]      VARCHAR (4)        NULL,
+    [satellite_schema]            VARCHAR (128)      NOT NULL,
+    [satellite_database]          VARCHAR (128)      NOT NULL,
+    [duplicate_removal_threshold] INT                NOT NULL,
+    [is_columnstore]              BIT                NOT NULL,
+    [is_compressed]               BIT                NOT NULL,
+    [is_retired]                  BIT                NOT NULL,
+    [release_key]                 INT                NOT NULL,
+    [version_number]              INT                NOT NULL,
+    [updated_by]                  VARCHAR (128)      NULL,
+    [updated_datetime]            DATETIMEOFFSET (7) NULL,
+    CONSTRAINT [PK__dv_satel__591F7B98AC67FA20] PRIMARY KEY CLUSTERED ([satellite_key] ASC),
+    CONSTRAINT [dv_sat_abr_unique] UNIQUE NONCLUSTERED ([satellite_abbreviation] ASC),
+    CONSTRAINT [dv_satellite_unique] UNIQUE NONCLUSTERED ([satellite_name] ASC)
+);
 
 
 GO
@@ -1608,105 +1608,6 @@ ALTER TABLE [dbo].[dv_link]
 
 
 GO
-PRINT N'Creating [dbo].[DF__dv_satell__hub_k__72C60C4A]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__hub_k__72C60C4A] DEFAULT ((0)) FOR [hub_key];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__link___73BA3083]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__link___73BA3083] DEFAULT ((0)) FOR [link_key];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__link___74AE54BC]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__link___74AE54BC] DEFAULT ('H') FOR [link_hub_satellite_flag];
-
-
-GO
-PRINT N'Creating [dbo].[DF_dv_satellite_duplicate_removal_threshold]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF_dv_satellite_duplicate_removal_threshold] DEFAULT ((0)) FOR [duplicate_removal_threshold];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__is_co__75A278F5]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__is_co__75A278F5] DEFAULT ((0)) FOR [is_columnstore];
-
-
-GO
-PRINT N'Creating unnamed constraint on [dbo].[dv_satellite]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD DEFAULT ((0)) FOR [is_compressed];
-
-
-GO
-PRINT N'Creating unnamed constraint on [dbo].[dv_satellite]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD DEFAULT ((0)) FOR [is_retired];
-
-
-GO
-PRINT N'Creating [dbo].[DF_dv_satellite_release_key]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF_dv_satellite_release_key] DEFAULT ((0)) FOR [release_key];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__versi__76969D2E]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__versi__76969D2E] DEFAULT ((1)) FOR [version_number];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__updat__778AC167]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__updat__778AC167] DEFAULT (suser_name()) FOR [updated_by];
-
-
-GO
-PRINT N'Creating [dbo].[DF__dv_satell__updat__787EE5A0]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [DF__dv_satell__updat__787EE5A0] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
-
-
-GO
 PRINT N'Creating [dbo].[DF_dv_satellite_column_func_ordinal_position]...';
 
 
@@ -2208,6 +2109,105 @@ PRINT N'Creating [dbo].[DF_dv_ref_function_updated_datetime]...';
 GO
 ALTER TABLE [dbo].[dv_ref_function]
     ADD CONSTRAINT [DF_dv_ref_function_updated_datetime] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__hub_k__72C60C4A]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__hub_k__72C60C4A] DEFAULT ((0)) FOR [hub_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__link___73BA3083]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__link___73BA3083] DEFAULT ((0)) FOR [link_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__link___74AE54BC]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__link___74AE54BC] DEFAULT ('H') FOR [link_hub_satellite_flag];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_duplicate_removal_threshold]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF_dv_satellite_duplicate_removal_threshold] DEFAULT ((0)) FOR [duplicate_removal_threshold];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__is_co__75A278F5]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__is_co__75A278F5] DEFAULT ((0)) FOR [is_columnstore];
+
+
+GO
+PRINT N'Creating unnamed constraint on [dbo].[dv_satellite]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD DEFAULT ((0)) FOR [is_compressed];
+
+
+GO
+PRINT N'Creating unnamed constraint on [dbo].[dv_satellite]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD DEFAULT ((0)) FOR [is_retired];
+
+
+GO
+PRINT N'Creating [dbo].[DF_dv_satellite_release_key]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF_dv_satellite_release_key] DEFAULT ((0)) FOR [release_key];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__versi__76969D2E]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__versi__76969D2E] DEFAULT ((1)) FOR [version_number];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__updat__778AC167]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__updat__778AC167] DEFAULT (suser_name()) FOR [updated_by];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_satell__updat__787EE5A0]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [DF__dv_satell__updat__787EE5A0] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
 
 
 GO
@@ -2769,33 +2769,6 @@ ALTER TABLE [dbo].[dv_link]
 
 
 GO
-PRINT N'Creating [dbo].[FK__dv_satellite__dv_hub]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [FK__dv_satellite__dv_hub] FOREIGN KEY ([hub_key]) REFERENCES [dbo].[dv_hub] ([hub_key]);
-
-
-GO
-PRINT N'Creating [dbo].[FK__dv_satellite__dv_link]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [FK__dv_satellite__dv_link] FOREIGN KEY ([link_key]) REFERENCES [dbo].[dv_link] ([link_key]);
-
-
-GO
-PRINT N'Creating [dbo].[FK_dv_satellite_dv_release_master]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [FK_dv_satellite_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
-
-
-GO
 PRINT N'Creating [dbo].[FK__dv_satellite_column__dv_ref_function]...';
 
 
@@ -3021,6 +2994,33 @@ ALTER TABLE [dbo].[dv_ref_function]
 
 
 GO
+PRINT N'Creating [dbo].[FK__dv_satellite__dv_hub]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [FK__dv_satellite__dv_hub] FOREIGN KEY ([hub_key]) REFERENCES [dbo].[dv_hub] ([hub_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK__dv_satellite__dv_link]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [FK__dv_satellite__dv_link] FOREIGN KEY ([link_key]) REFERENCES [dbo].[dv_link] ([link_key]);
+
+
+GO
+PRINT N'Creating [dbo].[FK_dv_satellite_dv_release_master]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [FK_dv_satellite_dv_release_master] FOREIGN KEY ([release_key]) REFERENCES [dv_release].[dv_release_master] ([release_key]);
+
+
+GO
 PRINT N'Creating [dv_scheduler].[FK_dv_schedule_dv_release_master]...';
 
 
@@ -3120,15 +3120,6 @@ ALTER TABLE [log4].[JournalDetail]
 
 
 GO
-PRINT N'Creating [dbo].[CK_dv_satellite__link_hub_flag]...';
-
-
-GO
-ALTER TABLE [dbo].[dv_satellite]
-    ADD CONSTRAINT [CK_dv_satellite__link_hub_flag] CHECK ([link_hub_satellite_flag]='H' OR [link_hub_satellite_flag]='L');
-
-
-GO
 PRINT N'Creating [dbo].[CK_dv_source_table__load_type]...';
 
 
@@ -3144,6 +3135,15 @@ PRINT N'Creating [dbo].[CK_dv_source_version__source_type]...';
 GO
 ALTER TABLE [dbo].[dv_source_version]
     ADD CONSTRAINT [CK_dv_source_version__source_type] CHECK ([source_type]='BespokeProc' OR [source_type]='SourceTable' OR [source_type]='ExternalStage' OR [source_type]='LeftRightComparison' OR [source_type]='SSISPackage');
+
+
+GO
+PRINT N'Creating [dbo].[CK_dv_satellite__link_hub_flag]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_satellite]
+    ADD CONSTRAINT [CK_dv_satellite__link_hub_flag] CHECK ([link_hub_satellite_flag]='H' OR [link_hub_satellite_flag]='L');
 
 
 GO
@@ -3347,23 +3347,6 @@ AS
 									   ON [a].[link_key] = [b].[link_key];
 	END;
 GO
-PRINT N'Creating [dbo].[dv_satellite_audit]...';
-
-
-GO
-
-CREATE TRIGGER [dbo].[dv_satellite_audit] ON [dbo].[dv_satellite]
-AFTER INSERT, UPDATE
-AS
-	BEGIN
-	    UPDATE [a]
-		 SET
-			[updated_datetime] = SYSDATETIMEOFFSET()
-		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_satellite] AS [a]
-									   JOIN [inserted] AS [b]
-									   ON [a].[satellite_key] = [b].[satellite_key];
-	END;
-GO
 PRINT N'Creating [dbo].[dv_satellite_column_audit]...';
 
 
@@ -3558,6 +3541,23 @@ AS
 		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_ref_function] AS [a]
 									   JOIN [inserted] AS [b]
 									   ON [a].[ref_function_key] = [b].[ref_function_key];
+	END;
+GO
+PRINT N'Creating [dbo].[dv_satellite_audit]...';
+
+
+GO
+
+CREATE TRIGGER [dbo].[dv_satellite_audit] ON [dbo].[dv_satellite]
+AFTER INSERT, UPDATE
+AS
+	BEGIN
+	    UPDATE [a]
+		 SET
+			[updated_datetime] = SYSDATETIMEOFFSET()
+		   , [updated_by] = SUSER_NAME() FROM [dbo].[dv_satellite] AS [a]
+									   JOIN [inserted] AS [b]
+									   ON [a].[satellite_key] = [b].[satellite_key];
 	END;
 GO
 PRINT N'Creating [dv_log].[dv_execution_audit]...';
@@ -4863,12 +4863,7 @@ PRINT N'Creating [dv_scripting].[fn_get_task_log_insert_statement]...';
 
 
 GO
-
-
-
-
-CREATE 
-FUNCTION [dv_scripting].[fn_get_task_log_insert_statement] 
+CREATE FUNCTION [dv_scripting].[fn_get_task_log_insert_statement] 
 (@source_version_key	INT
 ,@object_type			VARCHAR(128)
 ,@object_key			INT
@@ -4884,6 +4879,8 @@ For the generated script ot work, the following runtime variables need to be pre
    ,@rows_updated
    ,@rows_deleted
    ,@vault_runkey
+
+@__source_high_water_lsn has been modified to be binary(10) (instead of varchar(50)) in order to support an external fix.
 ********************************************************************************************/
 RETURNS varchar(2048)
 AS
@@ -4937,7 +4934,7 @@ BEGIN
 	SET @SQL += 'DECLARE ' + @crlf
 	SET @SQL += '  @__high_water_date        datetimeoffset(7)' + @crlf
 	SET @SQL += ', @__source_high_water_date varchar(50)' + @crlf
-	SET @SQL += ', @__source_high_water_lsn  varchar(50)' + @crlf
+	SET @SQL += ', @__source_high_water_lsn  binary(10)' + @crlf
 	SET @SQL += ', @__load_start_date        varchar(50)' + @crlf
 	SET @SQL += ', @__load_end_date          varchar(50)' + @crlf
 	SET @SQL += ', @__rows_inserted          bigint' + @crlf
@@ -15085,6 +15082,7 @@ begin
 	  We wouldn't lose any data, but the historical view of data change becomes useless.
 	  The new version of the code falls back to the most recent successful loads High Water Mark value
 	  from the dbo.dv_task_state table in the Satellite database if the Staging table is empty.
+
 	*/
 	/*
 	Sample code
@@ -15109,10 +15107,7 @@ begin
 
 	if @stage_load_type = 'ODEcdc'
 	begin
-		-- Original Incarnation of High Water Mark Code for ODEcdc
-		--set @sql1 = @sql1 + 'select top 1 @__source_high_water_date = CAST(' + @stage_hw_date_col + ' AS VARCHAR(50)) FROM ' + @stage_qualified_name + @crlf
-
-		-- Revised High Water Mark code with last successful load fallback. 
+		-- High Water Mark code with last successful load fallback. 
 		set @sql1 = @sql1 + ';WITH StageTable AS (' + @crlf
 		set @sql1 = @sql1 + 'SELECT ''' + @vault_source_unique_name + ''' AS STG_unique, ' + @stage_hw_date_col + ' AS STG_hwm, dv_stage_date_time AS STG_dt' + @crlf
 		set @sql1 = @sql1 + 'FROM ' + @stage_qualified_name + @crlf
@@ -15134,10 +15129,7 @@ begin
 	end
 	else 
 	begin
-		-- Original Incarnation of High Water Mark Code for MSSQLcdc
-		--set @sql1 = @sql1 + 'select top 1 @__source_high_water_lsn = ' + @stage_hw_lsn_col + ' FROM ' + @stage_qualified_name + @crlf
-
-		-- Revised High Water Mark code with last successful load fallback. 
+		--High Water Mark code with last successful load fallback. 
 		set @sql1 = @sql1 + ';WITH StageTable AS (' + @crlf
 		set @sql1 = @sql1 + 'SELECT ''' + @vault_source_unique_name + ''' AS STG_unique, ' + @stage_hw_lsn_col + ' AS STG_hwm, dv_stage_date_time AS STG_dt' + @crlf
 		set @sql1 = @sql1 + 'FROM ' + @stage_qualified_name + @crlf
@@ -15146,7 +15138,7 @@ begin
 		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@sat_database) + '.[dbo].[dv_task_state]' + @crlf	
 		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf
 		set @sql1 = @sql1 + ')'+ @crlf	
-		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_lsn = COALESCE(ST.STG_hwm, PL.SAT_hwm)'+ @crlf	
+		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_lsn = COALESCE(CONVERT(binary(10),ST.STG_hwm,1), CONVERT(binary(10),PL.SAT_hwm,1))'+ @crlf	
 		set @sql1 = @sql1 + 'FROM StageTable AS ST'+ @crlf
 		set @sql1 = @sql1 + 'RIGHT OUTER JOIN PreviousLoad AS PL'+ @crlf
 		set @sql1 = @sql1 + '	ON ST.STG_unique = PL.SAT_unique'+ @crlf	
