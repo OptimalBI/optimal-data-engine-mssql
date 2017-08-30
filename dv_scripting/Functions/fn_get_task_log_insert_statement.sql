@@ -1,9 +1,4 @@
-﻿
-
-
-
-CREATE 
-FUNCTION [dv_scripting].[fn_get_task_log_insert_statement] 
+﻿CREATE FUNCTION [dv_scripting].[fn_get_task_log_insert_statement] 
 (@source_version_key	INT
 ,@object_type			VARCHAR(128)
 ,@object_key			INT
@@ -19,6 +14,8 @@ For the generated script ot work, the following runtime variables need to be pre
    ,@rows_updated
    ,@rows_deleted
    ,@vault_runkey
+
+@__source_high_water_lsn has been modified to be binary(10) (instead of varchar(50)) in order to support an external fix.
 ********************************************************************************************/
 RETURNS varchar(2048)
 AS
@@ -72,7 +69,7 @@ BEGIN
 	SET @SQL += 'DECLARE ' + @crlf
 	SET @SQL += '  @__high_water_date        datetimeoffset(7)' + @crlf
 	SET @SQL += ', @__source_high_water_date varchar(50)' + @crlf
-	SET @SQL += ', @__source_high_water_lsn  varchar(50)' + @crlf
+	SET @SQL += ', @__source_high_water_lsn  binary(10)' + @crlf
 	SET @SQL += ', @__load_start_date        varchar(50)' + @crlf
 	SET @SQL += ', @__load_end_date          varchar(50)' + @crlf
 	SET @SQL += ', @__rows_inserted          bigint' + @crlf

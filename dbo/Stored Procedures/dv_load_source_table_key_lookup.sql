@@ -548,6 +548,7 @@ begin
 	  We wouldn't lose any data, but the historical view of data change becomes useless.
 	  The new version of the code falls back to the most recent successful loads High Water Mark value
 	  from the dbo.dv_task_state table in the Satellite database if the Staging table is empty.
+
 	*/
 	/*
 	Sample code
@@ -572,10 +573,7 @@ begin
 
 	if @stage_load_type = 'ODEcdc'
 	begin
-		-- Original Incarnation of High Water Mark Code for ODEcdc
-		--set @sql1 = @sql1 + 'select top 1 @__source_high_water_date = CAST(' + @stage_hw_date_col + ' AS VARCHAR(50)) FROM ' + @stage_qualified_name + @crlf
-
-		-- Revised High Water Mark code with last successful load fallback. 
+		-- High Water Mark code with last successful load fallback. 
 		set @sql1 = @sql1 + ';WITH StageTable AS (' + @crlf
 		set @sql1 = @sql1 + 'SELECT ''' + @vault_source_unique_name + ''' AS STG_unique, ' + @stage_hw_date_col + ' AS STG_hwm, dv_stage_date_time AS STG_dt' + @crlf
 		set @sql1 = @sql1 + 'FROM ' + @stage_qualified_name + @crlf
@@ -597,10 +595,7 @@ begin
 	end
 	else 
 	begin
-		-- Original Incarnation of High Water Mark Code for MSSQLcdc
-		--set @sql1 = @sql1 + 'select top 1 @__source_high_water_lsn = ' + @stage_hw_lsn_col + ' FROM ' + @stage_qualified_name + @crlf
-
-		-- Revised High Water Mark code with last successful load fallback. 
+		--High Water Mark code with last successful load fallback. 
 		set @sql1 = @sql1 + ';WITH StageTable AS (' + @crlf
 		set @sql1 = @sql1 + 'SELECT ''' + @vault_source_unique_name + ''' AS STG_unique, ' + @stage_hw_lsn_col + ' AS STG_hwm, dv_stage_date_time AS STG_dt' + @crlf
 		set @sql1 = @sql1 + 'FROM ' + @stage_qualified_name + @crlf
@@ -609,7 +604,7 @@ begin
 		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@sat_database) + '.[dbo].[dv_task_state]' + @crlf	
 		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf
 		set @sql1 = @sql1 + ')'+ @crlf	
-		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_lsn = COALESCE(ST.STG_hwm, PL.SAT_hwm)'+ @crlf	
+		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_lsn = COALESCE(CONVERT(binary(10),ST.STG_hwm,1), CONVERT(binary(10),PL.SAT_hwm,1))'+ @crlf	
 		set @sql1 = @sql1 + 'FROM StageTable AS ST'+ @crlf
 		set @sql1 = @sql1 + 'RIGHT OUTER JOIN PreviousLoad AS PL'+ @crlf
 		set @sql1 = @sql1 + '	ON ST.STG_unique = PL.SAT_unique'+ @crlf	
