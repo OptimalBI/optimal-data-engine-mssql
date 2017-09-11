@@ -1,0 +1,279 @@
+﻿<#@ template tier="20" language="C#"#>
+<#@ import namespace="System.Data"#>
+<#@ import namespace="System.IO"#>
+
+<Biml xmlns="http://schemas.varigence.com/biml.xsd">
+ 
+<Packages>
+<#@ include file="_Include_10.biml"#>
+
+
+
+<#string source_unique_name;
+ string columnListFull  = "";
+ string columnListDelta  = "";
+ string columnList = "";
+ foreach (var table in RootNode.Tables) { 
+
+//Build the connections to the required Stage Databases
+DataTable ColumnInfoFull = new DataTable();
+string SQL_columnList = " SELECT SQL_source_payload = [dv_scripting].[fn_get_SSIS select_statement]('" +table.GetTag("SourceUniqueName")+ "','Full') \n";
+ColumnInfoFull = ExternalDataAccess.GetDataTable(MetadataConnection,SQL_columnList);
+foreach(DataRow row in ColumnInfoFull.Rows)
+{
+      columnListFull = row["SQL_source_payload"].ToString();
+}
+
+
+DataTable ColumnInfoDelta = new DataTable();
+SQL_columnList = " SELECT SQL_source_payload = [dv_scripting].[fn_get_SSIS select_statement]('" +table.GetTag("SourceUniqueName")+ "','Delta') \n";
+ColumnInfoDelta = ExternalDataAccess.GetDataTable(MetadataConnection,SQL_columnList);
+foreach(DataRow row in ColumnInfoDelta.Rows)
+{
+      columnListDelta = row["SQL_source_payload"].ToString();
+}
+
+  #>
+        <Package Name="<#=table.GetTag("PackageName")#>"  ConstraintMode="Linear" ProtectionLevel="DontSaveSensitive" PackagePassword="mypass" DelayValidation="true">
+            
+			<Parameters>
+				<Parameter Name="load_type" DataType="String">Full</Parameter>
+				<Parameter Name="run_key" DataType="Int64">0</Parameter>
+				<Parameter Name="source_connection_password" DataType="String" IsSensitive="false"><#=table.GetTag("ConnectionPassword")#></Parameter>
+			</Parameters>
+			
+			<Variables>
+                <Variable Name="stage_start_date"           DataType="String">1900-01-01 00:00:00.0000000 +00:00</Variable>
+				<Variable Name="source_hw_date"             DataType="String">1900-01-01 00:00:00.0000000 +00:00</Variable>
+				<Variable Name="local_hw_date"              DataType="String">1900-01-01 00:00:00.0000000 +00:00</Variable>
+				<Variable Name="source_hw_lsn"              DataType="String">0x00000000000000000000</Variable>
+				<Variable Name="local_hw_lsn"               DataType="String">0x00000000000000000000</Variable>
+				<Variable Name="local_hw_lsn_incremented"   DataType="String">0x00000000000000000000</Variable>
+                <Variable Name="Stage_Row_Count"            DataType="Int32">0</Variable>
+				<Variable Name="source_SQL_template_full"   DataType="String"><#=columnListFull#></Variable>
+				<Variable Name="source_SQL_template_delta"  DataType="String"><#=columnListDelta#></Variable>
+				<Variable Name="source_SQL_filter"          DataType="String">1=1</Variable>
+				
+				<Variable Name="source_schema_name"         DataType="String"><#=table.GetTag("SourceSchemaName")#></Variable>
+				<Variable Name="source_table_name"          DataType="String"><#=table.GetTag("SourceTableName")#></Variable>
+				<Variable Name="source_unique_name"         DataType="String"><#=table.GetTag("SourceUniqueName")#></Variable>
+				<Variable Name="source_connection_string"   DataType="String"><#=table.GetTag("connStringSource")#></Variable>
+				<Variable Name="source_function_name"       DataType="String"><#=table.GetTag("SourceFunctionName")#></Variable>
+				<Variable Name="source_delta_function_name" DataType="String"><#=table.GetTag("SourceDeltaFunctionName")#></Variable>
+				<Variable Name="stage_database_name"        DataType="String"><#=table.GetTag("StageDatabaseName")#></Variable>
+				<Variable Name="stage_schema_name"          DataType="String"><#=table.GetTag("StageSchemaName")#></Variable>
+				<Variable Name="stage_table_name"           DataType="String"><#=table.GetTag("StageTableName")#></Variable>				
+				<Variable Name="target_connection_string"   DataType="String"><#=table.GetTag("connStringStage")#></Variable>				
+
+				<Variable Name="package_load_type"          DataType="String" EvaluateAsExpression="true">UPPER(@[$Package::load_type])</Variable>
+				<Variable Name="source_SQL_string"          DataType="String" EvaluateAsExpression="true">
+
+<#if (table.GetTag("SourceLoadType") == "ODECDC") { #>	
+(UPPER(@[User::package_load_type]) == "FULL" ?  REPLACE(@[User::source_SQL_template_full], "@pit", "'" + @[User::source_hw_date] + "'")
+: (UPPER(@[User::package_load_type]) == "DELTA" ? REPLACE(REPLACE(@[User::source_SQL_template_delta], "@cdc_start_time", "'" + @[User::local_hw_date] + "'")
+,"@cdc_end_time", "'" + @[User::source_hw_date] + "'"
+):"") 
+)
+<#} #>
+<#if (table.GetTag("SourceLoadType") == "MSSQLCDC") { #>
+(UPPER(@[User::package_load_type]) == "FULL" ? @[User::source_SQL_template_full]
+ : (UPPER(@[User::package_load_type]) == "DELTA" ? REPLACE(REPLACE( @[User::source_SQL_template_delta], "@cdc_start_lsn", @[User::local_hw_lsn_incremented] ), "@cdc_end_lsn", @[User::source_hw_lsn] )
+ :""))
+<#} #>					
+<#if (table.GetTag("SourceLoadType") == "FULL") { #>
+@[User::source_SQL_template_full] 
+<#} #>
+<#if (table.GetTag("SourceLoadType") == "DELTA") { #>
+@[User::source_SQL_template_delta] 
+<#} #>					
+					
++ (LEN(TRIM(@[User::source_SQL_filter])) &lt; 1 ? ""  :" AND (" + @[User::source_SQL_filter] + ")")					
+				</Variable>
+				
+				<Variable Name="package_run_key"            DataType="Int64" EvaluateAsExpression="true">@[$Package::run_key]</Variable>
+			</Variables>
+			
+            <Connections>
+				<Connection ConnectionName="Source">
+					<Expressions>
+						<Expression PropertyName="Source.ConnectionString">@[User::source_connection_string] </Expression>
+						<Expression ExternalProperty="Password">@[$Package::source_connection_password]</Expression>
+                    </Expressions>
+                </Connection>
+            <Connection ConnectionName="<#=table.GetTag("StageConnectionName")#>">
+					<Expressions>
+						<Expression PropertyName="<#=table.GetTag("StageConnectionName")#>.ConnectionString">@[User::target_connection_string] </Expression>
+                    </Expressions>
+                </Connection>
+            </Connections>        
+    		<Tasks>
+<!-- ********************************************************************************************************************************* -->
+	<ExecuteSQL ConnectionName="Config" Name="SQL_Get_Variables" ResultSet="SingleRow">
+               <DirectInput>
+DECLARE @source_unique_name varchar(256)
+SET @source_unique_name = ?
+SELECT sd.stage_database_name
+  ,source_connection_string = ssconn.connection_string
+  ,target_connection_string = sdconn.connection_string
+  ,stage_start_date = CAST(SYSDATETIMEOFFSET() AS VARCHAR(50))
+  FROM [dbo].[dv_source_system] ss
+  INNER JOIN [dbo].[dv_source_table] st ON st.system_key = ss.source_system_key
+  INNER JOIN [dbo].[dv_stage_schema] ssc ON ssc.stage_schema_key = st.stage_schema_key
+  INNER JOIN [dbo].[dv_stage_database] sd ON sd.stage_database_key = ssc.stage_database_key
+  INNER JOIN [dbo].[dv_source_version] sv ON sv.source_table_key = st.source_table_key AND sv.is_current = 1
+   LEFT JOIN [dbo].[dv_connection] ssconn ON ssconn.connection_name = ss.project_connection_name
+   LEFT JOIN [dbo].[dv_connection] sdconn ON sdconn.connection_name = sd.stage_connection_name 
+  WHERE st.source_unique_name = @source_unique_name            
+            </DirectInput>
+                <Parameters>
+                        <Parameter Name="0" VariableName="User.source_unique_name" Direction = "Input" DataType = "String" />
+                </Parameters>
+                <Results>
+                    <Result Name="stage_database_name"      VariableName="User.stage_database_name" />
+                    <Result Name="source_connection_string" VariableName="User.source_connection_string" />
+                    <Result Name="target_connection_string" VariableName="User.target_connection_string" />
+					<Result Name="stage_start_date"         VariableName="User.stage_start_date" />
+                </Results>    
+            </ExecuteSQL>
+<!-- ********************************************************************************************************************************* -->
+<#if (table.GetTag("SourceLoadType") == "ODECDC") { #>
+        <ExecuteSQL ConnectionName="Source" Name="SQL_Get_Source_HW_Mark" ResultSet="SingleRow">
+            <DirectInput><#=table.GetTag("SourceHWScript")#></DirectInput>
+        	<Results>
+                <Result Name="source_hw_date" VariableName="User.source_hw_date"/>
+        	</Results>
+        </ExecuteSQL>
+        <ExecuteSQL ConnectionName="<#=table.GetTag("StageConnectionName")#>" Name="SQL_Get_Local_HW_Mark" ResultSet="SingleRow">
+            <DirectInput><#=table.GetTag("LocalHWScript")#></DirectInput>
+        	<Results>
+                <Result Name="local_hw_date" VariableName="User.local_hw_date"/>
+        	</Results>
+        </ExecuteSQL>
+<#} #>
+<!-- ********************************************************************************************************************************* -->
+<#if (table.GetTag("SourceLoadType") == "MSSQLCDC") { #>
+        <ExecuteSQL ConnectionName="Source" Name="SQL_Get_Source_HW_Mark" ResultSet="SingleRow">
+            <DirectInput><#=table.GetTag("SourceHWScript")#></DirectInput>
+        	<Results>
+                <Result Name="source_hw_lsn" VariableName="User.source_hw_lsn"/>
+        	</Results>
+        </ExecuteSQL>
+<!-- ********************************************************************************************************************************* -->
+        <ExecuteSQL ConnectionName="<#=table.GetTag("StageConnectionName")#>" Name="SQL_Get_Local_HW_Mark" ResultSet="SingleRow">
+            <DirectInput><#=table.GetTag("LocalHWScript")#></DirectInput>
+        	<Results>
+                <Result Name="local_hw_lsn" VariableName="User.local_hw_lsn"/>
+        	</Results>
+        </ExecuteSQL>
+<#} #>
+<!-- ********************************************************************************************************************************* -->
+
+
+        <ExecuteSQL ConnectionName="Config" Name="SQL_Get_Filter" ResultSet="SingleRow">
+            <DirectInput> DECLARE @source_unique_name varchar(256)
+SET @source_unique_name = ?
+SELECT source_filter = sv.source_filter
+  FROM [dbo].[dv_source_table] st 
+  INNER JOIN [dbo].[dv_source_version] sv ON sv.source_table_key = st.source_table_key AND sv.is_current = 1
+  WHERE st.source_unique_name = @source_unique_name
+      	</DirectInput>
+        <Parameters>
+            <Parameter Name="0" VariableName="User.source_unique_name" Direction = "Input" DataType = "String" />
+            </Parameters>
+            <Results>
+                <Result Name="source_filter"      VariableName="User.source_SQL_filter" />
+            </Results>
+        </ExecuteSQL>
+<!-- ********************************************************************************************************************************* -->
+        <ExecuteSQL ConnectionName="<#=table.GetTag("StageConnectionName")#>" Name="SQL_EmptyStageTable">
+            <DirectInput> TRUNCATE TABLE <#=table.GetTag("StageSchemaName")#>.<#=table.GetTag("StageTableName")#></DirectInput>
+        </ExecuteSQL>
+<!-- ********************************************************************************************************************************* --> 
+
+<#if (table.GetTag("SourceLoadType") == "MSSQLCDC") { #>
+        <ExecuteSQL ConnectionName="Source" Name="SQL_Increment_Local_HW_Mark" ResultSet="SingleRow">
+            <DirectInput>
+DECLARE @from_lsn varchar(50) = ?
+DECLARE @to_lsn varchar(50) = ?
+DECLARE @load_type varchar(50) = ?
+DECLARE @check_lsn bit
+DECLARE @from_lsn_bin binary(10)
+DECLARE @from_lsn_incremented_bin binary(10)
+DECLARE @to_lsn_bin binary(10)
+DECLARE @to_lsn_incremented_bin binary(10)
+
+if upper(@load_type) = 'DELTA'
+begin
+ select @from_lsn_bin  = convert(binary(10), @from_lsn, 1)
+ select @to_lsn_bin  = convert(binary(10), @to_lsn, 1)
+ select @from_lsn_incremented_bin = sys.fn_cdc_increment_lsn ( @from_lsn_bin ) 
+ select @check_lsn = [sys].[fn_cdc_check_parameters]( N'dl_dlapp_all', @from_lsn_bin, @to_lsn_bin, 'all', 0)
+ select from_lsn_incremented = convert(varchar(50), @from_lsn_incremented_bin, 1)
+end
+else select from_lsn_incremented = '0'
+			</DirectInput>
+			<Parameters>
+            <Parameter Name="0" VariableName="User.local_hw_lsn"  Direction = "Input" DataType = "String" />
+			<Parameter Name="1" VariableName="User.source_hw_lsn" Direction = "Input" DataType = "String" />
+			<Parameter Name="2" VariableName="User.package_load_type" Direction = "Input" DataType = "String" />
+            </Parameters>
+        	<Results>
+                <Result Name="from_lsn_incremented" VariableName="User.local_hw_lsn_incremented"/>
+        	</Results>
+        </ExecuteSQL>
+<#} #>
+<!-- ********************************************************************************************************************************* -->
+        <Dataflow Name="DFT_CopyData">
+            <Transformations>
+                <OleDbSource Name="Retrieve_Rows" ConnectionName="Source">
+                    <VariableInput VariableName="User.source_SQL_string"></VariableInput>
+                </OleDbSource>
+                <DerivedColumns Name="DC_StageDetails">
+                            <Columns>
+                                <Column Name="dv_stage_date_time" Scale="7" DataType="DateTimeOffset"> (DT_DBTIMESTAMPOFFSET,7)@[User::stage_start_date] </Column>
+								<#if (table.GetTag("SourceLoadType") == "ODECDC") {#> 
+								<Column Name="dv_cdc_high_water_date" Scale="7" DataType="DateTimeOffset"> (DT_DBTIMESTAMPOFFSET,7)@[User::source_hw_date] </Column>
+								<#} #>
+								<#if (table.GetTag("SourceLoadType") == "MSSQLCDC") { #>
+								<Column Name="dv_cdc_high_water_lsn" DataType="AnsiString" Length = "50" CodePage = "1252"> (DT_STR,50,1252)@[User::source_hw_lsn] </Column>
+								<#} #>
+                                <Column Name="dv_source_version_key" DataType="Int32"><#=table.GetTag("SourceVersionKey")#></Column>   
+                            </Columns>
+                        </DerivedColumns>
+                        <RowCount Name="Row Count Transformation" VariableName="User.Stage_Row_Count">
+                      
+                        </RowCount>
+                <OleDbDestination Name="Stage_Rows" ConnectionName="<#=table.GetTag("StageConnectionName")#>">
+                    <ExternalTableOutput Table="<#=table.GetTag("StageSchemaName")#>.<#=table.GetTag("StageTableName")#>" />
+                </OleDbDestination>
+            </Transformations>
+        </Dataflow> 
+
+		<ExecuteSQL Name="SQL_LogStageRowCount" ConnectionName="<#=table.GetTag("StageConnectionName")#>" ResultSet="None">
+                    <DirectInput>
+<#=table.GetTag("LogVariableScript")#>
+SELECT   @__source_high_water_date = ?
+		,@__load_start_date  = ?
+		,@__load_end_date  = CAST(SYSDATETIMEOFFSET() AS VARCHAR(50))				
+		,@__rows_inserted = ?
+		,@__vault_runkey = ?
+		,@__source_high_water_lsn = convert(binary(10), ?, 1)				
+<#=table.GetTag("LogInsertScript")#>
+            </DirectInput>
+                <Parameters>
+                    <Parameter Name="0" VariableName="User.source_hw_date" Direction = "Input" DataType = "String" />
+                    <Parameter Name="1" VariableName="User.stage_start_date" Direction = "Input" DataType = "String" />
+                    <Parameter Name="2" VariableName="User.Stage_Row_Count" Direction = "Input" DataType = "Int64" />
+					<Parameter Name="3" VariableName="User.package_run_key" Direction = "Input" DataType = "Int64" />
+					<Parameter Name="4" VariableName="User.source_hw_lsn" Direction = "Input" DataType = "String" />
+                </Parameters>
+                </ExecuteSQL>
+    
+            </Tasks>
+    </Package>
+    
+<#} #>
+    
+</Packages>   
+</Biml>
+

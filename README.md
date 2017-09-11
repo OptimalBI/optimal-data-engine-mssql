@@ -1,4 +1,4 @@
-﻿# Optimal Data Engine (ODE) Build 004.001.001 #
+﻿# Optimal Data Engine (ODE) Build 005.001.001 #
 Copyright 2015 OptimalBI - Licensed under the GNU GENERAL PUBLIC LICENSE Version 3.0 (GPL-3.0)
 
 ## The Approach: ##
@@ -19,7 +19,7 @@ If you wish to develop ODE further, we recommend:
 * Visual Studio 2015 Community Edition installed on a computer which you can access. This can be downloaded from https://www.visualstudio.com/en-us/mt171547.aspx
 
 ## Additional Code ##
-The related project "optimal-data-engine-mssql-scripts" in the OptimalBI repository contains a set of scripts, which can be downloaded and used to assist in making use of ODE.
+The related project "optimal-data-engine-mssql-scripts" in the OptimalBI repository contains a set of scripts, which can be downloaded and used to assist in making use of ODE. https://github.com/OptimalBI/optimal-data-engine-mssql-scripts
 
 ## Branches: ##
 Currently, ODE has two Branches available:
@@ -59,7 +59,6 @@ Details of the current functionality can be found here http://www.ode.ninja/cate
 
 ## Notes ##
 * Untested on SQL Server editions prior to 2014. Release script is compiled for SQL Server 2016 edition.
-* This product is still in Beta and should not be deployed to a production environment without thorough testing by you to ensure no adverse effects on your environment
 
 ## Feedback, suggestions, bugs, contributions: ##
 Please submit these to GitHub issue tracking or join us in developing by forking the project and then making a pull request!
@@ -69,12 +68,16 @@ Visit http://ode.ninja/ - this is where we keep our guides and share our knowled
 
 ## Change log: ##
 ```
+Build 005.001.001 on 20170911
+	* Added BIML scripts to generate SSIS package that loads data from another server
+	* Implemented CDC (change data capture) load type
+	* Removed limitation on release script length
 Build 004.001.001 on 20170301
-		* Added satellite columns
-		* Added link columns and reorganised the hub-link relationship to enable Same-as links
-		* Reorganised source table functionality
-		* Added satellite functions feature for the calculated fields
-		* Added table reconciliation functionality (left-right object match)
+	* Added satellite columns
+	* Added link columns and reorganised the hub-link relationship to enable Same-as links
+	* Reorganised source table functionality
+	* Added satellite functions feature for the calculated fields
+	* Added table reconciliation functionality (left-right object match)
 Build 002.002.001 on 20160819
         * Added the ability to pass a parameter from the scheduler, to a Staging Procedure, telling the Procedure what type of run to perform (Full or DELTA).
 Build 002.001.001 on 20160805

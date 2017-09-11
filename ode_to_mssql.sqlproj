@@ -27,7 +27,7 @@
     <ServiceBrokerOption>EnableBroker</ServiceBrokerOption>
     <Trustworthy>True</Trustworthy>
     <GenerateCreateScript>True</GenerateCreateScript>
-    <DefaultCollation>Latin1_General_CI_AS</DefaultCollation>
+    <DefaultCollation>SQL_Latin1_General_CP1_CI_AS</DefaultCollation>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>

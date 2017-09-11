@@ -1,0 +1,187 @@
+﻿<#@ assembly name="%WINDIR%\\Microsoft.NET\\Framework\\v2.0.50727\\System.Windows.Forms.dll" #>
+
+<#@ import namespace="System.Windows.Forms" #>
+
+<#@ template tier="10" language="C#"#>
+<#@ import namespace="System.Data"#>
+<#@ import namespace="System.IO"#>
+
+<Biml xmlns="http://schemas.varigence.com/biml.xsd">
+<#@ include file="_Include_10.biml"#>
+<#
+// 10_Environments Builds all necessary Connections plus a list of Tables, so that later files can Create the Packages.
+
+
+DataTable ConnectionInfo = new DataTable();
+string connStringSource = "";
+string connPasswordSource = "";
+string connNameTarget = "";
+string connStringTarget = "";
+string source_table_schema = "";
+string stage_database_name = "";
+string source_database_name = "";
+// Build the Connection to the Source System
+ConnectionInfo = ExternalDataAccess.GetDataTable(MetadataConnection,
+"SELECT TOP 1 conn.connection_string \n"
++", conn.connection_password \n"
++"FROM dbo.dv_source_system ss \n"
++"INNER JOIN dbo.dv_connection conn ON conn.connection_name = ss.project_connection_name \n"
++"WHERE ss.source_system_name = '"+SourceSystemName+"'");
+
+foreach(DataRow row in ConnectionInfo.Rows)
+{
+      connStringSource = row["connection_string"].ToString();
+      connPasswordSource = row["connection_password"].ToString();
+}
+connStringSource += "Password='"+connPasswordSource+"'";
+
+//Build the connections to the required Stage Databases
+string SQL_stageTarget = "SELECT DISTINCT conn.connection_string \n"
++", conn.connection_name \n"
++", st.source_table_schma \n"
++", conn.connection_password \n"
++", sd.stage_database_name \n"
++", ss.source_database_name \n"
++"FROM dbo.dv_source_system ss \n"
++"INNER JOIN dbo.dv_source_table st ON st.system_key = ss.source_system_key \n"
++"INNER JOIN dbo.dv_source_version sv ON sv.source_table_key = st.source_table_key AND sv.is_current = 1 \n"
++"INNER JOIN dbo.dv_stage_schema ssc ON ssc.stage_schema_key = st.stage_schema_key \n"
++"INNER JOIN dbo.dv_stage_database sd ON sd.stage_database_key = ssc.stage_database_key \n"
++"INNER JOIN dbo.dv_connection conn ON conn.connection_name = sd.stage_connection_name \n"
++"WHERE sv.source_type = 'SSISPackage' \n"
++"AND st.is_retired = 0 \n";
+if (TableName != "ALL") {
+    SQL_stageTarget +="AND st.source_unique_name IN(" + TableName + ") \n";
+}
+SQL_stageTarget +="AND ss.source_system_name = '"+SourceSystemName+"'";
+//MessageBox.Show(SQL_stageTarget);
+ConnectionInfo = ExternalDataAccess.GetDataTable(MetadataConnection,SQL_stageTarget);
+
+ #>   
+<Connections>
+    <Connection Name="Config" ConnectionString="<#=MetadataConnection#>"></Connection>
+    <Connection Name="Source" ConnectionString="<#=connStringSource#>"></Connection>
+  <#
+  
+    foreach(DataRow row in ConnectionInfo.Rows){
+      connNameTarget = row["connection_name"].ToString();
+      connStringTarget = row["connection_string"].ToString();
+      source_table_schema = row["source_table_schma"].ToString();
+      stage_database_name = row["stage_database_name"].ToString();
+      source_database_name = row["source_database_name"].ToString();
+  #>
+      <Connection Name="<#=connNameTarget#>" ConnectionString="<#=connStringTarget#>">
+      </Connection>
+    <#} #>
+    </Connections>
+ 
+<Databases>
+    <Database Name="<#=source_database_name#>" ConnectionName="Source" />
+</Databases>
+  <Schemas>
+    <Schema Name="<#=source_table_schema#>" DatabaseName="<#=source_database_name#>" />
+  </Schemas>
+<#
+//Build the List of Tables for which Packages will be built.
+DataTable tableList;
+string SQL_tableList = "SELECT DISTINCT st.source_table_nme \n"
++", conn.connection_name \n"
++", ssc.stage_schema_name \n"
++", st.stage_table_name \n"
++", st.source_unique_name \n"
++", load_type = UPPER(st.load_type) \n"
++", source_procedure_name = CASE WHEN ISNULL(sv.source_procedure_name,'') = '' THEN 'Load_'+st.stage_table_name ELSE sv.source_procedure_name END \n"
++", sv.source_version_key \n"
+//+", source_function = case when st.load_type = 'ODEcdc' then [dv_scripting].[fn_get_ODE_function_name](st.source_table_nme,'pit') else st.source_table_nme end \n"
+//+", source_delta_function = case when st.load_type = 'ODEcdc' then [dv_scripting].[fn_get_ODE_function_name](st.source_table_nme,'all') \n"
+//+"                               when st.load_type = 'MSSQLcdc' then lower(replace([dv_scripting].[fn_get_MSSQL_function_name](st.source_table_nme,'all'), '@schema', st.source_table_schma)) \n"
+//+"                               else st.source_table_nme end \n"
++", conn.connection_string \n"
++", source_hw_script = [dv_scripting].[fn_get_source_high_water_statement] (st.source_table_key, st.load_type) \n"
++", local_hw_script = [dv_scripting].[fn_get_local_high_water_statement] (st.source_table_key, st.load_type) \n"
++", log_variable_script = [dv_scripting].[fn_get_task_log_insert_statement] (0,'stage',0,1) \n"
++", log_insert_script = [dv_scripting].[fn_get_task_log_insert_statement] (sv.source_version_key,'stage',0,0) \n"
++"FROM dbo.dv_source_system ss \n"
++"INNER JOIN dbo.dv_source_table st ON st.system_key = ss.source_system_key \n"
++"INNER JOIN dbo.dv_source_version sv ON sv.source_table_key = st.source_table_key AND sv.is_current = 1 \n"
++"INNER JOIN dbo.dv_stage_schema ssc ON ssc.stage_schema_key = st.stage_schema_key \n"
++"INNER JOIN dbo.dv_stage_database sd ON sd.stage_database_key = ssc.stage_database_key \n"
++"INNER JOIN dbo.dv_connection conn ON conn.connection_name = sd.stage_connection_name \n"
++"WHERE sv.source_type = 'SSISPackage' \n"
++"AND st.is_retired = 0 \n";
+if (TableName != "ALL") {
+    SQL_tableList +="AND st.source_unique_name IN(" + TableName + ") \n";
+}
+SQL_tableList +="AND ss.source_system_name = '"+SourceSystemName+"'";
+//MessageBox.Show(SQL_tableList);
+tableList = ExternalDataAccess.GetDataTable(MetadataConnection,SQL_tableList);
+#>
+
+<Tables>
+<#
+string source_table_name;
+string stage_schema_name;
+string stage_table_name;
+string source_load_type;
+string source_procedure_name;
+string source_version_key;
+string source_unique_name;
+string stage_connection_string;
+string source_function;
+string source_delta_function;
+string source_hw_script;
+string local_hw_script;
+string log_variable_script;
+string log_insert_script;
+
+foreach(DataRow row in tableList.Rows){
+	 // source_function = row["source_function"].ToString();
+	 // source_delta_function = row["source_delta_function"].ToString();
+	  source_hw_script = row["source_hw_script"].ToString();
+	  local_hw_script = row["local_hw_script"].ToString();
+      source_table_name = row["source_table_nme"].ToString();
+      connNameTarget = row["connection_name"].ToString();
+      stage_schema_name = row["stage_schema_name"].ToString();
+      stage_table_name = row["stage_table_name"].ToString();
+      source_load_type = row["load_type"].ToString();
+      source_procedure_name = row["source_procedure_name"].ToString();
+      source_version_key = row["source_version_key"].ToString();
+      source_unique_name = row["source_unique_name"].ToString();
+      stage_connection_string = row["connection_string"].ToString();
+	  log_variable_script = row["log_variable_script"].ToString();
+	  log_insert_script = row["log_insert_script"].ToString();
+      
+   #>
+<Table Name="<#=source_table_name#>" SchemaName="<#=source_database_name#>.<#=source_table_schema#>">
+    <Annotations>
+        <Annotation AnnotationType="Tag" Tag="StageConnectionName"><#=connNameTarget#></Annotation>
+        <Annotation AnnotationType="Tag" Tag="StageSchemaName"><#=stage_schema_name#></Annotation>
+        <Annotation AnnotationType="Tag" Tag="StageTableName"><#=stage_table_name#></Annotation>
+        <Annotation AnnotationType="Tag" Tag="SourceLoadType"><#=source_load_type#></Annotation>
+        <Annotation AnnotationType="Tag" Tag="ConnectionPassword"><#=connPasswordSource#></Annotation>
+        <Annotation AnnotationType="Tag" Tag="PackageName"><#=source_procedure_name#></Annotation>
+        <Annotation AnnotationType="Tag" Tag="SourceVersionKey"><#=source_version_key#></Annotation>
+        <Annotation AnnotationType="Tag" Tag="SourceUniqueName"><#=source_unique_name#></Annotation>  
+        <Annotation AnnotationType="Tag" Tag="StageDatabaseName"><#=stage_database_name#></Annotation>
+        <Annotation AnnotationType="Tag" Tag="connStringSource"><#=connStringSource#></Annotation>    
+        <Annotation AnnotationType="Tag" Tag="connStringStage"><#=stage_connection_string#></Annotation>
+        <Annotation AnnotationType="Tag" Tag="SourceTableName"><#=source_table_name#></Annotation>
+        <Annotation AnnotationType="Tag" Tag="SourceSchemaName"><#=source_table_schema#></Annotation>
+
+		<Annotation AnnotationType="Tag" Tag="SourceHWScript"><#=source_hw_script#></Annotation>
+		<Annotation AnnotationType="Tag" Tag="LocalHWScript"><#=local_hw_script#></Annotation>
+		<Annotation AnnotationType="Tag" Tag="LogVariableScript"><#=log_variable_script#></Annotation>
+		<Annotation AnnotationType="Tag" Tag="LogInsertScript"><#=log_insert_script#></Annotation>
+                 
+      </Annotations>
+</Table>
+
+    
+<#} #>
+    
+</Tables>   
+ 
+ 
+ 
+</Biml>
+

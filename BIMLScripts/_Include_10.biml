@@ -1,0 +1,8 @@
+﻿
+<#
+string SourceSystemName = "DLR";//Name of the Source System as it is recorded in dv_source_system
+string TableName = "ALL";
+//string TableName = "'DSCHD','DTOFF'";  //  Comma separated list of tables to build packages. "ALL" will build all tables, recorded in dv_source_table, for the selected Source System
+string MetadataConnection = "Provider=SQLNCLI11;Data Source=ABCDEVDB01;Initial Catalog=ODE_Config;Integrated Security=SSPI;"; // The connection string to the metadata database. This is hardcoded.
+#>
+
