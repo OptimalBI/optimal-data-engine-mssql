@@ -580,13 +580,19 @@ begin
 		set @sql1 = @sql1 + '), PreviousLoad AS ('+ @crlf	
 		set @sql1 = @sql1 + '	SELECT source_unique_name AS SAT_unique, source_high_water_date AS SAT_hwm, task_start_datetime AS SAT_dt'+ @crlf
 		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@sat_database) + '.[dbo].[dv_task_state]' + @crlf	
-		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf	
+		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf
+		set @sql1 = @sql1 + '), LatestStageState AS ('+ @crlf	
+		set @sql1 = @sql1 + '	SELECT source_unique_name AS LSS_unique, source_high_water_date AS LSS_hwm, task_start_datetime AS LSS_dt'+ @crlf
+		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@stage_database) + '.[dbo].[dv_task_state]'+ @crlf
+		set @sql1 = @sql1 + '	WHERE source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf	
 		set @sql1 = @sql1 + ')'+ @crlf	
-		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_date = COALESCE(ST.STG_hwm, PL.SAT_hwm)'+ @crlf	
+		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_date = COALESCE(ST.STG_hwm, PL.SAT_hwm, LSS_hwm)'+ @crlf	
 		set @sql1 = @sql1 + 'FROM StageTable AS ST'+ @crlf
 		set @sql1 = @sql1 + 'RIGHT OUTER JOIN PreviousLoad AS PL'+ @crlf
-		set @sql1 = @sql1 + '	ON ST.STG_unique = PL.SAT_unique'+ @crlf	
-		set @sql1 = @sql1 + 'ORDER BY COALESCE(ST.STG_dt, PL.SAT_dt) DESC'+ @crlf	
+		set @sql1 = @sql1 + '	ON ST.STG_unique = PL.SAT_unique'+ @crlf
+		set @sql1 = @sql1 + 'RIGHT OUTER JOIN LatestStageState AS LSS'+ @crlf
+		set @sql1 = @sql1 + '	ON ST.STG_unique = LSS.LSS_unique'+ @crlf
+		set @sql1 = @sql1 + 'ORDER BY COALESCE(ST.STG_dt, PL.SAT_dt, LSS.LSS_dt) DESC'+ @crlf	
 
 		-- Adding in an error check to fail loading for this table if we can't find a water mark and it's not a full load.
 		set @sql1 = @sql1 + 'if (@__source_high_water_date is null AND (''' + @vault_source_load_type + ''' = ''Delta''))' + @crlf	
@@ -603,12 +609,18 @@ begin
 		set @sql1 = @sql1 + '	SELECT source_unique_name AS SAT_unique, source_high_water_lsn AS SAT_hwm, task_start_datetime AS SAT_dt'+ @crlf
 		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@sat_database) + '.[dbo].[dv_task_state]' + @crlf	
 		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf
+		set @sql1 = @sql1 + '), LatestStageState AS ('+ @crlf	
+		set @sql1 = @sql1 + '	SELECT source_unique_name AS LSS_unique, source_high_water_lsn AS LSS_hwm, task_start_datetime AS LSS_dt'+ @crlf
+		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@stage_database) + '.[dbo].[dv_task_state]'+ @crlf
+		set @sql1 = @sql1 + '	WHERE source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf
 		set @sql1 = @sql1 + ')'+ @crlf	
-		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_lsn = COALESCE(CONVERT(binary(10),ST.STG_hwm,1), CONVERT(binary(10),PL.SAT_hwm,1))'+ @crlf	
+		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_lsn = COALESCE(CONVERT(binary(10),ST.STG_hwm,1), CONVERT(binary(10),PL.SAT_hwm,1), CONVERT(binary(10),LSS.LSS_hwm,1))'+ @crlf
 		set @sql1 = @sql1 + 'FROM StageTable AS ST'+ @crlf
 		set @sql1 = @sql1 + 'RIGHT OUTER JOIN PreviousLoad AS PL'+ @crlf
-		set @sql1 = @sql1 + '	ON ST.STG_unique = PL.SAT_unique'+ @crlf	
-		set @sql1 = @sql1 + 'ORDER BY COALESCE(ST.STG_dt, PL.SAT_dt) DESC'+ @crlf	
+		set @sql1 = @sql1 + '	ON ST.STG_unique = PL.SAT_unique'+ @crlf
+		set @sql1 = @sql1 + 'RIGHT OUTER JOIN LatestStageState AS LSS'+ @crlf	
+		set @sql1 = @sql1 + 'ON ST.STG_unique = LSS.LSS_unique'+ @crlf
+		set @sql1 = @sql1 + 'ORDER BY COALESCE(ST.STG_dt, PL.SAT_dt, LSS.LSS_dt) DESC'+ @crlf	
 
 		-- Adding in an error check to fail loading for this table if we can't find a water mark and it's not a full load.
 		set @sql1 = @sql1 + 'if (@__source_high_water_lsn is null AND (''' + @vault_source_load_type + ''' = ''Delta''))' + @crlf
