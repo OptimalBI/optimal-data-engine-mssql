@@ -15107,26 +15107,30 @@ begin
 
 	if @stage_load_type = 'ODEcdc'
 	begin
-		-- High Water Mark code with last successful load fallback. 
+		-- First go to the stage table for the high watermark from source brough by SSIS package
+		-- All the records in stage have the same HWM
 		set @sql1 = @sql1 + ';WITH StageTable AS (' + @crlf
-		set @sql1 = @sql1 + 'SELECT ''' + @vault_source_unique_name + ''' AS STG_unique, ' + @stage_hw_date_col + ' AS STG_hwm, dv_stage_date_time AS STG_dt' + @crlf
-		set @sql1 = @sql1 + 'FROM ' + @stage_qualified_name + @crlf
+		set @sql1 = @sql1 + '	SELECT MIN(' + @stage_hw_date_col + ') AS STG_hwm' + @crlf
+		set @sql1 = @sql1 + '	FROM ' + @stage_qualified_name + @crlf
 		set @sql1 = @sql1 + '), PreviousLoad AS ('+ @crlf	
-		set @sql1 = @sql1 + '	SELECT source_unique_name AS SAT_unique, source_high_water_date AS SAT_hwm, task_start_datetime AS SAT_dt'+ @crlf
+		-- Then if stage is empty (no data this time), get the HWM from the last successful satellite insert
+		set @sql1 = @sql1 + '	SELECT source_high_water_date AS SAT_hwm'+ @crlf
+		set @sql1 = @sql1 + '   , ROW_NUMBER() OVER (PARTITION BY source_unique_name ORDER BY task_start_datetime DESC) RN' + @crlf
 		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@sat_database) + '.[dbo].[dv_task_state]' + @crlf	
-		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf
+		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf	
 		set @sql1 = @sql1 + '), LatestStageState AS ('+ @crlf	
-		set @sql1 = @sql1 + '	SELECT source_unique_name AS LSS_unique, source_high_water_date AS LSS_hwm, task_start_datetime AS LSS_dt'+ @crlf
+		-- Third place to get HWM is the last successful stage table insert.
+		-- This was implemented for the empty tables
+		set @sql1 = @sql1 + '	SELECT source_high_water_date AS LSS_hwm'+ @crlf
+		set @sql1 = @sql1 + '	, ROW_NUMBER() OVER (PARTITION BY source_unique_name ORDER BY task_start_datetime DESC) RN' + @crlf
 		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@stage_database) + '.[dbo].[dv_task_state]'+ @crlf
-		set @sql1 = @sql1 + '	WHERE source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf	
+		set @sql1 = @sql1 + '	WHERE source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf
 		set @sql1 = @sql1 + ')'+ @crlf	
-		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_date = COALESCE(ST.STG_hwm, PL.SAT_hwm, LSS_hwm)'+ @crlf	
+
+		set @sql1 = @sql1 + 'SELECT @__source_high_water_date = COALESCE(ST.STG_hwm,'+ @crlf	
+		set @sql1 = @sql1 + '		(SELECT PL.SAT_hwm FROM PreviousLoad AS PL WHERE PL.RN = 1)'+ @crlf	
+		set @sql1 = @sql1 + '		,(SELECT LSS_hwm FROM LatestStageState AS LSS WHERE LSS.RN = 1))'+ @crlf	
 		set @sql1 = @sql1 + 'FROM StageTable AS ST'+ @crlf
-		set @sql1 = @sql1 + 'RIGHT OUTER JOIN PreviousLoad AS PL'+ @crlf
-		set @sql1 = @sql1 + '	ON ST.STG_unique = PL.SAT_unique'+ @crlf
-		set @sql1 = @sql1 + 'RIGHT OUTER JOIN LatestStageState AS LSS'+ @crlf
-		set @sql1 = @sql1 + '	ON ST.STG_unique = LSS.LSS_unique'+ @crlf
-		set @sql1 = @sql1 + 'ORDER BY COALESCE(ST.STG_dt, PL.SAT_dt, LSS.LSS_dt) DESC'+ @crlf	
 
 		-- Adding in an error check to fail loading for this table if we can't find a water mark and it's not a full load.
 		set @sql1 = @sql1 + 'if (@__source_high_water_date is null AND (''' + @vault_source_load_type + ''' = ''Delta''))' + @crlf	
@@ -15135,26 +15139,29 @@ begin
 	end
 	else 
 	begin
-		--High Water Mark code with last successful load fallback. 
+		-- First go to the stage table for the high watermark from source brough by SSIS package
+		-- All the records in stage have the same HWM
 		set @sql1 = @sql1 + ';WITH StageTable AS (' + @crlf
-		set @sql1 = @sql1 + 'SELECT ''' + @vault_source_unique_name + ''' AS STG_unique, ' + @stage_hw_lsn_col + ' AS STG_hwm, dv_stage_date_time AS STG_dt' + @crlf
-		set @sql1 = @sql1 + 'FROM ' + @stage_qualified_name + @crlf
-		set @sql1 = @sql1 + '), PreviousLoad AS ('+ @crlf	
-		set @sql1 = @sql1 + '	SELECT source_unique_name AS SAT_unique, source_high_water_lsn AS SAT_hwm, task_start_datetime AS SAT_dt'+ @crlf
+		set @sql1 = @sql1 + '	SELECT MIN(' + @stage_hw_lsn_col + ') AS STG_hwm' + @crlf
+		set @sql1 = @sql1 + '	FROM ' + @stage_qualified_name + @crlf
+		set @sql1 = @sql1 + '), PreviousLoad AS ('+ @crlf
+		-- Then if stage is empty (no data this time), get the HWM from the last successful satellite insert
+		set @sql1 = @sql1 + '	SELECT source_high_water_lsn AS SAT_hwm'+ @crlf
+		set @sql1 = @sql1 + '	, ROW_NUMBER() OVER (PARTITION BY source_unique_name ORDER BY task_start_datetime DESC) RN' + @crlf
 		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@sat_database) + '.[dbo].[dv_task_state]' + @crlf	
-		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf
+		set @sql1 = @sql1 + '	WHERE [object_type] = ''sat'' AND source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf	
 		set @sql1 = @sql1 + '), LatestStageState AS ('+ @crlf	
-		set @sql1 = @sql1 + '	SELECT source_unique_name AS LSS_unique, source_high_water_lsn AS LSS_hwm, task_start_datetime AS LSS_dt'+ @crlf
+		-- Third place to get HWM is the last successful stage table insert.
+		-- This was implemented for the empty tables
+		set @sql1 = @sql1 + '	SELECT source_high_water_lsn AS LSS_hwm'+ @crlf
+		set @sql1 = @sql1 + '	, ROW_NUMBER() OVER (PARTITION BY source_unique_name ORDER BY task_start_datetime DESC) RN'
 		set @sql1 = @sql1 + '	FROM ' + QUOTENAME(@stage_database) + '.[dbo].[dv_task_state]'+ @crlf
 		set @sql1 = @sql1 + '	WHERE source_unique_name = ''' + @vault_source_unique_name + '''' + @crlf
 		set @sql1 = @sql1 + ')'+ @crlf	
-		set @sql1 = @sql1 + 'SELECT TOP 1 @__source_high_water_lsn = COALESCE(CONVERT(binary(10),ST.STG_hwm,1), CONVERT(binary(10),PL.SAT_hwm,1), CONVERT(binary(10),LSS.LSS_hwm,1))'+ @crlf
+		set @sql1 = @sql1 + 'SELECT @__source_high_water_lsn = COALESCE(CONVERT(binary(10),ST.STG_hwm,1), '+ @crlf
+		set @sql1 = @sql1 + '		(SELECT CONVERT(binary(10),PL.SAT_hwm,1) FROM PreviousLoad AS PL WHERE PL.RN = 1)'+ @crlf
+		set @sql1 = @sql1 + '		,(SELECT CONVERT(binary(10),LSS.LSS_hwm,1) FROM LatestStageState AS LSS WHERE LSS.RN = 1))'+ @crlf
 		set @sql1 = @sql1 + 'FROM StageTable AS ST'+ @crlf
-		set @sql1 = @sql1 + 'RIGHT OUTER JOIN PreviousLoad AS PL'+ @crlf
-		set @sql1 = @sql1 + '	ON ST.STG_unique = PL.SAT_unique'+ @crlf
-		set @sql1 = @sql1 + 'RIGHT OUTER JOIN LatestStageState AS LSS'+ @crlf	
-		set @sql1 = @sql1 + 'ON ST.STG_unique = LSS.LSS_unique'+ @crlf
-		set @sql1 = @sql1 + 'ORDER BY COALESCE(ST.STG_dt, PL.SAT_dt, LSS.LSS_dt) DESC'+ @crlf	
 
 		-- Adding in an error check to fail loading for this table if we can't find a water mark and it's not a full load.
 		set @sql1 = @sql1 + 'if (@__source_high_water_lsn is null AND (''' + @vault_source_load_type + ''' = ''Delta''))' + @crlf
