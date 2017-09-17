@@ -77,26 +77,27 @@ BEGIN
 	SET @SQL += ', @__rows_deleted           bigint' + @crlf
 	SET @SQL += ', @__vault_runkey           bigint' + @crlf
 END
-ELSE
-BEGIN
-	SET @SQL += 'INSERT ' + QUOTENAME(@vault_database) + '.[dbo].[dv_task_state] ([source_table_key],[source_unique_name],[object_key],[object_type],[object_name],[procedure_name],[high_water_date],[source_high_water_lsn],[source_high_water_date],[task_start_datetime],[task_end_datetime],[rows_inserted],[rows_updated],[rows_deleted],[session_id],[run_key])' + @crlf
-	SET @SQL += 'VALUES(' + cast(@source_table_key as varchar(20)) + ',' + @crlf
-	SET @SQL += '''' + @source_unique_name + ''',' + @crlf
-	SET @SQL += cast(@object_key as varchar(20)) + ',' + @crlf
-	SET @SQL += ''''+ @object_type + ''',' + @crlf
-	SET @SQL += '''' + @object_name + ''',' + @crlf
-	SET @SQL += '''' + @procedure_name + ''',' + @crlf
-	SET @SQL += '@__high_water_date,' + @crlf
-	SET @SQL += 'CONVERT(binary(10), @__source_high_water_lsn,1),' + @crlf
-	SET @SQL += 'CONVERT(varchar(50), @__source_high_water_date),' + @crlf
-	SET @SQL += '@__load_start_date,' + @crlf
-	SET @SQL += '@__load_end_date,' + @crlf
-	SET @SQL += '@__rows_inserted,' + @crlf
-	SET @SQL += '@__rows_updated,' + @crlf
-	SET @SQL += '@__rows_deleted,' + @crlf
-	SET @SQL += 'CAST(@@SPID AS VARCHAR(20)),' + @crlf
-	SET @SQL += '@__vault_runkey)' + @crlf
-END
+--sspaet: [dbo].[dv_task_state] does not exist!! therefore this is commented out
+--ELSE
+--BEGIN
+--	SET @SQL += 'INSERT ' + QUOTENAME(@vault_database) + '.[dbo].[dv_task_state] ([source_table_key],[source_unique_name],[object_key],[object_type],[object_name],[procedure_name],[high_water_date],[source_high_water_lsn],[source_high_water_date],[task_start_datetime],[task_end_datetime],[rows_inserted],[rows_updated],[rows_deleted],[session_id],[run_key])' + @crlf
+--	SET @SQL += 'VALUES(' + cast(@source_table_key as varchar(20)) + ',' + @crlf
+--	SET @SQL += '''' + @source_unique_name + ''',' + @crlf
+--	SET @SQL += cast(@object_key as varchar(20)) + ',' + @crlf
+--	SET @SQL += ''''+ @object_type + ''',' + @crlf
+--	SET @SQL += '''' + @object_name + ''',' + @crlf
+--	SET @SQL += '''' + @procedure_name + ''',' + @crlf
+--	SET @SQL += '@__high_water_date,' + @crlf
+--	SET @SQL += 'CONVERT(binary(10), @__source_high_water_lsn,1),' + @crlf
+--	SET @SQL += 'CONVERT(varchar(50), @__source_high_water_date),' + @crlf
+--	SET @SQL += '@__load_start_date,' + @crlf
+--	SET @SQL += '@__load_end_date,' + @crlf
+--	SET @SQL += '@__rows_inserted,' + @crlf
+--	SET @SQL += '@__rows_updated,' + @crlf
+--	SET @SQL += '@__rows_deleted,' + @crlf
+--	SET @SQL += 'CAST(@@SPID AS VARCHAR(20)),' + @crlf
+--	SET @SQL += '@__vault_runkey)' + @crlf
+--END
 RETURN @SQL
 
 END
