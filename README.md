@@ -54,6 +54,10 @@ If you simply wish to build an ODE instance and use it, the following instructio
 * Using Visual Studio, open the *ode_to_mssql.sln* solution.
 * Publish the Database to your server - preferred name for the database is *ODE_Config*.
 
+### How to start using ODE for Data Vault modeling ###
+
+* Check http://ode.ninja/create-a-data-vault-with-ode-v5/ for the next steps
+
 ## Current functionality: ##
 Details of the current functionality can be found here http://www.ode.ninja/category/features/
 
@@ -79,9 +83,9 @@ Build 004.001.001 on 20170301
 	* Added satellite functions feature for the calculated fields
 	* Added table reconciliation functionality (left-right object match)
 Build 002.002.001 on 20160819
-        * Added the ability to pass a parameter from the scheduler, to a Staging Procedure, telling the Procedure what type of run to perform (Full or DELTA).
+    * Added the ability to pass a parameter from the scheduler, to a Staging Procedure, telling the Procedure what type of run to perform (Full or DELTA).
 Build 002.001.001 on 20160805
-        * Added the "is_retired" switch on dv_hub, dv_link, dv_sat, dv_source_table, dv_source_system and dv_column tables. This column is currently documentary only.
+    * Added the "is_retired" switch on dv_hub, dv_link, dv_sat, dv_source_table, dv_source_system and dv_column tables. This column is currently documentary only.
 Build 001.001.001 on 20151020
 	* Automated Install Script.
 	* Added new schema (dv_config) which holds helper scripts to populate some configuration tables.

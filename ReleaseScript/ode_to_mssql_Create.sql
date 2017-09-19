@@ -15078,30 +15078,13 @@ begin
 	  The following if statement for the different cdc types has been modified to accomodate the situation
 	  where a staging table can be empty.  In the previous incarnation the code would return a NULL High
 	  Water Mark which would result in the next Staging extract using the default Low value and returning
-	  all data from the Source.  This in turn would get the Satellite data retired and then re-inserted.
+	  all data from the Source. This in turn would get the Satellite data retired and then re-inserted.
 	  We wouldn't lose any data, but the historical view of data change becomes useless.
 	  The new version of the code falls back to the most recent successful loads High Water Mark value
 	  from the dbo.dv_task_state table in the Satellite database if the Staging table is empty.
+	  If it is also empty due to the empty data source table, so there was nothing to be inserted to the satellite,
+	  high watermark is the value from the last successful stage table load.
 
-	*/
-	/*
-	Sample code
-	============
-
-	;WITH StageTable AS (
-		SELECT 'Sales' AS STG_unique, dv_cdc_high_water_date AS STG_hwm, dv_stage_date_time AS STG_dt
-		FROM #Sample_Stage_ODEcdc
-	), PreviousLoad AS (
-		SELECT source_unique_name AS SAT_unique, source_high_water_date AS SAT_hwm, task_start_datetime AS SAT_dt
-		FROM #Sample_TaskState_ODEcdc
-		WHERE Object_type  = 'sat'
-			AND source_unique_name = 'Sales'
-	)
-	SELECT TOP 1 @__source_high_water_date = COALESCE(ST.STG_hwm, PL.SAT_hwm)
-	FROM StageTable AS ST
-	RIGHT OUTER JOIN PreviousLoad AS PL
-		ON ST.STG_unique = PL.SAT_unique
-	ORDER BY COALESCE(ST.STG_dt, PL.SAT_dt) DESC	
 	*/
 
 

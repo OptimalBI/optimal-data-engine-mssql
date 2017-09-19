@@ -33,6 +33,50 @@ foreach(DataRow row in ColumnInfoDelta.Rows)
       columnListDelta = row["SQL_source_payload"].ToString();
 }
 
+// In order to address a discovered problem with Tombstones we are generating a script that 
+// nullifies a staging tables attributes when that record is deleted in the source.  This is to handle the 
+// problem with CDC loading tombstones where it was discovered that the Tombstone record was being created with
+// the latest records attributes instead of NULL values (which it does correctly under the Full load regime).
+
+// The following SQL will query the individual satellite table configuration for its attributes, and ignore
+// those that are used as hub key columns.
+
+string SQL_nonKeyTableFields = @"
+DECLARE 
+	@source_columns NVARCHAR(max)
+	,@source_unique_name varchar(128)
+
+SET @source_unique_name = '" +table.GetTag("SourceUniqueName") + @"'
+SET @source_columns = ''
+
+;WITH ColumnsOfInterest AS (
+  SELECT  
+	c.column_name,
+	c.column_key
+       
+FROM [dbo].[dv_source_table] st
+inner join [dbo].[dv_column] c
+  on st.source_table_key = c.table_key
+  where 1=1
+  and st.source_unique_name	= @source_unique_name
+  and c.[column_name] not in (select [column_name] from [dbo].[dv_default_column] where object_type = 'Stg' and object_column_type <> 'Object_Key')
+) 
+SELECT @source_columns += ',' + QUOTENAME(COI.column_name) + ' = NULL'  
+FROM ColumnsOfInterest AS COI
+LEFT JOIN dbo.dv_hub_column AS HC 
+	ON COI.column_key = HC.column_key
+LEFT JOIN dbo.dv_hub_key_column AS HKC
+	ON HC.hub_key_column_key = HKC.hub_key_column_key
+WHERE HKC.hub_key_column_key IS NULL
+
+SELECT 'UPDATE "  + table.GetTag("StageSchemaName") + @"." + table.GetTag("StageTableName") + @"' +  
+	STUFF(@source_columns, 1, 1, ' SET ') + ' WHERE dv_cdc_action = ''D'''
+";
+DataTable nonKeyTableFields = new DataTable();
+nonKeyTableFields = ExternalDataAccess.GetDataTable(MetadataConnection,SQL_nonKeyTableFields);
+
+string SQL_updateStageTable = nonKeyTableFields.Rows[0][0].ToString();
+
   #>
         <Package Name="<#=table.GetTag("PackageName")#>"  ConstraintMode="Linear" ProtectionLevel="DontSaveSensitive" PackagePassword="mypass" DelayValidation="true">
             
@@ -249,6 +293,20 @@ else select from_lsn_incremented = '0'
             </Transformations>
         </Dataflow> 
 
+		<!-- 
+			The following SQL Task is a fix for a situation where Tombstone records for MSSQLcdc were being populated with
+			all of their attributes (thanks to MSSQLcdc doing what it should) inserted instead of NULL values.  Rather
+			than monkey around with a fairly complex bit of MERGE logic in the loading engine and more than likely make
+			things worse we're going to try setting all of the attributes to NULL for a record that has been flagged 
+			as (D)eleted according to dv_cdc_action.
+		-->
+		<ExecuteSQL Name="SQL_NullifyDeletedRecordsAttributes" ConnectionName="<#=table.GetTag("StageConnectionName")#>" ResultSet="None">
+		<DirectInput>
+<#=SQL_updateStageTable#>
+		    </DirectInput>
+        </ExecuteSQL>
+			
+			
 		<ExecuteSQL Name="SQL_LogStageRowCount" ConnectionName="<#=table.GetTag("StageConnectionName")#>" ResultSet="None">
                     <DirectInput>
 <#=table.GetTag("LogVariableScript")#>
