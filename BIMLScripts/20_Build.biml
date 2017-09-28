@@ -3,8 +3,9 @@
 <#@ import namespace="System.IO"#>
 
 <Biml xmlns="http://schemas.varigence.com/biml.xsd">
- 
-<Packages>
+
+
+<Packages>	
 <#@ include file="_Include_10.biml"#>
 
 
@@ -33,7 +34,7 @@ foreach(DataRow row in ColumnInfoDelta.Rows)
       columnListDelta = row["SQL_source_payload"].ToString();
 }
 
-// In order to address a discovered problem with Tombstones we are generating a script that 
+// In order to address a discovered problem with Tombstones we are generating a script that
 // nullifies a staging tables attributes when that record is deleted in the source.  This is to handle the 
 // problem with CDC loading tombstones where it was discovered that the Tombstone record was being created with
 // the latest records attributes instead of NULL values (which it does correctly under the Full load regime).
@@ -251,7 +252,6 @@ begin
  select @from_lsn_bin  = convert(binary(10), @from_lsn, 1)
  select @to_lsn_bin  = convert(binary(10), @to_lsn, 1)
  select @from_lsn_incremented_bin = sys.fn_cdc_increment_lsn ( @from_lsn_bin ) 
- select @check_lsn = [sys].[fn_cdc_check_parameters]( N'dl_dlapp_all', @from_lsn_bin, @to_lsn_bin, 'all', 0)
  select from_lsn_incremented = convert(varchar(50), @from_lsn_incremented_bin, 1)
 end
 else select from_lsn_incremented = '0'
@@ -332,6 +332,7 @@ SELECT   @__source_high_water_date = ?
     
 <#} #>
     
-</Packages>   
+</Packages>
+
 </Biml>
 
