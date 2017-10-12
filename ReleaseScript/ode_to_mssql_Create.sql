@@ -12074,17 +12074,17 @@ OnComplete:
 	RETURN (@_Error);
 END
 GO
-PRINT N'Creating [dv_integrity].[dv_link_metrics]...';
+PRINT N'Creating [dv_integrity].[dv_hub_metrics]...';
 
 
 GO
 
-CREATE procedure [dv_integrity].[dv_link_metrics]
+CREATE procedure [dv_integrity].[dv_hub_metrics]
 (
-   @link_key					int				= 0
+   @hub_key						int				= 0
   ,@stage_database				varchar(128)	= 'ODV_Metrics_Stage'
   ,@stage_schema				varchar(128)	= 'Stage'
-  ,@stage_table					varchar(128)	= 'Integrity_Link_Counts'
+  ,@stage_table					varchar(128)	= 'Integrity_Hub_Counts'
   ,@dogenerateerror				bit				= 0
   ,@dothrowerror				bit				= 1
 )
@@ -12096,16 +12096,17 @@ declare @crlf char(2) = char(13) + char(10)
 -- Global Defaults
 DECLARE  
 		 @def_global_default_load_date_time	varchar(128)
--- Link Table
-declare  @link_qualified_name				varchar(512)
-        ,@link_data_source_col              varchar(50)
-		,@link_load_date_time				varchar(50)
+-- hub Table
+declare  @hub_qualified_name				varchar(512)
+        ,@hub_data_source_col               varchar(50)
+		,@hub_load_date_time				varchar(50)
+		
 -- Stage Table
 declare  @stage_qualified_name				varchar(512)
 --  Working Storage
 declare @SQL								nvarchar(max) = ''
-declare @link_loop_key						bigint
-declare @link_loop_stop_key					bigint
+declare @hub_loop_key						bigint
+declare @hub_loop_stop_key					bigint
 declare @run_time							varchar(50)
 
 -- Log4TSQL Journal Constants 										
@@ -12146,7 +12147,7 @@ select @_FunctionName   = isnull(OBJECT_NAME(@@PROCID), 'Test');
 
 -- set Log4TSQL Parameters for Logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @link_key                     : ' + COALESCE(CAST(@link_key AS varchar), 'NULL') 
+						+ @NEW_LINE + '    @hub_key                     : ' + COALESCE(CAST(@hub_key AS varchar), 'NULL') 
 						+ @NEW_LINE + '    @stage_database               : ' + @stage_database					
 						+ @NEW_LINE + '    @stage_schema                 : ' + @stage_schema				
 						+ @NEW_LINE + '    @stage_table                  : ' + @stage_table					    
@@ -12166,61 +12167,62 @@ select
 -- Global Defaults
 	@def_global_default_load_date_time	= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')	as varchar(128))
 
--- Link Defaults
-select @link_data_source_col = quotename(column_name)
+-- hub Defaults
+select @hub_data_source_col = quotename(column_name)
 from [dbo].[dv_default_column]
 where 1=1
-and object_type = 'lnk'
+and object_type = 'hub'
 and object_column_type = 'Data_Source'
 
-select @link_load_date_time = quotename(column_name)
+select @hub_load_date_time = quotename(column_name)
 from [dbo].[dv_default_column]
 where 1=1
-and object_type = 'lnk'
+and object_type = 'hub'
 and object_column_type = 'Load_Date_Time'
 
  --Stage Values
 set @stage_qualified_name = quotename(@stage_database) + '.' + quotename(@stage_schema) + '.' + quotename(@stage_table) 
 select @run_time = cast(sysdatetimeoffset() as varchar(50))
 
---Truncate the Stage Table
+-- Truncate the Stage Table
 set @SQL = 'truncate table ' + @stage_qualified_name
 exec(@SQL)
 
 set @_Step = 'Build the test SQL'
-select @link_loop_key = case when isnull(@link_key, 0) = 0 then max(link_key) else @link_key end from [dbo].[dv_link]
-set @link_loop_stop_key = isnull(@link_key, 0)
-while @link_loop_key >= @link_loop_stop_key
+select @hub_loop_key = case when isnull(@hub_key, 0) = 0 then max(hub_key) else @hub_key end from [dbo].[dv_hub]
+set @hub_loop_stop_key = isnull(@hub_key, 0)
+while @hub_loop_key >= @hub_loop_stop_key
 /**********************************************************************************************************************/
 begin
-if @link_loop_key > 0
+if @hub_loop_key > 0
 begin
 	select @SQL =
-	'if exists (select 1 from ' + quotename(l.[link_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[link_schema] + ''' and [table_name] = ''' + [dbo].[fn_get_object_name] (l.link_name, 'lnk') + ''')' + @crlf +
+	'if exists (select 1 from ' + quotename(l.[hub_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[hub_schema] + ''' and [table_name] = ''' + [dbo].[fn_get_object_name] (l.hub_name, 'hub') + ''')' + @crlf +
 	'begin' + @crlf +
 	'insert ' + @stage_qualified_name + @crlf +
 	'select ''' + @run_time + '''' + @crlf +
-	+',' + cast(l.link_key as varchar(50)) + ' as [object_key]' + @crlf
-	+ ',''' + l.link_name + ''' as [object_name]' + @crlf
-	+ ',l.' + @link_data_source_col + ' as [record_source]' + @crlf
-	+ ',ss.[source_system_name]' + @crlf
-	+ ',cfg.[source_table_nme] as [source_table_name]' + @crlf
-	+ ',count_big(*) as [Runkey]' + @crlf
-	+'from ' + quotename(l.[link_database]) + '.' + quotename(l.[link_schema]) + '.' + quotename([dbo].[fn_get_object_name] (l.link_name, 'lnk')) +' l' + @crlf
-	+ 'left join  [dbo].[dv_source_version] sv on sv.source_version_key = l.' + @link_data_source_col + @crlf
+		+',' + cast(l.hub_key as varchar(50)) + ' as [object_key]' + @crlf
+		+ ',''' + l.hub_name + ''' as [object_name]' + @crlf
+		+ ',l.' + @hub_data_source_col + ' as [record_source]' + @crlf
+		+ ',ss.[source_system_name]' + @crlf
+		+ ',cfg.[source_unique_name] as [source_table_name]' + @crlf
+
+	+ ',count_big(*) as [RowCount]' + @crlf
+	+'from ' + quotename(l.[hub_database]) + '.' + quotename(l.[hub_schema]) + '.' + quotename([dbo].[fn_get_object_name] (l.hub_name, 'hub')) +' l' + @crlf
+	+'left join [dbo].[dv_source_version] sv on sv.source_version_key = l.' + @hub_data_source_col + @crlf
 	+'left join [dbo].[dv_source_table] cfg on cfg.source_table_key = sv.source_table_key ' + @crlf
 	+'left join [dbo].[dv_source_system] ss on ss.[source_system_key] = cfg.[system_key]' + @crlf
-	+'where ' + @link_load_date_time + ' <= ''' + @run_time + '''' + @crlf + 
-	+ 'group by l.' + @link_data_source_col + ', ss.[source_system_name],cfg.[source_table_nme]' + @crlf 
+	+'where ' + @hub_load_date_time + ' <= ''' + @run_time + '''' + @crlf + 
+	+ 'group by l.' + @hub_data_source_col + ', ss.[source_system_name],cfg.[source_unique_name]' + @crlf 
 	+ 'end' + @crlf
-    + @crlf + @crlf
-	from [dbo].[dv_link] l
-	where link_key = @link_loop_key
+	+ @crlf + @crlf
+	from [dbo].[dv_hub] l
+	where hub_key = @hub_loop_key
 	--print @SQL
-	exec sp_executesql @SQL
+	execute sp_executesql @SQL
 end
-select @link_loop_key = max(link_key) from [dbo].[dv_link]
-		where link_key < @link_loop_key
+select @hub_loop_key = max(hub_key) from [dbo].[dv_hub]
+		where hub_key < @hub_loop_key
 end
 /**********************************************************************************************************************/
 
@@ -12236,11 +12238,11 @@ SET @_ProgressText  = @_ProgressText + @NEW_LINE
 
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Successfully Ran Link Integrity Checker' 
+SET @_Message   = 'Successfully Ran Hub Integrity Checker' 
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Run Link Integrity Checker' + @link_qualified_name
+SET @_ErrorContext	= 'Failed to Run Hub Integrity Checker' + @hub_qualified_name
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
@@ -13192,17 +13194,17 @@ OnComplete:
 	RETURN (@_Error);
 END
 GO
-PRINT N'Creating [dv_integrity].[dv_hub_metrics]...';
+PRINT N'Creating [dv_integrity].[dv_link_metrics]...';
 
 
 GO
 
-CREATE procedure [dv_integrity].[dv_hub_metrics]
+CREATE procedure [dv_integrity].[dv_link_metrics]
 (
-   @hub_key						int				= 0
+   @link_key					int				= 0
   ,@stage_database				varchar(128)	= 'ODV_Metrics_Stage'
   ,@stage_schema				varchar(128)	= 'Stage'
-  ,@stage_table					varchar(128)	= 'Integrity_Hub_Counts'
+  ,@stage_table					varchar(128)	= 'Integrity_Link_Counts'
   ,@dogenerateerror				bit				= 0
   ,@dothrowerror				bit				= 1
 )
@@ -13214,17 +13216,16 @@ declare @crlf char(2) = char(13) + char(10)
 -- Global Defaults
 DECLARE  
 		 @def_global_default_load_date_time	varchar(128)
--- hub Table
-declare  @hub_qualified_name				varchar(512)
-        ,@hub_data_source_col               varchar(50)
-		,@hub_load_date_time				varchar(50)
-		
+-- Link Table
+declare  @link_qualified_name				varchar(512)
+        ,@link_data_source_col              varchar(50)
+		,@link_load_date_time				varchar(50)
 -- Stage Table
 declare  @stage_qualified_name				varchar(512)
 --  Working Storage
 declare @SQL								nvarchar(max) = ''
-declare @hub_loop_key						bigint
-declare @hub_loop_stop_key					bigint
+declare @link_loop_key						bigint
+declare @link_loop_stop_key					bigint
 declare @run_time							varchar(50)
 
 -- Log4TSQL Journal Constants 										
@@ -13265,7 +13266,7 @@ select @_FunctionName   = isnull(OBJECT_NAME(@@PROCID), 'Test');
 
 -- set Log4TSQL Parameters for Logging:
 SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_SprocStartTime, 121) + ' with inputs: '
-						+ @NEW_LINE + '    @hub_key                     : ' + COALESCE(CAST(@hub_key AS varchar), 'NULL') 
+						+ @NEW_LINE + '    @link_key                     : ' + COALESCE(CAST(@link_key AS varchar), 'NULL') 
 						+ @NEW_LINE + '    @stage_database               : ' + @stage_database					
 						+ @NEW_LINE + '    @stage_schema                 : ' + @stage_schema				
 						+ @NEW_LINE + '    @stage_table                  : ' + @stage_table					    
@@ -13285,62 +13286,61 @@ select
 -- Global Defaults
 	@def_global_default_load_date_time	= cast([dbo].[fn_get_default_value] ('DefaultLoadDateTime','Global')	as varchar(128))
 
--- hub Defaults
-select @hub_data_source_col = quotename(column_name)
+-- Link Defaults
+select @link_data_source_col = quotename(column_name)
 from [dbo].[dv_default_column]
 where 1=1
-and object_type = 'hub'
+and object_type = 'lnk'
 and object_column_type = 'Data_Source'
 
-select @hub_load_date_time = quotename(column_name)
+select @link_load_date_time = quotename(column_name)
 from [dbo].[dv_default_column]
 where 1=1
-and object_type = 'hub'
+and object_type = 'lnk'
 and object_column_type = 'Load_Date_Time'
 
  --Stage Values
 set @stage_qualified_name = quotename(@stage_database) + '.' + quotename(@stage_schema) + '.' + quotename(@stage_table) 
 select @run_time = cast(sysdatetimeoffset() as varchar(50))
 
--- Truncate the Stage Table
+--Truncate the Stage Table
 set @SQL = 'truncate table ' + @stage_qualified_name
 exec(@SQL)
 
 set @_Step = 'Build the test SQL'
-select @hub_loop_key = case when isnull(@hub_key, 0) = 0 then max(hub_key) else @hub_key end from [dbo].[dv_hub]
-set @hub_loop_stop_key = isnull(@hub_key, 0)
-while @hub_loop_key >= @hub_loop_stop_key
+select @link_loop_key = case when isnull(@link_key, 0) = 0 then max(link_key) else @link_key end from [dbo].[dv_link]
+set @link_loop_stop_key = isnull(@link_key, 0)
+while @link_loop_key >= @link_loop_stop_key
 /**********************************************************************************************************************/
 begin
-if @hub_loop_key > 0
+if @link_loop_key > 0
 begin
 	select @SQL =
-	'if exists (select 1 from ' + quotename(l.[hub_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[hub_schema] + ''' and [table_name] = ''' + [dbo].[fn_get_object_name] (l.hub_name, 'hub') + ''')' + @crlf +
+	'if exists (select 1 from ' + quotename(l.[link_database]) + '.[information_schema].[tables] where [table_schema] = ''' + l.[link_schema] + ''' and [table_name] = ''' + [dbo].[fn_get_object_name] (l.link_name, 'lnk') + ''')' + @crlf +
 	'begin' + @crlf +
 	'insert ' + @stage_qualified_name + @crlf +
 	'select ''' + @run_time + '''' + @crlf +
-		+',' + cast(l.hub_key as varchar(50)) + ' as [object_key]' + @crlf
-		+ ',''' + l.hub_name + ''' as [object_name]' + @crlf
-		+ ',l.' + @hub_data_source_col + ' as [record_source]' + @crlf
-		+ ',ss.[source_system_name]' + @crlf
-		+ ',cfg.[source_unique_name] as [source_table_name]' + @crlf
-
-	+ ',count_big(*) as [RowCount]' + @crlf
-	+'from ' + quotename(l.[hub_database]) + '.' + quotename(l.[hub_schema]) + '.' + quotename([dbo].[fn_get_object_name] (l.hub_name, 'hub')) +' l' + @crlf
-	+'left join [dbo].[dv_source_version] sv on sv.source_version_key = l.' + @hub_data_source_col + @crlf
+	+',' + cast(l.link_key as varchar(50)) + ' as [object_key]' + @crlf
+	+ ',''' + l.link_name + ''' as [object_name]' + @crlf
+	+ ',l.' + @link_data_source_col + ' as [record_source]' + @crlf
+	+ ',ss.[source_system_name]' + @crlf
+	+ ',cfg.[source_unique_name] as [source_table_name]' + @crlf
+	+ ',count_big(*) as [Runkey]' + @crlf
+	+'from ' + quotename(l.[link_database]) + '.' + quotename(l.[link_schema]) + '.' + quotename([dbo].[fn_get_object_name] (l.link_name, 'lnk')) +' l' + @crlf
+	+ 'left join  [dbo].[dv_source_version] sv on sv.source_version_key = l.' + @link_data_source_col + @crlf
 	+'left join [dbo].[dv_source_table] cfg on cfg.source_table_key = sv.source_table_key ' + @crlf
 	+'left join [dbo].[dv_source_system] ss on ss.[source_system_key] = cfg.[system_key]' + @crlf
-	+'where ' + @hub_load_date_time + ' <= ''' + @run_time + '''' + @crlf + 
-	+ 'group by l.' + @hub_data_source_col + ', ss.[source_system_name],cfg.[source_unique_name]' + @crlf 
+	+'where ' + @link_load_date_time + ' <= ''' + @run_time + '''' + @crlf + 
+	+ 'group by l.' + @link_data_source_col + ', ss.[source_system_name],cfg.[source_unique_name]' + @crlf 
 	+ 'end' + @crlf
-	+ @crlf + @crlf
-	from [dbo].[dv_hub] l
-	where hub_key = @hub_loop_key
+    + @crlf + @crlf
+	from [dbo].[dv_link] l
+	where link_key = @link_loop_key
 	--print @SQL
-	execute sp_executesql @SQL
+	exec sp_executesql @SQL
 end
-select @hub_loop_key = max(hub_key) from [dbo].[dv_hub]
-		where hub_key < @hub_loop_key
+select @link_loop_key = max(link_key) from [dbo].[dv_link]
+		where link_key < @link_loop_key
 end
 /**********************************************************************************************************************/
 
@@ -13356,11 +13356,11 @@ SET @_ProgressText  = @_ProgressText + @NEW_LINE
 
 IF @@TRANCOUNT > 0 COMMIT TRAN;
 
-SET @_Message   = 'Successfully Ran Hub Integrity Checker' 
+SET @_Message   = 'Successfully Ran Link Integrity Checker' 
 
 END TRY
 BEGIN CATCH
-SET @_ErrorContext	= 'Failed to Run Hub Integrity Checker' + @hub_qualified_name
+SET @_ErrorContext	= 'Failed to Run Link Integrity Checker' + @link_qualified_name
 IF (XACT_STATE() = -1) -- uncommitable transaction
 OR (@@TRANCOUNT > 0 AND XACT_STATE() != 1) -- undocumented uncommitable transaction
 	BEGIN
