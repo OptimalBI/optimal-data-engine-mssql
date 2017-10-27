@@ -847,6 +847,7 @@ CREATE TABLE [dbo].[dv_connection] (
     [connection_name]     VARCHAR (50)       NOT NULL,
     [connection_string]   VARCHAR (512)      NOT NULL,
     [connection_password] VARCHAR (128)      NULL,
+    [connection_db_type]  VARCHAR (50)       NOT NULL,
     [version_number]      INT                NOT NULL,
     [updated_by]          VARCHAR (128)      NULL,
     [updated_datetime]    DATETIMEOFFSET (7) NULL,
@@ -1227,11 +1228,11 @@ CREATE TABLE [log4].[Exception] (
 
 
 GO
-PRINT N'Creating [ODE_Release].[dv_release_005_001_001]...';
+PRINT N'Creating [ODE_Release].[dv_release_005_002_001]...';
 
 
 GO
-CREATE TABLE [ODE_Release].[dv_release_005_001_001] (
+CREATE TABLE [ODE_Release].[dv_release_005_002_001] (
     [release_key]          INT                IDENTITY (1, 1) NOT NULL,
     [release_applied_date] DATETIMEOFFSET (7) NULL,
     PRIMARY KEY CLUSTERED ([release_key] ASC)
@@ -2181,6 +2182,15 @@ PRINT N'Creating [dbo].[DF_dv_ref_function_updated_datetime]...';
 GO
 ALTER TABLE [dbo].[dv_ref_function]
     ADD CONSTRAINT [DF_dv_ref_function_updated_datetime] DEFAULT (sysdatetimeoffset()) FOR [updated_datetime];
+
+
+GO
+PRINT N'Creating [dbo].[DF__dv_connection__connection_db_type]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_connection]
+    ADD CONSTRAINT [DF__dv_connection__connection_db_type] DEFAULT (('MSSQLServer')) FOR [connection_db_type];
 
 
 GO
@@ -3144,6 +3154,15 @@ PRINT N'Creating [dbo].[CK_dv_source_version__source_type]...';
 GO
 ALTER TABLE [dbo].[dv_source_version]
     ADD CONSTRAINT [CK_dv_source_version__source_type] CHECK ([source_type]='BespokeProc' OR [source_type]='SourceTable' OR [source_type]='ExternalStage' OR [source_type]='LeftRightComparison' OR [source_type]='SSISPackage');
+
+
+GO
+PRINT N'Creating [dbo].[CK_dv_connection__connection_db_type]...';
+
+
+GO
+ALTER TABLE [dbo].[dv_connection]
+    ADD CONSTRAINT [CK_dv_connection__connection_db_type] CHECK ([connection_db_type]='MSSQLServer' OR [connection_db_type]='Oracle');
 
 
 GO
@@ -7818,6 +7837,38 @@ AS
 
 	COMMIT
 GO
+PRINT N'Creating [dbo].[dv_connection_update]...';
+
+
+GO
+
+
+CREATE PROC [dbo].[dv_connection_update] 
+    @connection_key      int,
+	@connection_name     varchar(128),   
+    @connection_string	 varchar(256),           
+    @connection_password varchar(50),
+	@connection_db_type	 varchar(50)
+
+AS 
+SET NOCOUNT ON 
+SET XACT_ABORT ON 	
+BEGIN TRAN
+
+    UPDATE [dbo].[dv_connection]
+    SET [connection_name]		= @connection_name
+       ,[connection_string]		= @connection_string
+       ,[connection_password]	= @connection_password
+	   ,[connection_db_type]	= @connection_db_type
+ 	WHERE [connection_key]		= @connection_key
+	
+	-- Begin Return Select <- do not remove
+SELECT *
+  FROM [dbo].[dv_connection]
+  WHERE  [connection_key] = @connection_key
+	-- End Return Select <- do not remove
+COMMIT
+GO
 PRINT N'Creating [dbo].[dv_connection_insert]...';
 
 
@@ -7826,7 +7877,8 @@ GO
 CREATE PROC [dbo].[dv_connection_insert] 
     @connection_name     varchar(128),   
     @connection_string	 varchar(256),           
-    @connection_password varchar(50)
+    @connection_password varchar(50) = NULL,
+	@connection_db_type	 varchar(50) = 'MSSQLServer'
 AS 
 	SET NOCOUNT ON 
 	SET XACT_ABORT ON  
@@ -7842,8 +7894,8 @@ AS
 	--if @rc <> 1 
 	--	RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 
-INSERT INTO [dbo].[dv_connection]([connection_name],[connection_string],[connection_password])
-SELECT @connection_name,@connection_string,@connection_password
+INSERT INTO [dbo].[dv_connection]([connection_name],[connection_string],[connection_password],connection_db_type)
+SELECT @connection_name,@connection_string,@connection_password,@connection_db_type
 	
 	-- Begin Return Select <- do not remove
 	SELECT *
@@ -7853,36 +7905,6 @@ SELECT @connection_name,@connection_string,@connection_password
                
 	COMMIT
        RETURN SCOPE_IDENTITY()
-GO
-PRINT N'Creating [dbo].[dv_connection_update]...';
-
-
-GO
-
-
-CREATE PROC [dbo].[dv_connection_update] 
-    @connection_key      int,
-	@connection_name     varchar(128),   
-    @connection_string	 varchar(256),           
-    @connection_password varchar(50)
-
-AS 
-SET NOCOUNT ON 
-SET XACT_ABORT ON 	
-BEGIN TRAN
-
-    UPDATE [dbo].[dv_connection]
-    SET [connection_name]		= @connection_name
-       ,[connection_string]		= @connection_string	
-       ,[connection_password]	= @connection_password			
- 	WHERE [connection_key]		= @connection_key
-	
-	-- Begin Return Select <- do not remove
-SELECT *
-  FROM [dbo].[dv_connection]
-  WHERE  [connection_key] = @connection_key
-	-- End Return Select <- do not remove
-COMMIT
 GO
 PRINT N'Creating [dv_config].[dv_populate_hub_key_columns]...';
 

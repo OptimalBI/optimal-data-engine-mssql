@@ -2,7 +2,8 @@
 CREATE PROC [dbo].[dv_connection_insert] 
     @connection_name     varchar(128),   
     @connection_string	 varchar(256),           
-    @connection_password varchar(50)
+    @connection_password varchar(50) = NULL,
+	@connection_db_type	 varchar(50) = 'MSSQLServer'
 AS 
 	SET NOCOUNT ON 
 	SET XACT_ABORT ON  
@@ -18,8 +19,8 @@ AS
 	--if @rc <> 1 
 	--	RAISERROR('Release Number %i Does Not Exist', 16, 1, @release_number)
 
-INSERT INTO [dbo].[dv_connection]([connection_name],[connection_string],[connection_password])
-SELECT @connection_name,@connection_string,@connection_password
+INSERT INTO [dbo].[dv_connection]([connection_name],[connection_string],[connection_password],connection_db_type)
+SELECT @connection_name,@connection_string,@connection_password,@connection_db_type
 	
 	-- Begin Return Select <- do not remove
 	SELECT *

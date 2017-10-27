@@ -4,7 +4,8 @@ CREATE PROC [dbo].[dv_connection_update]
     @connection_key      int,
 	@connection_name     varchar(128),   
     @connection_string	 varchar(256),           
-    @connection_password varchar(50)
+    @connection_password varchar(50),
+	@connection_db_type	 varchar(50)
 
 AS 
 SET NOCOUNT ON 
@@ -13,8 +14,9 @@ BEGIN TRAN
 
     UPDATE [dbo].[dv_connection]
     SET [connection_name]		= @connection_name
-       ,[connection_string]		= @connection_string	
-       ,[connection_password]	= @connection_password			
+       ,[connection_string]		= @connection_string
+       ,[connection_password]	= @connection_password
+	   ,[connection_db_type]	= @connection_db_type
  	WHERE [connection_key]		= @connection_key
 	
 	-- Begin Return Select <- do not remove
