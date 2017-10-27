@@ -25,6 +25,13 @@ foreach(DataRow row in ColumnInfoFull.Rows)
       columnListFull = row["SQL_source_payload"].ToString();
 }
 
+// If we have an Oracle source connection for this package project,we need to strip out the [] that have been put
+// in by the dv_scripting function.  Otherwise the ODBC source in the Data Flow task will chuck a wobbly.
+
+if (table.GetTag("SourceConnectionDBType").Equals("Oracle", StringComparison.OrdinalIgnoreCase)) {
+	string scrubbedColumnListFull = columnListFull.Replace("[", "").Replace("]","");
+	columnListFull = scrubbedColumnListFull;
+}
 
 DataTable ColumnInfoDelta = new DataTable();
 SQL_columnList = " SELECT SQL_source_payload = [dv_scripting].[fn_get_SSIS select_statement]('" +table.GetTag("SourceUniqueName")+ "','Delta') \n";
@@ -34,8 +41,15 @@ foreach(DataRow row in ColumnInfoDelta.Rows)
       columnListDelta = row["SQL_source_payload"].ToString();
 }
 
-// In order to address a discovered problem with Tombstones we are generating a script that
-// nullifies a staging tables attributes when that record is deleted in the source.  This is to handle the 
+// If we have an Oracle source connection for this package project,we need to strip out the [] that have been put
+// in by the dv_scripting function.  Otherwise the ODBC source in the Data Flow task will chuck a wobbly.
+
+if (table.GetTag("SourceConnectionDBType").Equals("Oracle", StringComparison.OrdinalIgnoreCase)) {
+	string scrubbedColumnListDelta = columnListDelta.Replace("[", "").Replace("]","");
+	columnListDelta = scrubbedColumnListDelta;
+}
+
+// Now we are generating a script that will allow nullification of a staging tables attributes when that record is deleted in the source.  This is to handle the 
 // problem with CDC loading tombstones where it was discovered that the Tombstone record was being created with
 // the latest records attributes instead of NULL values (which it does correctly under the Full load regime).
 
@@ -139,17 +153,34 @@ string SQL_updateStageTable = nonKeyTableFields.Rows[0][0].ToString();
 			</Variables>
 			
             <Connections>
-				<Connection ConnectionName="Source">
-					<Expressions>
+			
+				<Connection ConnectionName="Source"> 
+					<Expressions>	
+					<# 
+					if (table.GetTag("SourceConnectionDBType").Equals("Oracle", StringComparison.OrdinalIgnoreCase)) {
+						
+					#>
+						<!-- Because of the oddities of ODBC (pwd instead of password) we need to manipulate the connection string
+						construction to use the variables appropriately. -->	
+						<Expression PropertyName="Source.ConnectionString">@[User::source_connection_string] + ";Pwd=" + @[$Package::source_connection_password]</Expression>
+					<#
+					} else {
+						// We stick with our bog standard connection expression
+					#>
 						<Expression PropertyName="Source.ConnectionString">@[User::source_connection_string] </Expression>
+					<# } #>
+
 						<Expression ExternalProperty="Password">@[$Package::source_connection_password]</Expression>
                     </Expressions>
                 </Connection>
-            <Connection ConnectionName="<#=table.GetTag("StageConnectionName")#>">
+				
+				
+            	<Connection ConnectionName="<#=table.GetTag("StageConnectionName")#>"> 
 					<Expressions>
 						<Expression PropertyName="<#=table.GetTag("StageConnectionName")#>.ConnectionString">@[User::target_connection_string] </Expression>
                     </Expressions>
                 </Connection>
+			
             </Connections>        
     		<Tasks>
 <!-- ********************************************************************************************************************************* -->
@@ -269,9 +300,27 @@ else select from_lsn_incremented = '0'
 <!-- ********************************************************************************************************************************* -->
         <Dataflow Name="DFT_CopyData">
             <Transformations>
-                <OleDbSource Name="Retrieve_Rows" ConnectionName="Source">
+			<# 
+			if (table.GetTag("SourceConnectionDBType").Equals("Oracle", StringComparison.OrdinalIgnoreCase)) {
+				
+			#>
+                <!-- Because we are using an Oracle ODBC connection manager, we need to use an ODBC source
+					in the Dataflow task (which doesn't allow variables with SQL statements).  And because it's 
+					Oracle we have to have the [] stripped out from the sql query. This has been done higher 
+					up in this script. -->
+				<OdbcSource Name="Retrieve_Rows" Connection="Source" BindCharColumnAs="Unicode" BindNumericAs="Char" ExposeCharColumnsAsUnicode="true">
+					<DirectInput>
+						<#=columnListFull#>
+                    </DirectInput>
+                </OdbcSource>
+			<#
+			} else {
+			#>
+				<!-- This is the standard SQL Server source for use in the data flow transfer. -->	
+				<OleDbSource Name="Retrieve_Rows" ConnectionName="Source">
                     <VariableInput VariableName="User.source_SQL_string"></VariableInput>
-                </OleDbSource>
+                </OleDbSource>	
+			<#} #>	
                 <DerivedColumns Name="DC_StageDetails">
                             <Columns>
                                 <Column Name="dv_stage_date_time" Scale="7" DataType="DateTimeOffset"> (DT_DBTIMESTAMPOFFSET,7)@[User::stage_start_date] </Column>
@@ -292,7 +341,14 @@ else select from_lsn_incremented = '0'
                 </OleDbDestination>
             </Transformations>
         </Dataflow> 
-
+		
+		<# 
+		if (table.GetTag("SourceConnectionDBType").Equals("Oracle", StringComparison.OrdinalIgnoreCase)) {
+			
+			// This is not needed for ODBC source as there is no CDC in action on the Oracle database.
+			
+		} else {	
+		#>
 		<!-- 
 			The following SQL Task is a fix for a situation where Tombstone records for MSSQLcdc were being populated with
 			all of their attributes (thanks to MSSQLcdc doing what it should) inserted instead of NULL values.  Rather
@@ -300,13 +356,15 @@ else select from_lsn_incremented = '0'
 			things worse we're going to try setting all of the attributes to NULL for a record that has been flagged 
 			as (D)eleted according to dv_cdc_action.
 		-->
+		
 		<ExecuteSQL Name="SQL_NullifyDeletedRecordsAttributes" ConnectionName="<#=table.GetTag("StageConnectionName")#>" ResultSet="None">
-		<DirectInput>
-<#=SQL_updateStageTable#>
-		    </DirectInput>
+			<DirectInput>
+				<#=SQL_updateStageTable#>
+			</DirectInput>
         </ExecuteSQL>
 			
-			
+		<#} #>
+		
 		<ExecuteSQL Name="SQL_LogStageRowCount" ConnectionName="<#=table.GetTag("StageConnectionName")#>" ResultSet="None">
                     <DirectInput>
 <#=table.GetTag("LogVariableScript")#>

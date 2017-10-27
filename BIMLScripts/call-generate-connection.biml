@@ -1,0 +1,26 @@
+﻿<#@ property name="connectionName" type="String" #>
+<#@ property name="connectionString" type="String" #>
+<#@ property name="connectionDBType" type="String" #>
+
+<#
+/*
+  The purpose of this callee script is to generate a connection entry for the Connections collection
+  dependent upon the type of database provider identified by connectionDBType.  If a provider entry
+  isn't present then the default Connection will be returned.
+
+  At the moment the current list of providers supported is only two - feel free to expand on this.
+
+*/
+
+if (connectionDBType.Equals("Oracle", StringComparison.OrdinalIgnoreCase)) {
+#>
+<!-- This is an ODBC connection for an Oracle database -->
+<OdbcConnection Name="<#=connectionName#>" ConnectionString="<#=connectionString#>"/>
+<# 	
+} else {
+#>
+<!-- This is the default standard SQL server connection,  -->
+<Connection Name="<#=connectionName#>" ConnectionString="<#=connectionString#>"/>
+<#}#> 
+
+

@@ -15,8 +15,10 @@
 DataTable ConnectionInfo = new DataTable();
 string connStringSource = "";
 string connPasswordSource = "";
+string connDBTypeSource = "";
 string connNameTarget = "";
 string connStringTarget = "";
+string connDBTypeTarget = "";
 string source_table_schema = "";
 string stage_database_name = "";
 string source_database_name = "";
@@ -24,6 +26,7 @@ string source_database_name = "";
 ConnectionInfo = ExternalDataAccess.GetDataTable(MetadataConnection,
 "SELECT TOP 1 conn.connection_string \n"
 +", conn.connection_password \n"
++", conn.connection_db_type \n"
 +"FROM dbo.dv_source_system ss \n"
 +"INNER JOIN dbo.dv_connection conn ON conn.connection_name = ss.project_connection_name \n"
 +"WHERE ss.source_system_name = '"+SourceSystemName+"'");
@@ -32,12 +35,30 @@ foreach(DataRow row in ConnectionInfo.Rows)
 {
       connStringSource = row["connection_string"].ToString();
       connPasswordSource = row["connection_password"].ToString();
+	  connDBTypeSource = row["connection_db_type"].ToString();
+	  
 }
-connStringSource += "Password='"+connPasswordSource+"'";
+
+if (connDBTypeSource.Equals("Oracle", StringComparison.OrdinalIgnoreCase)) {
+	// At the moment we are using an ODBC connection to communicate with the Oracle source.
+	// The connection string for ODBC has no concept of "Password" and so we need to use 
+	// an alternative token of "Pwd" - it is also picky about any surrounding quotes as well.
+	
+	connStringSource += "Pwd="+connPasswordSource+"";
+	
+} else {
+	// The default case is the regular approach for SQL Server where "Password" is used in the connection
+	// string.
+	
+	connStringSource += "Password='"+connPasswordSource+"'";
+	
+}
+
 
 //Build the connections to the required Stage Databases
 string SQL_stageTarget = "SELECT DISTINCT conn.connection_string \n"
 +", conn.connection_name \n"
++", conn.connection_db_type \n"
 +", st.source_table_schma \n"
 +", conn.connection_password \n"
 +", sd.stage_database_name \n"
@@ -59,19 +80,28 @@ ConnectionInfo = ExternalDataAccess.GetDataTable(MetadataConnection,SQL_stageTar
 
  #>   
 <Connections>
-    <Connection Name="Config" ConnectionString="<#=MetadataConnection#>"></Connection>
-    <Connection Name="Source" ConnectionString="<#=connStringSource#>"></Connection>
+<!--  The following set of connections now use a called biml function to generate the correct type of
+	connection based on the type of provider in the connection string.  This has changed because we
+	now can have Oracle/ODBC sources. -->	
+	
+	<#=CallBimlScript("..\\BimlScripts\\call-generate-connection.biml", "Config", MetadataConnection, "") #>
+	
+	<#=CallBimlScript("..\\BimlScripts\\call-generate-connection.biml", "Source", connStringSource, connDBTypeSource) #>
+	
   <#
   
     foreach(DataRow row in ConnectionInfo.Rows){
       connNameTarget = row["connection_name"].ToString();
       connStringTarget = row["connection_string"].ToString();
+	  connDBTypeTarget = row["connection_db_type"].ToString();
       source_table_schema = row["source_table_schma"].ToString();
       stage_database_name = row["stage_database_name"].ToString();
       source_database_name = row["source_database_name"].ToString();
   #>
-      <Connection Name="<#=connNameTarget#>" ConnectionString="<#=connStringTarget#>">
-      </Connection>
+    
+	
+	<#=CallBimlScript("..\\BimlScripts\\call-generate-connection.biml", connNameTarget, connStringTarget, connDBTypeTarget) #>
+	
     <#} #>
     </Connections>
  
@@ -150,6 +180,8 @@ foreach(DataRow row in tableList.Rows){
       stage_connection_string = row["connection_string"].ToString();
 	  log_variable_script = row["log_variable_script"].ToString();
 	  log_insert_script = row["log_insert_script"].ToString();
+	  
+
       
    #>
 <Table Name="<#=source_table_name#>" SchemaName="<#=source_database_name#>.<#=source_table_schema#>">
@@ -172,7 +204,13 @@ foreach(DataRow row in tableList.Rows){
 		<Annotation AnnotationType="Tag" Tag="LocalHWScript"><#=local_hw_script#></Annotation>
 		<Annotation AnnotationType="Tag" Tag="LogVariableScript"><#=log_variable_script#></Annotation>
 		<Annotation AnnotationType="Tag" Tag="LogInsertScript"><#=log_insert_script#></Annotation>
-                 
+        
+		<!-- The following is a new Annotation Tag that allows us to pass the value of connDBTypeSource
+		  down into the config tier. This will be used in order to change components that are affected
+		  by the use of an Oracle ODBC source connection. -->
+		
+		<Annotation AnnotationType="Tag" Tag="SourceConnectionDBType"><#=connDBTypeSource#></Annotation>
+		
       </Annotations>
 </Table>
 
@@ -181,7 +219,24 @@ foreach(DataRow row in tableList.Rows){
     
 </Tables>   
  
- 
+<Projects>
+<!--  Here we define the Package Project that we want the subsequent generated packages to be part of. -->
+<PackageProject Name="<#=packageProjectNamePrecursor#>_<#=SourceSystemName#>">
+	<Packages>
+<# 
+// Unfortunately we need to predefine the package names that will be included in the Package project before
+// we actually construct them in the later biml script.  So this requires a second loop through the contents
+// of the tableList DataTable.
+
+foreach(DataRow row in tableList.Rows){
+	      source_procedure_name = row["source_procedure_name"].ToString();
+#>
+	<Package PackageName="<#=source_procedure_name#>"/>
+	
+<#} #>
+	</Packages>
+</PackageProject>
+</Projects>	 
  
 </Biml>
 
