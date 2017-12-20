@@ -382,11 +382,11 @@ begin
 
 	WHILE @@FETCH_STATUS = 0
 	BEGIN
- 			select @wrk_link_joins  = 'LEFT JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + @c_link_key_name + @crlf + ' ON  '
+ 			select @wrk_link_joins  = 'LEFT JOIN ' + quotename(@c_hub_database) + '.' + quotename(coalesce(@c_hub_schema, @def_hub_schema, 'dbo')) + '.' + quotename((select [dbo].[fn_get_object_name] (@c_hub_name, 'hub'))) + ' ' + quotename(@c_link_key_name) + @crlf + ' ON  '
 			
-			select @wrk_link_keys  += ' tmp.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + 
-				     				  ' = link.' + (select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + @crlf + ' AND '
-			select @wrk_link_joins += @c_link_key_name + '.' + quotename(hkc.[hub_key_column_name]) + ' = ' +
+			select @wrk_link_keys  += ' tmp.' + (select [column_name] from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + 
+				     				  ' = link.' + (select [column_name] from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + @crlf + ' AND '
+			select @wrk_link_joins += quotename(@c_link_key_name) + '.' + quotename(hkc.[hub_key_column_name]) + ' = ' +
 									 case when  hub_data_type <> col_data_type
 										  then col_data_type_cast
 										  else 'src.' + quotename(hkc.[column_name])
@@ -417,7 +417,7 @@ begin
 			and c.is_retired <> 1) hkc
 			ORDER BY hkc.hub_key_ordinal_position
 ---------------------------------------------------------
-			select  @wrk_hub_joins += ', ' + @c_link_key_name + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ' as ' + 
+			select  @wrk_hub_joins += ', ' + QUOTENAME(@c_link_key_name) + '.' + (select column_name from [dbo].[fn_get_key_definition]([hub_name], 'hub')) + ' as ' + 
 									(select column_name from [dbo].[fn_get_key_definition](@c_link_key_name, 'hub')) + @crlf				   
 			from(
 			select distinct hub_name
