@@ -122,7 +122,7 @@ SET @_Step = 'Check Whether the Schedule is Complete'
 		BEGIN
 -- If so, Is there anything left in the Queue to to run
 			IF EXISTS(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (@run_key, 'Potential'))			   
-			OR EXISTS(SELECT 1 FROM [dv_scheduler].[dv_run_manifest] WHERE [run_key] = @run_key AND [run_status] IN('Queued'))
+			OR EXISTS(SELECT 1 FROM [dv_scheduler].[dv_run_manifest] WHERE [run_key] = @run_key AND [run_status] IN ('Queued', 'Processing'))
 				  SET @nothing = 0
 			-- If not, Fail the run.
 			      ELSE
