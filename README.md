@@ -1,4 +1,4 @@
-﻿# Optimal Data Engine (ODE) Build 005.001.001 #
+﻿# Optimal Data Engine (ODE) Build 005.002.002 #
 Copyright 2015 OptimalBI - Licensed under the GNU GENERAL PUBLIC LICENSE Version 3.0 (GPL-3.0)
 
 ## The Approach: ##
@@ -72,6 +72,8 @@ Visit http://ode.ninja/ - this is where we keep our guides and share our knowled
 
 ## Change log: ##
 ```
+Build 005.002.002 on 20180302
+	* Bug fixes
 Build 005.002.001 on 20171028
 	* Added connectivity to the Oracle as a data source via BIML scripts
 Build 005.001.001 on 20170911

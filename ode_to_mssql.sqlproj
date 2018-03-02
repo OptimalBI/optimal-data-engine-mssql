@@ -367,7 +367,7 @@
     <Build Include="dbo\Stored Procedures\dv_column_match_delete.sql" />
     <Build Include="dbo\User Defined Types\dv_column_matching_list.sql" />
     <Build Include="dbo\User Defined Types\dv_column_list.sql" />
-    <Build Include="ODE_Release\Tables\dv_release_005_002_001.sql" />
+    <Build Include="ODE_Release\Tables\dv_release_005_002_002.sql" />
     <Build Include="dbo\Tables\dv_connection.sql" />
     <Build Include="dv_log\Views\dv_dv_load_state_history.sql" />
     <Build Include="dv_scripting\Functions\fn_get_task_log_insert_statement.sql" />
