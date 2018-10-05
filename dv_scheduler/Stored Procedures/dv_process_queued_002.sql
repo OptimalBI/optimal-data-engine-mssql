@@ -1,7 +1,7 @@
 ﻿
 CREATE PROCEDURE [dv_scheduler].[dv_process_queued_002]
 
---WITH EXECUTE AS OWNER
+WITH EXECUTE AS OWNER
 AS
 BEGIN
 SET NOCOUNT ON

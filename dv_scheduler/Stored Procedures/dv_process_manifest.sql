@@ -17,7 +17,7 @@ DECLARE @msg						XML
 	   ,@run_key					int
 	   ,@delay_in_seconds			int
 	   ,@delayChar					char(8)
-	   ,@nothing					bit
+	   ,@run_status					varchar(50)
 
 
 -- Log4TSQL Journal Constants 
@@ -67,103 +67,74 @@ SET @_ProgressText		= @_FunctionName + ' starting at ' + CONVERT(char(23), @_Spr
 BEGIN TRY
 SET @_Step = 'Generate any required error';
 IF @DoGenerateError = 1
-   select 1 / 0
+   SELECT 1 / 0
 SET @_Step = 'Validate Inputs';
 
-if not exists (select 1 from [dv_scheduler].[dv_run] where [run_key] = @vault_run_key and [run_status] = 'Scheduled')
-   raiserror('Run must be "Scheduled" to be able to Start it', 16, 1)
+IF NOT EXISTS (select 1 from [dv_scheduler].[dv_run] WHERE [run_key] = @vault_run_key and [run_status] = 'Scheduled')
+   RAISERROR('Run must be "Scheduled" to be able to Start it', 16, 1)
 
-if (SELECT count(*) from [dv_scheduler].[fn_check_manifest_for_circular_reference] (@vault_run_key)) <> 0
-	begin
-	select @_Message = 'Run Key: ' + cast(@vault_run_key as varchar(20)) + ' Contains Circular References. Please Investigate'
+if (SELECT COUNT(*) FROM [dv_scheduler].[fn_check_manifest_for_circular_reference] (@vault_run_key)) <> 0
+	BEGIN
+	SELECT @_Message = 'Run Key: ' + CAST(@vault_run_key AS VARCHAR(20)) + ' Contains Circular References. Please Investigate'
     RAISERROR(@_Message, 16, 1);
-	end
+	END
 /*--------------------------------------------------------------------------------------------------------------*/
 SET @_Step = 'Get Defaults';
-select @delay_in_seconds = cast([dbo].[fn_get_default_value] ('PollDelayInSeconds','Scheduler') as int)
-select @delayChar = '00' + format(CONVERT(DATETIME, DATEADD(SECOND, @delay_in_seconds, 0)), ':mm:ss');
+SELECT @delay_in_seconds = CAST([dbo].[fn_get_default_value] ('PollDelayInSeconds','Scheduler') as int)
+SELECT @delayChar = '00' + FORMAT(CONVERT(DATETIME, DATEADD(SECOND, @delay_in_seconds, 0)), ':mm:ss');
+SET @run_key = @vault_run_key
 
-set @run_key = @vault_run_key
 
-UPDATE [dv_scheduler].[dv_run] 
-	set [run_status] = 'Started'
-	   ,[run_start_datetime] = SYSDATETIMEOFFSET()
-    where [run_key] = @run_key
-
+--****************************************************************************************************************
 SET @_Step = 'Start the Manifest';
-while 1=1 -- The loop forcibly exits when all processing has completed
+--****************************************************************************************************************
+UPDATE [dv_scheduler].[dv_run] 
+	SET [run_status] = 'Started'
+	   ,[run_start_datetime] = SYSDATETIMEOFFSET()
+    WHERE [run_key] = @run_key
+
+--****************************************************************************************************************
+SET @_Step = 'Loop until the Manifest completes processing';
+--****************************************************************************************************************
+WHILE 1=1 
 BEGIN
+--> If the run has been cancelled, "Cancel" all waiting tasks to save them from beig Queued and then Cancelled anyway.
+SET @_Step = 'Check whether the Schedule has been Cancelled'
+	UPDATE m
+	SET [run_status] = 'Cancelled'
+	FROM [dv_scheduler].[dv_run] r
+	INNER JOIN [dv_scheduler].[dv_run_manifest] m
+	ON m.[run_key] = r.[run_key]
+	WHERE 1=1
+		AND r.[run_key] = @run_key
+		AND ISNULL(r.[run_status], '') = 'Cancelled'
+		AND ISNULL(m.[run_status], '') = 'Scheduled'
+
+--****************************************************************************************************************
 SET @_Step = 'Check Whether the Schedule is Complete'
-    if not exists (
-		select 1
-		from [dv_scheduler].[dv_run] r
-		inner join [dv_scheduler].[dv_run_manifest] m
-		on m.run_key = r.run_key
-		where 1=1
-		  and r.run_key = @run_key
-		  and isnull(m.run_status, '') <> 'Completed')
-		BEGIN
-		    UPDATE [dv_scheduler].[dv_run] 
-			   set [run_status] = 'Completed'
-	              ,[run_end_datetime] = SYSDATETIMEOFFSET()
-			   where [run_key] = @run_key
-			BREAK
-		END
--- has there been a Failure?	
-	if exists (
-		select 1
-		from [dv_scheduler].[dv_run] r
-		inner join [dv_scheduler].[dv_run_manifest] m
-		on m.run_key = r.run_key
-		where 1=1
-		and r.run_key = @run_key
-		and (isnull(r.run_status, '') = 'Failed' or isnull(m.run_status, '') = 'Failed')
-		)
-		BEGIN
--- If so, Is there anything left in the Queue to to run
-			IF EXISTS(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (@run_key, 'Potential'))			   
-			OR EXISTS(SELECT 1 FROM [dv_scheduler].[dv_run_manifest] WHERE [run_key] = @run_key AND [run_status] IN ('Queued', 'Processing'))
-				  SET @nothing = 0
-			-- If not, Fail the run.
-			      ELSE
-				    BEGIN
-				  	UPDATE [dv_scheduler].[dv_run] 
-				  		set [run_status] = 'Failed'
-				             ,[run_end_datetime] = SYSDATETIMEOFFSET()
-				  		where [run_key] = @run_key
-				  	BREAK
-				  END
-        END
--- has there been a Cancellation?	
-	if exists (
-		select 1
-		from [dv_scheduler].[dv_run] r
-		inner join [dv_scheduler].[dv_run_manifest] m
-		on m.run_key = r.run_key
-		where 1=1
-		and r.run_key = @run_key
-		and (isnull(r.run_status, '') = 'Cancelled' or isnull(m.run_status, '') = 'Cancelled')
-		)
-		BEGIN
--- If so, Is there anything to run, assuming that what is queued or running now will succeed?
-			if not exists(SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (@run_key, 'Potential'))
-			BEGIN
--- If not, Cancel the run.
-				UPDATE [dv_scheduler].[dv_run] 
-					set [run_status] = 'Cancelled'
-	                   ,[run_end_datetime] = SYSDATETIMEOFFSET()
-					where [run_key] = @run_key
-				BREAK
-			END
-        END
--- There is still something to run so Get a list of Tasks to run:
-SET @_Step = 'Queue as Set of Tasks'
+--****************************************************************************************************************
+--> To exit the loop:
+	--> Nothing must be waiting to finish ("Queued" or "Processing"). 
+	--> Also, there may be no further tasks, which could be placed on the Queue.
+    IF NOT EXISTS (
+		SELECT 1 FROM [dv_scheduler].[dv_run_manifest] 
+		WHERE ISNULL([run_status], '') IN ('Queued', 'Processing')
+		  AND [run_key] = @run_key
+		  )
+		IF NOT EXISTS (SELECT 1 FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (@run_key, DEFAULT))
+			BREAK   
+
+--****************************************************************************************************************
+SET @_Step = 'Queue eligible Tasks'
+--****************************************************************************************************************
+--> There is still something running or to be run, so check for anything eligble to be Queued:
+
 	DECLARE manifest_cursor CURSOR FOR  
 	SELECT [source_unique_name]	
 		  ,[source_table_load_type]	
 		  ,[queue]
 	FROM [dv_scheduler].[fn_get_waiting_scheduler_tasks] (@run_key, DEFAULT)
-	order by [priority]
+	ORDER BY [priority]
 	OPEN manifest_cursor
 	FETCH NEXT FROM manifest_cursor 
 	  INTO @source_unique_name
@@ -216,7 +187,7 @@ SET @_Step = 'Queue as Set of Tasks'
 			MESSAGE TYPE dv_scheduler_mAgent001 (@Msg)
 	END
 	END CONVERSATION @SBDialog
-	EXECUTE[dv_scheduler].[dv_manifest_status_update] @run_key ,@source_unique_name ,'Queued'
+	EXECUTE [dv_scheduler].[dv_manifest_status_update] @run_key ,@source_unique_name ,'Queued'
 	COMMIT
 	FETCH NEXT FROM manifest_cursor 
 	  INTO @source_unique_name
@@ -226,8 +197,65 @@ SET @_Step = 'Queue as Set of Tasks'
 	
 	CLOSE manifest_cursor   
 	DEALLOCATE manifest_cursor
+--****************************************************************************************************************
+SET @_Step = 'Wait before Checking for eligible Tasks again'
+--****************************************************************************************************************
     WAITFOR DELAY @delayChar
 END
+
+--****************************************************************************************************************
+SET @_Step = 'Processing is Complete. Set the Run Status.'
+--****************************************************************************************************************
+SELECT @run_status = ISNULL([run_status], '') 
+	FROM [dv_scheduler].[dv_run] r
+	WHERE [run_key] = @run_key 
+-- If the schedule has been cancelled, leave the status as is
+IF @run_status <> 'Cancelled'
+-- Has there been a Failure?	
+	IF EXISTS (
+		SELECT 1
+		FROM [dv_scheduler].[dv_run] r
+		INNER JOIN [dv_scheduler].[dv_run_manifest] m
+		ON m.[run_key] = r.[run_key]
+		WHERE 1=1
+		AND r.[run_key] = @run_key
+		AND (ISNULL(m.[run_status], '') = 'Failed')
+		)
+		SET @run_status = 'Failed'
+-- Has there been a Cancelled Task?
+	ELSE IF EXISTS (
+		SELECT 1
+		FROM [dv_scheduler].[dv_run] r
+		INNER JOIN [dv_scheduler].[dv_run_manifest] m
+		ON m.[run_key] = r.[run_key]
+		WHERE 1=1
+		AND r.[run_key] = @run_key
+		AND (ISNULL(m.[run_status], '') = 'Cancelled')
+		)
+		SET @run_status = 'Cancelled'
+-- In case of a random Status - should never happen
+	ELSE IF EXISTS (
+		SELECT 1
+		FROM [dv_scheduler].[dv_run] r
+		INNER JOIN [dv_scheduler].[dv_run_manifest] m
+		ON m.[run_key] = r.[run_key]
+		WHERE 1=1
+		AND r.[run_key] = @run_key
+		AND (ISNULL(m.[run_status], '') <> 'Completed')
+		)
+		SET @run_status = 'Unknown'
+	ELSE
+-- Otherwise, set to Completed.
+	    SET @run_status = 'Completed'
+
+	UPDATE [dv_scheduler].[dv_run] 
+	SET [run_status] = @run_status
+	   ,[run_end_datetime] = SYSDATETIMEOFFSET()
+	WHERE [run_key] = @run_key
+-- If the final Status isn't Completed, Raise an error:
+	IF @run_status <> 'Completed'
+		RAISERROR('Scheduler Run: %i Completed unsuccessfully with Status: %s', 16, 1, @run_key, @run_status);
+
 /*--------------------------------------------------------------------------------------------------------------*/
 
 SET @_ProgressText  = @_ProgressText + @NEW_LINE
