@@ -468,7 +468,7 @@ select @stage_load_date_time = isnull(@stage_load_date_time, @def_global_default
 set @sql = ''
 select @sql += quotename(sc.column_name) + ' = ' + 
            case when c.[is_retired] = 1 
-				then 'NULL'
+				then [dbo].[fn_build_column_definition] ('NULL',sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],NULL,0,NULL,0,0,1,0)
 		        when  [dbo].[fn_build_column_definition] ('',c.[column_type],c.[column_length],c.[column_precision],c.[column_scale],c.[Collation_Name],0,NULL,0,0,0,0)
 		            = [dbo].[fn_build_column_definition] ('',sc.[column_type],sc.[column_length],sc.[column_precision],sc.[column_scale],sc.[Collation_Name],0,NULL,0,0,0,0)
 				then 'src.' + quotename(c.[column_name])
@@ -755,7 +755,7 @@ if (@sat_link_hub_flag = 'H' or (@sat_link_hub_flag = 'L' and @link_load_only <>
 
         end
         else
-                set @sql1 = @sql1 + 'if exists (select 1 from ' + @temp_table_name_001 + ' group by ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else @link_surrogate_keyname end  + ' having count(*) > 1)' + @crlf + '    raiserror (''Duplicate Keys Detected while Loading ' + @stage_qualified_name + '''' + ', 16, 1)' + @crlf + @crlf
+                set @sql1 = @sql1 + 'if exists (select 1 from ' + @temp_table_name_001 + ' group by ' + case when @sat_link_hub_flag = 'H' then quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end  + ' having count(*) > 1)' + @crlf + '    raiserror (''Duplicate Keys Detected while Loading ' + @stage_qualified_name + '''' + ', 16, 1)' + @crlf + @crlf
         end
 
 if @sat_link_hub_flag = 'H'

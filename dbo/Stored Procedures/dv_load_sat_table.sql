@@ -331,7 +331,7 @@ begin
 	set @sql2 += 'SELECT @loopmax = ISNULL(MAX(rn),1) FROM ' + @vault_temp_table_name + @crlf 
 end
 set @sql2 += 'BEGIN TRANSACTION' + @crlf
-set @sql2 += 'SELECT *  INTO #t' + @sat_table + ' FROM ' +  @sat_qualified_name + ' WHERE 1 = 0;' + @crlf
+set @sql2 += 'SELECT *  INTO [#t' + @sat_table + '] FROM ' +  @sat_qualified_name + ' WHERE 1 = 0;' + @crlf
 if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta' -- only need to loop is its a cdc delta run:
 	set @sql2 += 'WHILE @counter <= @loopmax' + @crlf
 set @sql2 += 'BEGIN' + @crlf
@@ -339,7 +339,7 @@ if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Del
 	--set @sql2 += 'SET @counter = @counter + 1' + @crlf
 	set @sql2 += 'SELECT @version_date = SYSDATETIMEOFFSET()'  + @crlf 
 set @sql2 += 'select @__load_start_date = sysdatetimeoffset();' + @crlf
-set @sql2 += 'INSERT INTO #t' + @sat_table + @crlf
+set @sql2 += 'INSERT INTO [#t' + @sat_table + ']' + @crlf
 set @sql2 += ' (' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
 set @sql2 += ',   ' + replace(@sat_technical_columns, 'sat.', '')
 set @sql2 += replace(@sat_payload, 'sat.', '')
@@ -390,7 +390,7 @@ if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Del
 	set @sql2 += ' USING (SELECT * FROM ' + @vault_temp_table_name + ' WHERE rn = @counter) AS [src]' + @crlf
 else
 	set @sql2 += ' USING ' + @vault_temp_table_name + ' AS [src]' + @crlf
-set @sql2 += ' ON sat.' + case when @sat_link_hub_flag = 'H' then  @hub_surrogate_keyname else @link_surrogate_keyname end + ' = src.' +  case when @sat_link_hub_flag = 'H' then  @hub_surrogate_keyname else @link_surrogate_keyname end + @crlf
+set @sql2 += ' ON sat.' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + ' = src.' +  case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
 set @sql2 += ' AND sat.' + @sat_current_row_col + ' = 1' + @crlf
 
 -- End Date Rows for Updates
@@ -402,10 +402,10 @@ else
 	set @sql2 += ' WHEN MATCHED AND EXISTS ' + @crlf
 --******************************************************************************************************************
 set @sql2 += '  (SELECT ' + @crlf
-set @sql2 += '  src.' + case when @sat_link_hub_flag = 'H' then  @hub_surrogate_keyname else @link_surrogate_keyname end + @crlf + ', '
+set @sql2 += '  src.' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf + ', '
 set @sql2 += @source_payload 
 set @sql2 += ' EXCEPT ' + @crlf + ' SELECT ' + @crlf
-set @sql2 += '  sat.' + case when @sat_link_hub_flag = 'H' then  @hub_surrogate_keyname else @link_surrogate_keyname end + @crlf + ', '
+set @sql2 += '  sat.' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf + ', '
 set @sql2 += @sat_payload
 set @sql2 += ')' + @crlf + 'THEN UPDATE SET' + @crlf
 set @sql2 += @sat_current_row_col + '  = 0' + @crlf
@@ -462,7 +462,7 @@ set @sql2 += ')' + @crlf
 set @sql2 += 'SELECT ' + case when @sat_link_hub_flag = 'H' then  quotename(@hub_surrogate_keyname) else quotename(@link_surrogate_keyname) end + @crlf
 set @sql2 += ',' + replace(@sat_technical_columns, 'sat.', '')
 set @sql2 += replace(@sat_payload, 'sat.', '')  + @crlf
-set @sql2 += 'FROM #t' + @sat_table + ';' + @crlf
+set @sql2 += 'FROM [#t' + @sat_table + '];' + @crlf
 --set @sql2 += 'SELECT @rows_updated = @@ROWCOUNT;' + @crlf
 set @sql2 += 'SELECT @__load_end_date = sysdatetimeoffset()' + @crlf 
 set @sql2 += '      ,@__high_water_date = @version_date' + @crlf 
@@ -473,7 +473,7 @@ select @sql2 += [dv_scripting].[fn_get_task_log_insert_statement] (@source_versi
 if @source_load_type in('ODEcdc', 'MSSQLcdc') and @vault_source_load_type = 'Delta' -- only need to loop is its a cdc delta run:
 begin
 	set @sql2 += 'SET @counter = @counter + 1' + @crlf
-	set @sql2 += 'TRUNCATE TABLE #t' + @sat_table + @crlf
+	set @sql2 += 'TRUNCATE TABLE [#t' + @sat_table + ']' + @crlf
 end
 --print @sql2
 set @sql2 += 'END' + @crlf
