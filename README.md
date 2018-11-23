@@ -72,6 +72,8 @@ Visit http://ode.ninja/ - this is where we keep our guides and share our knowled
 
 ## Change log: ##
 ```
+Build 005.002.003 on 20181123
+	* Fixed retired columns and enabled hyphen in tables name
 Build 005.002.002 on 20180302
 	* Bug fixes
 Build 005.002.001 on 20171028
