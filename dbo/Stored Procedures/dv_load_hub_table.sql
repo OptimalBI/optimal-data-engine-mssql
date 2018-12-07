@@ -135,7 +135,7 @@ left join [dbo].[dv_source_version] sv on sv.source_table_key = st.source_table_
 where 1=1
 and st.source_unique_name	= @vault_source_unique_name
 select @rc = count(*) from [dbo].[dv_source_version] where source_version_key = @dv_source_version_key and is_current= 1
-if @rc <> 1 RAISERROR('dv_source_table or current dv_source_version missing for: %s, source version : %i', 16, 1, @dv_stage_table_name, @vault_source_version_key);
+if @rc <> 1 RAISERROR('dv_source_table or current dv_source_version missing for: %s, source version : %i', 16, 1, @dv_stage_table_name, @dv_source_version_key);
 
 
 select @hub_key = hub_key
@@ -238,7 +238,7 @@ set @SQL1 = left(@SQL1, len(@SQL1) -10)  + ')' + @crlf +
 -- Log Completion
 set @SQL1 += 'SET @__high_water_date = @version_date' + @crlf 
 SET @SQL1 += 'SET @__vault_runkey = @vault_runkey' + @crlf 
-select @SQL1 += [dv_scripting].[fn_get_task_log_insert_statement] (@vault_source_version_key, 'hub', @hub_key, 0)
+select @SQL1 += [dv_scripting].[fn_get_task_log_insert_statement] (@dv_source_version_key, 'hub', @hub_key, 0)
 set @SQL1 += 'COMMIT;' + @crlf
 
 CLOSE cur_hub_column   

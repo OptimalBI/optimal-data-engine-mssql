@@ -332,7 +332,7 @@ set @sql1 += 'SELECT @__rows_inserted = count(*) from @rowcounts;' + @crlf
 set @sql1 += 'SELECT @__load_end_date = sysdatetimeoffset();' + @crlf
 set @sql1 += 'SET @__high_water_date = @version_date;' + @crlf
 -- Log Completion
-select @sql1 += [dv_scripting].[fn_get_task_log_insert_statement] (@vault_source_version_key, 'link', @link_config_key, 0)
+select @sql1 += [dv_scripting].[fn_get_task_log_insert_statement] (@stage_source_version_key, 'link', @link_config_key, 0)
 set @sql1 += 'COMMIT;' + @crlf
 set @sql = @sql1
 
