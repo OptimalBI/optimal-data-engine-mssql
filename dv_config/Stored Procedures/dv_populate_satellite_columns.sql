@@ -86,8 +86,8 @@ if @@ROWCOUNT > 0  -- Satellite already has Columns attached
 	begin
 	if @vault_rerun_satellite_column_insert = 1
 	    begin
-		delete from [dbo].[dv_satellite_column] where [satellite_key] = @satellite_key
 		update [dbo].[dv_column] set [satellite_col_key] = NULL where [table_key] = @source_table_key
+		delete from [dbo].[dv_satellite_column] where [satellite_key] = @satellite_key
 		end
 	else
 		begin
